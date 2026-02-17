@@ -1,0 +1,85 @@
+import pytest
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from backend.game.state import GameManager
+from backend.game.models import GameState, CardType
+
+@pytest.fixture
+def game_manager():
+    manager = GameManager()
+    manager.create_game("test_game")
+    return manager
+
+@pytest.mark.unit
+def test_create_game(game_manager):
+    assert game_manager.game is not None
+    assert game_manager.game.id == "test_game"
+    assert game_manager.game.state == GameState.WAITING
+
+@pytest.mark.unit
+def test_add_player(game_manager):
+    result = game_manager.add_player("player_1", "玩家1")
+    assert result is True
+    assert len(game_manager.game.players) == 1
+    assert game_manager.game.players[0].id == "player_1"
+
+@pytest.mark.unit
+def test_add_too_many_players(game_manager):
+    for i in range(6):
+        game_manager.add_player(f"player_{i+1}", f"玩家{i+1}")
+
+    result = game_manager.add_player("player_7", "玩家7")
+    assert result is False
+    assert len(game_manager.game.players) == 6
+
+@pytest.mark.unit
+def test_remove_player(game_manager):
+    game_manager.add_player("player_1", "玩家1")
+    game_manager.add_player("player_2", "玩家2")
+
+    result = game_manager.remove_player("player_1")
+    assert result is True
+    assert len(game_manager.game.players) == 1
+    assert game_manager.game.players[0].id == "player_2"
+
+@pytest.mark.unit
+def test_deal_cards(game_manager):
+    for i in range(3):
+        game_manager.add_player(f"player_{i+1}", f"玩家{i+1}")
+
+    result = game_manager.deal_cards()
+    assert result is True
+
+    for player in game_manager.game.players:
+        assert len(player.hand) == 6
+        assert player.current_hand_count == 6
+
+@pytest.mark.unit
+def test_next_turn(game_manager):
+    for i in range(3):
+        game_manager.add_player(f"player_{i+1}", f"玩家{i+1}")
+
+    game_manager.deal_cards()
+
+    assert game_manager.game.current_player_index == 0
+
+    game_manager.next_turn()
+    assert game_manager.game.current_player_index == 1
+
+    game_manager.next_turn()
+    assert game_manager.game.current_player_index == 2
+
+    game_manager.next_turn()
+    assert game_manager.game.current_player_index == 0
+
+@pytest.mark.unit
+def test_get_current_player(game_manager):
+    for i in range(3):
+        game_manager.add_player(f"player_{i+1}", f"玩家{i+1}")
+
+    game_manager.deal_cards()
+
+    current_player = game_manager.get_current_player()
+    assert current_player is not None
+    assert current_player.id == "player_1"

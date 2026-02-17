@@ -1,0 +1,26 @@
+services:
+  backend:
+    build: .
+    container_name: card_game_backend
+    ports:
+      - "8765:8765"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8765
+    volumes:
+      - ./backend:/app
+    user: "${UID:-1000}:${GID:-1000}"
+    command: uv run python main.py
+    restart: unless-stopped
+
+  test:
+    build: .
+    container_name: card_game_test
+    volumes:
+      - ./backend:/app
+    user: "${UID:-1000}:${GID:-1000}"
+    command: uv run pytest tests/
+    depends_on:
+      - backend
+    profiles:
+      - test
