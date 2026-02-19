@@ -160,15 +160,16 @@ def test_game_rules():
         current_player = manager.get_current_player()
         print(f"   新当前玩家: {current_player.name} (ID: {current_player.id}), 手牌数: {len(current_player.hand)}")
     
-    if current_player.hand:
-        card_id = current_player.hand[0].id
-        print(f"   出卡: {current_player.hand[0].name}")
+    harmony_card = next((c for c in current_player.hand if c.name != CardType.CRIMINAL), None)
+    if harmony_card:
+        card_id = harmony_card.id
+        print(f"   出卡: {harmony_card.name}")
         result = rules.play_card(current_player.id, card_id, CardUsageType.HARMONY)
         assert result is True
         assert len(current_player.hand) == 5
         print("✓ 调和出卡成功")
     else:
-        print("✓ 所有玩家无手牌，跳过测试")
+        print("✓ 当前玩家无可打出的手牌（仅犯人等），跳过测试")
 
     print("\n2. 测试质疑出卡")
     current_player = manager.get_current_player()
@@ -186,16 +187,17 @@ def test_game_rules():
             target_player = player
             break
     
-    if target_player and current_player.hand:
-        card_id = current_player.hand[0].id
-        print(f"   出卡: {current_player.hand[0].name}")
+    doubt_card = next((c for c in current_player.hand if c.name != CardType.CRIMINAL), None)
+    if target_player and doubt_card:
+        card_id = doubt_card.id
+        print(f"   出卡: {doubt_card.name}")
         print(f"   目标玩家: {target_player.name} (ID: {target_player.id})")
         result = rules.play_card(current_player.id, card_id, CardUsageType.DOUBT, target_player.id)
         assert result is True
         assert len(current_player.hand) == 5
         print("✓ 质疑出卡成功")
     else:
-        print("✓ 当前玩家无手牌或无目标玩家，跳过测试")
+        print("✓ 当前玩家无手牌、无可打出牌或无目标玩家，跳过测试")
 
     print("\n3. 测试特技出卡")
     current_player = manager.get_current_player()
@@ -207,15 +209,18 @@ def test_game_rules():
         current_player = manager.get_current_player()
         print(f"   新当前玩家: {current_player.name} (ID: {current_player.id}), 手牌数: {len(current_player.hand)}")
     
-    if current_player.hand:
-        card_id = current_player.hand[0].id
-        print(f"   出卡: {current_player.hand[0].name}")
+    # 犯人牌不可打出；保健委员/归宅部等需额外参数。选用可不带目标打出的特技牌
+    skill_playable = (CardType.LIBRARY_COMMITTEE, CardType.NEWS_CLUB, CardType.ALIEN, CardType.HONOR_STUDENT)
+    skill_card = next((c for c in current_player.hand if c.name in skill_playable), None)
+    if skill_card:
+        card_id = skill_card.id
+        print(f"   出卡: {skill_card.name}")
         result = rules.play_card(current_player.id, card_id, CardUsageType.SKILL)
         assert result is True
         assert len(current_player.hand) == 5
         print("✓ 特技出卡成功")
     else:
-        print("✓ 所有玩家无手牌，跳过测试")
+        print("✓ 当前玩家手牌无可直接打出的特技牌，跳过测试")
 
     print("\n=== 游戏规则测试通过 ===\n")
 
