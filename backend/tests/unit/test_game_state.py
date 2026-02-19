@@ -62,16 +62,19 @@ def test_next_turn(game_manager):
 
     game_manager.deal_cards()
 
-    assert game_manager.game.current_player_index == 0
+    # 先手为持有学生会长卡的玩家（发牌随机，不假定是 player_1）
+    n = game_manager.game.player_count
+    first = game_manager.game.current_player_index
+    assert 0 <= first < n
 
     game_manager.next_turn()
-    assert game_manager.game.current_player_index == 1
+    assert game_manager.game.current_player_index == (first + 1) % n
 
     game_manager.next_turn()
-    assert game_manager.game.current_player_index == 2
+    assert game_manager.game.current_player_index == (first + 2) % n
 
     game_manager.next_turn()
-    assert game_manager.game.current_player_index == 0
+    assert game_manager.game.current_player_index == first
 
 @pytest.mark.unit
 def test_get_current_player(game_manager):
@@ -82,4 +85,5 @@ def test_get_current_player(game_manager):
 
     current_player = game_manager.get_current_player()
     assert current_player is not None
-    assert current_player.id == "player_1"
+    # 当前玩家应为 current_player_index 所指（先手为持学生会长者）
+    assert current_player.id == game_manager.game.players[game_manager.game.current_player_index].id
