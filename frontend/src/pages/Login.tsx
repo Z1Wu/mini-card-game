@@ -6,22 +6,14 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import { wsService } from '../services/websocket';
 import { LoginMessage, ReconnectMessage, GameStatusMessage } from '../types/message';
 
-const PRESET_USERS = [
-  { username: 'player1', password: 'password1', name: '玩家1' },
-  { username: 'player2', password: 'password2', name: '玩家2' },
-  { username: 'player3', password: 'password3', name: '玩家3' },
-  { username: 'player4', password: 'password4', name: '玩家4' },
-  { username: 'player5', password: 'password5', name: '玩家5' },
-  { username: 'player6', password: 'password6', name: '玩家6' },
-];
-
 export const Login: React.FC = () => {
   const navigate = useNavigate();
   const { setPlayer, setConnected, setUsername, setPassword } = usePlayerStore();
   const { connect, send, error } = useWebSocket();
   const [isConnecting, setIsConnecting] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
-  const [selectedUser, setSelectedUser] = useState('');
+  const [username, setUsernameInput] = useState('');
+  const [password, setPasswordInput] = useState('');
   const [serverError, setServerError] = useState('');
   /** 对局状态（登录前查询）：null=加载中/未请求 */
   const [gameStatus, setGameStatus] = useState<{ has_game: boolean; state: string | null; player_names: string[] } | null>(null);
@@ -45,7 +37,7 @@ export const Login: React.FC = () => {
     })();
     return () => {
       cancelled = true;
-      wsService.off('game_status', handler);
+      wsService.off('game_status');
     };
   }, [connect, send]);
 
@@ -88,9 +80,10 @@ export const Login: React.FC = () => {
   }, [navigate, setPlayer]);
 
   const handleLogin = async () => {
-    const user = PRESET_USERS.find(u => u.username === selectedUser);
-    if (!user) {
-      alert('请选择一个用户');
+    const u = username.trim();
+    const p = password;
+    if (!u || !p) {
+      alert('请输入用户名和密码');
       return;
     }
 
@@ -98,15 +91,14 @@ export const Login: React.FC = () => {
     setServerError('');
     try {
       await connect();
-      setPlayer(user.username, user.name);
-      setUsername(user.username);
-      setPassword(user.password);
+      setUsername(u);
+      setPassword(p);
       setConnected(true);
 
       const message: LoginMessage = {
         type: 'login',
-        username: user.username,
-        password: user.password,
+        username: u,
+        password: p,
       };
       send(message);
     } catch (err) {
@@ -116,9 +108,10 @@ export const Login: React.FC = () => {
   };
 
   const handleReconnect = async () => {
-    const user = PRESET_USERS.find(u => u.username === selectedUser);
-    if (!user) {
-      alert('请选择一个用户');
+    const u = usePlayerStore.getState().username;
+    const p = usePlayerStore.getState().password;
+    if (!u || !p) {
+      alert('请先使用用户名和密码登录');
       return;
     }
 
@@ -128,15 +121,12 @@ export const Login: React.FC = () => {
       if (!wsService.isConnected()) {
         await connect();
       }
-      setPlayer(user.username, user.name);
-      setUsername(user.username);
-      setPassword(user.password);
       setConnected(true);
 
       const message: ReconnectMessage = {
         type: 'reconnect',
-        username: user.username,
-        password: user.password,
+        username: u,
+        password: p,
       };
       send(message);
     } catch (err) {
@@ -181,7 +171,7 @@ export const Login: React.FC = () => {
                   <Button
                     type="button"
                     onClick={handleReconnect}
-                    disabled={!selectedUser || isReconnecting}
+                    disabled={isReconnecting}
                     variant="secondary"
                     className="mt-3 w-full"
                   >
@@ -232,28 +222,39 @@ export const Login: React.FC = () => {
 
         <div className="space-y-6">
           <div>
-            <label htmlFor="userSelect" className="block text-sm font-medium text-slate-300 mb-2">
-              选择用户
+            <label htmlFor="username" className="block text-sm font-medium text-slate-300 mb-2">
+              用户名
             </label>
-            <select
-              id="userSelect"
-              value={selectedUser}
-              onChange={(e) => setSelectedUser(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            <input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsernameInput(e.target.value)}
+              placeholder="请输入用户名"
+              className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               disabled={isConnecting}
-            >
-              <option value="">请选择...</option>
-              {PRESET_USERS.map((user) => (
-                <option key={user.username} value={user.username}>
-                  {user.name} ({user.username})
-                </option>
-              ))}
-            </select>
+              autoComplete="username"
+            />
+          </div>
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
+              密码
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              placeholder="请输入密码"
+              className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              disabled={isConnecting}
+              autoComplete="current-password"
+            />
           </div>
 
           <Button
             onClick={handleLogin}
-            disabled={!selectedUser || isConnecting}
+            disabled={!username.trim() || !password || isConnecting}
             className="w-full"
             variant="primary"
           >

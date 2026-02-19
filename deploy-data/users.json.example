@@ -1,0 +1,8 @@
+[
+  { "username": "player1", "password": "请修改为你的密码", "name": "玩家1" },
+  { "username": "player2", "password": "请修改为你的密码", "name": "玩家2" },
+  { "username": "player3", "password": "请修改为你的密码", "name": "玩家3" },
+  { "username": "player4", "password": "请修改为你的密码", "name": "玩家4" },
+  { "username": "player5", "password": "请修改为你的密码", "name": "玩家5" },
+  { "username": "player6", "password": "请修改为你的密码", "name": "玩家6" }
+]

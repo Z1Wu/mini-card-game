@@ -1,0 +1,16 @@
+# 服务器部署：前端 + 后端 + Nginx 单服务，对外 80 端口
+# 使用: docker compose -f docker-compose.deploy.yml up -d
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.deploy
+    image: card-game:latest
+    container_name: card-game
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    # 挂载自定义登录用户配置时取消下面注释，并创建 deploy-data/users.json（可复制 deploy-data/users.json.example 后修改）
+    # volumes:
+    #   - ./deploy-data/users.json:/app/backend/auth/users.json:ro

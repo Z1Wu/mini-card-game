@@ -110,7 +110,11 @@ docker-compose run --rm backend /bin/bash
 environment:
   - HOST=0.0.0.0
   - PORT=8765
+  # 登录用户配置文件路径，默认 backend/auth/users.json
+  - AUTH_USERS_FILE=/app/auth/users.json
 ```
+
+登录用户通过配置文件传入：JSON 数组，每项 `{"username": "xxx", "password": "xxx", "name": "显示名"}`。路径由 `AUTH_USERS_FILE` 指定。
 
 ## 数据持久化
 
@@ -494,6 +498,30 @@ A: 更新 `backend/pyproject.toml` 后重新构建：
 docker-compose build --no-cache backend
 docker-compose up -d backend
 ```
+
+## 云服务器部署镜像（前端 + 后端一体）
+
+适用于在云服务器上单机部署：一个镜像同时提供静态前端和 WebSocket 后端，Nginx 对外 80 端口，/ws 反代到后端。
+
+### 构建
+
+```bash
+docker build -f Dockerfile.deploy -t card-game:latest .
+```
+
+### 运行
+
+```bash
+docker run -d -p 80:80 --name card-game card-game:latest
+```
+
+访问 `http://你的服务器IP` 即可，WebSocket 自动走同源 `/ws`（前端已配置未设置 `VITE_WS_URL` 时使用当前域名 + `/ws`）。
+
+### 说明
+
+- 镜像内 Nginx 监听 80，静态资源来自前端 `npm run build` 产物，`/ws` 反代到容器内 `127.0.0.1:8765`。
+- 后端在容器内以 `uv run python main.py` 运行，仅本机访问，不对外暴露 8765。
+- 部署相关文件：`Dockerfile.deploy`、`deploy/nginx.conf`、`deploy/start.sh`。
 
 ## 相关文档
 

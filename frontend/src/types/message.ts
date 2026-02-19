@@ -24,6 +24,7 @@ export type MessageType =
   | 'honor_student_choice_required'
   | 'honor_student_waiting'
   | 'honor_student_result'
+  | 'honor_student_response'
   | 'honor_student_phase'
   | 'class_rep_waiting'
   | 'class_rep_phase'
@@ -149,6 +150,27 @@ export interface SkillChoiceMessage extends BaseMessage {
   give_card_id?: string;  // 大小姐第一阶段只发 take_card_id，看到牌后再发 give_card_id
 }
 
+/** 客户端发送：新闻部选牌 */
+export interface NewsClubChoiceMessage extends BaseMessage {
+  type: 'news_club_choice';
+  player_id: string;
+  card_id: string;
+}
+
+/** 客户端发送：班长选牌 */
+export interface ClassRepChoiceMessage extends BaseMessage {
+  type: 'class_rep_choice';
+  player_id: string;
+  card_id: string;
+}
+
+/** 客户端发送：优等生响应（举手/不举） */
+export interface HonorStudentResponseMessage extends BaseMessage {
+  type: 'honor_student_response';
+  player_id: string;
+  response: 'raise_hand' | 'none';
+}
+
 /** 大小姐第二阶段：看到拿到的牌后，选择要交给对方的牌 */
 export interface RichGirlChooseGiveMessage extends BaseMessage {
   type: 'rich_girl_choose_give';
@@ -263,6 +285,9 @@ export type WebSocketMessage =
   | PlayCardMessage
   | SkillChoiceRequiredMessage
   | SkillChoiceMessage
+  | NewsClubChoiceMessage
+  | ClassRepChoiceMessage
+  | HonorStudentResponseMessage
   | ViewHandMessage
   | ViewHarmonyMessage
   | RichGirlChooseGiveMessage
