@@ -1,125 +1,98 @@
-from typing import List, Optional
+from typing import Optional
 from .models import Game, Player, Card, CardType
 
+
 class VictoryChecker:
+    """按 overview 规则：所有人只剩一张手牌后，先做判定1（调和值）、判定2（质疑结算），再按胜利优先级 1→5 依次判定。"""
+
     def __init__(self, game: Game):
         self.game = game
+        self._harmony_reached = False
+        self._imprisoned_player: Optional[Player] = None
 
     def check_victory(self) -> Optional[str]:
-        if self._check_harmony_victory():
-            return self._get_harmony_winner()
+        # 判定 1：调和值是否达到
+        self._harmony_reached = self._check_harmony_value_reached()
+        # 判定 2：质疑结算，确定被监禁者（质疑区数值总和最大且唯一）
+        self._imprisoned_player = self._check_doubt_settlement()
 
-        imprisoned_player = self._check_doubt_settlement()
-        if imprisoned_player:
-            if self._check_alien_victory(imprisoned_player):
-                return imprisoned_player.id
+        # 判定 3：按胜利优先级 1→5 依次公开手牌，先满足条件者胜
+        for priority in [1, 2, 3, 4, 5]:
+            winner = self._find_winner_at_priority(priority)
+            if winner:
+                return winner
+        return None
 
-            if self._check_criminal_victory(imprisoned_player):
-                return self._get_criminal_winner()
-
-        return self._check_all_victory_conditions()
-
-    def _check_harmony_victory(self) -> bool:
-        total_harmony = sum(card.harmony_value for card in self.game.harmony_area)
-        return total_harmony >= self.game.required_harmony_value
-
-    def _get_harmony_winner(self) -> Optional[str]:
-        winners = []
-        for player in self.game.players:
-            if self._player_meets_harmony_condition(player):
-                winners.append(player.id)
-
-        if len(winners) == 1:
-            return winners[0]
-
-        return self._select_winner_by_priority(winners)
-
-    def _player_meets_harmony_condition(self, player: Player) -> bool:
-        for card in player.hand:
-            if card.victory_condition == "4 调和成功即可获胜":
-                return True
-        return False
+    def _check_harmony_value_reached(self) -> bool:
+        """判定 1：调和区数值总和是否达到游戏人数对应的要求。"""
+        total = sum(card.harmony_value for card in self.game.harmony_area)
+        return total >= self.game.required_harmony_value
 
     def _check_doubt_settlement(self) -> Optional[Player]:
+        """判定 2：质疑结算，数值总和最大的唯一玩家视为被监禁。"""
         player_doubt_values = {}
         for player in self.game.players:
             total_value = sum(card.harmony_value for card in player.doubt_cards)
             player_doubt_values[player.id] = total_value
 
+        if not player_doubt_values:
+            return None
         max_value = max(player_doubt_values.values())
         max_players = [pid for pid, value in player_doubt_values.items() if value == max_value]
+        if len(max_players) != 1:
+            return None
+        return self._get_player(max_players[0])
 
-        if len(max_players) == 1:
-            return self._get_player(max_players[0])
-
-        return None
-
-    def _check_alien_victory(self, imprisoned_player: Player) -> bool:
-        for card in imprisoned_player.hand:
-            if card.name == CardType.ALIEN:
-                return True
-        return False
-
-    def _check_criminal_victory(self, imprisoned_player: Player) -> bool:
-        for card in imprisoned_player.hand:
-            if card.name == CardType.CRIMINAL:
-                return False
-        return True
-
-    def _get_criminal_winner(self) -> Optional[str]:
-        for player in self.game.players:
+    def _find_winner_at_priority(self, priority: int) -> Optional[str]:
+        """在给定胜利优先级下，按玩家顺序检查，先满足条件者胜。"""
+        # 手牌中拥有该优先级卡牌的玩家，按在 game.players 中的顺序
+        players_with_priority = []
+        for i, player in enumerate(self.game.players):
             for card in player.hand:
-                if card.name == CardType.ACCOMPLICE:
+                if card.victory_priority == priority:
+                    players_with_priority.append((i, player))
+                    break
+        players_with_priority.sort(key=lambda x: x[0])
+
+        for _, player in players_with_priority:
+            for card in player.hand:
+                if card.victory_priority != priority:
+                    continue
+                if self._check_card_victory_condition(card, player):
                     return player.id
         return None
 
-    def _check_all_victory_conditions(self) -> Optional[str]:
-        players_by_priority = self._sort_players_by_victory_priority()
-
-        for player in players_by_priority:
-            if self._check_player_victory_condition(player):
-                return player.id
-
-        return None
-
-    def _sort_players_by_victory_priority(self) -> List[Player]:
-        players_with_priority = []
-        for player in self.game.players:
-            min_priority = float('inf')
-            for card in player.hand:
-                if card.victory_priority < min_priority:
-                    min_priority = card.victory_priority
-            players_with_priority.append((min_priority, player))
-
-        players_with_priority.sort(key=lambda x: x[0])
-        return [player for _, player in players_with_priority]
-
-    def _check_player_victory_condition(self, player: Player) -> bool:
-        for card in player.hand:
-            if self._check_card_victory_condition(card, player):
-                return True
-        return False
-
     def _check_card_victory_condition(self, card: Card, player: Player) -> bool:
+        """根据卡牌胜利条件文案，结合已算出的调和/监禁结果判定是否满足。"""
         condition = card.victory_condition
 
         if condition == "1 被监禁即可获胜":
             return self._is_player_imprisoned(player)
-        elif condition == "2 调和失败即可获胜":
-            return not self._check_harmony_victory()
-        elif condition == "3 不被监禁即可获胜":
+        if condition == "2 调和失败即可获胜":
+            return not self._harmony_reached
+        if condition == "3 不被监禁即可获胜":
             return not self._is_player_imprisoned(player)
-        elif condition == "3 犯人获胜即可获胜":
-            return self._check_criminal_victory(player)
-        elif condition == "4 调和成功即可获胜":
-            return self._check_harmony_victory()
-        elif condition == "5 没有任何人获胜即可获胜":
-            return True
+        if condition == "3 犯人获胜即可获胜":
+            return self._check_criminal_side_wins()
+        if condition == "4 调和成功即可获胜":
+            return self._harmony_reached
+        if condition == "5 没有任何人获胜即可获胜":
+            return True  # 已按优先级 1→5 检查，能到 5 表示无人 1→4 满足，即“无任何人胜利”
 
         return False
 
     def _is_player_imprisoned(self, player: Player) -> bool:
-        return False
+        """该玩家是否为判定 2 确定的被监禁者。"""
+        return self._imprisoned_player is not None and player.id == self._imprisoned_player.id
+
+    def _check_criminal_side_wins(self) -> bool:
+        """犯人方获胜：存在被监禁者且被监禁者手牌中没有犯人。"""
+        if self._imprisoned_player is None:
+            return False
+        for card in self._imprisoned_player.hand:
+            if card.name == CardType.CRIMINAL:
+                return False
+        return True
 
     def _get_player(self, player_id: str) -> Optional[Player]:
         for player in self.game.players:

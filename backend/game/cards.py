@@ -84,7 +84,7 @@ CARD_DATABASE = {
     },
     CardType.CRIMINAL: {
         "cost": 0,
-        "description": "此卡片无法被正面朝上或者反面朝下打出，当时可以被其他卡片的效果移动。",
+        "description": "此卡片无法被正面朝上或反面朝上打出，但可以被其他卡片的效果移动。",
         "harmony_value": 0,
         "victory_priority": 3,
         "victory_condition": "3 不被监禁即可获胜",
@@ -102,7 +102,7 @@ CARD_DATABASE = {
         "cost": 2,
         "description": "正面打出该卡时，其他玩家闭上眼睛，同时持有犯人卡的玩家需要举手示意。",
         "harmony_value": 2,
-        "victory_priority": 4,
+        "victory_priority": 3,
         "victory_condition": "3 不被监禁即可获胜",
         "count": 2
     }

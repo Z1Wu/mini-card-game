@@ -29,6 +29,23 @@ class GameManager:
         self.game.player_count = len(self.game.players)
         return True
 
+    def start_game(self) -> bool:
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"start_game 被调用: game exists={self.game is not None}, players={len(self.game.players) if self.game else 0}")
+        
+        if not self.game:
+            logger.warning("游戏不存在")
+            return False
+        if len(self.game.players) < 3:
+            logger.warning(f"玩家数量不足: {len(self.game.players)}")
+            return False
+        
+        result = self.deal_cards()
+        logger.info(f"deal_cards 返回: {result}")
+        return result
+
     def deal_cards(self) -> bool:
         if not self.game or self.game.state != GameState.WAITING:
             return False
