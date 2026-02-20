@@ -1,0 +1,14 @@
+---
+description: 禁止直接推 main/master，通过 PR 且 CI 全绿后再合并与发版
+globs: 
+alwaysApply: true
+---
+
+# 分支与发布流程
+
+- **禁止**将功能或修复**直接推送到 `main` / `master` 分支**。所有改动必须通过 **Pull Request (PR)** 合入。
+- 在 PR 中：
+  - 必须确保 **GitHub Actions CI 全部通过**（后端单元测试、前端 lint、前端 build）。
+  - 若 CI 失败，在 PR 内修复并推送，直到所有测试通过后再合并。
+- **合并到 `main`/`master`** 以及 **打 tag 发版**（如 `v*`）只允许在 PR 已合并、且当前 `main`/`master` 的 CI 为绿色后进行。
+- 协助实现功能时：在**功能分支**上提交，提示用户「请开 PR 并等 CI 通过后再合并」；不代为执行 `git push origin main` 或直接打 tag 推送到 main。
