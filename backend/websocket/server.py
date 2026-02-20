@@ -29,14 +29,16 @@ class GameWebSocketServer:
 
     async def register_client(self, websocket: websockets.WebSocketServerProtocol):
         self.clients.add(websocket)
-        logger.info("Client connected. Total clients: %s", len(self.clients))
+        connected_users = list(self.player_connections.keys())
+        logger.info("Client connected. Total clients: %s, identified users: %s", len(self.clients), connected_users)
 
     async def unregister_client(self, websocket: websockets.WebSocketServerProtocol):
         self.clients.discard(websocket)
         player_id = self._get_player_id_by_websocket(websocket)
         if player_id:
             del self.player_connections[player_id]
-            logger.info("Player %s disconnected. Total clients: %s", player_id, len(self.clients))
+        remaining = list(self.player_connections.keys())
+        logger.info("Player %s disconnected. Total clients: %s, identified users: %s", player_id or "(unknown)", len(self.clients), remaining)
 
     def _get_player_id_by_websocket(self, websocket: websockets.WebSocketServerProtocol) -> str:
         for player_id, ws in self.player_connections.items():

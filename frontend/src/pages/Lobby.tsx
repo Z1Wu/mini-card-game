@@ -31,8 +31,15 @@ export const Lobby: React.FC = () => {
       console.log('Received game state:', message.game_state);
       if (message.game_state) {
         setGameState(message.game_state);
-        // 如果游戏状态不是 WAITING，说明游戏已经开始，导航到游戏页面
-        if (message.game_state.state !== 'WAITING') {
+        // 用 game_state.players 同步大厅玩家列表（避免漏收 player_list 广播）
+        const list = message.game_state.players ?? [];
+        setPlayers(list.map((p: { id: string; name: string; hand?: unknown[]; current_hand_count?: number }) => ({
+          id: p.id,
+          name: p.name,
+          hand_count: p.current_hand_count ?? (Array.isArray(p.hand) ? p.hand.length : 0),
+        })));
+        // 如果游戏状态不是 WAITING，说明游戏已经开始，导航到游戏页面（后端序列化为小写 "waiting"）
+        if (message.game_state.state !== 'waiting' && message.game_state.state !== 'WAITING') {
           navigate('/game');
         }
       }
@@ -57,11 +64,9 @@ export const Lobby: React.FC = () => {
     wsService.on('reconnect_success', handleReconnectSuccess);
     wsService.on('error', handleError);
 
-    // 检查连接状态
-    if (!wsService.isConnected()) {
-      console.warn('WebSocket not connected in Lobby');
-    } else {
-      console.log('WebSocket connected in Lobby');
+    // 进入大厅时主动拉取当前状态，避免漏收 login 后发出的 player_list 广播
+    if (wsService.isConnected() && playerId) {
+      send({ type: 'get_game_state', player_id: playerId });
     }
 
     return () => {
@@ -71,7 +76,7 @@ export const Lobby: React.FC = () => {
       wsService.off('reconnect_success');
       wsService.off('error');
     };
-  }, [setGameState, navigate]);
+  }, [setGameState, navigate, playerId, send]);
 
   const handleStartGame = () => {
     if (players.length < MIN_PLAYERS) {

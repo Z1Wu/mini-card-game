@@ -94,19 +94,43 @@ docker compose -f docker-compose.deploy.yml restart
 
 ## 五、仅用 Docker 命令（不用 compose）
 
-若不想用 compose，可手动构建并运行：
+与 docker-compose 一致，建议挂载登录用户配置 `deploy-data/users.json`，便于修改账号密码而不重建镜像。
+
+### 1. 准备挂载文件（可选）
+
+```bash
+mkdir -p deploy-data
+cp deploy-data/users.json.example deploy-data/users.json
+# 编辑 deploy-data/users.json，修改各账号密码
+```
+
+### 2. 构建并运行
+
+**挂载 users.json（推荐）**：
+
+```bash
+docker build -f Dockerfile.deploy -t card-game:latest .
+docker run -d -p 80:80 --restart unless-stopped --name card-game \
+  -v $(pwd)/deploy-data/users.json:/app/backend/auth/users.json:ro \
+  card-game:latest
+```
+
+**不挂载**（使用镜像内默认 `backend/auth/users.json`，生产前请改默认密码或改用挂载）：
 
 ```bash
 docker build -f Dockerfile.deploy -t card-game:latest .
 docker run -d -p 80:80 --restart unless-stopped --name card-game card-game:latest
 ```
 
-修改登录用户需进入容器编辑或挂载文件：
+### 3. 使用 Docker Hub 镜像
+
+若使用 CI 推送的镜像（如 `z1wu97/mini-card-game:v1.0.3`），同样可挂载 volume（挂载前需准备 `deploy-data/users.json`，格式见上文「二、部署前注意事项 → 登录用户配置」；若已克隆仓库可 `cp deploy-data/users.json.example deploy-data/users.json` 后修改）：
 
 ```bash
+docker pull z1wu97/mini-card-game:v1.0.3
 docker run -d -p 80:80 --restart unless-stopped --name card-game \
   -v $(pwd)/deploy-data/users.json:/app/backend/auth/users.json:ro \
-  card-game:latest
+  z1wu97/mini-card-game:v1.0.3
 ```
 
 ## 六、故障排查
