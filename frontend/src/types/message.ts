@@ -10,6 +10,7 @@ export type MessageType =
   | 'error'
   | 'player_list'
   | 'game_state'
+  | 'get_game_state'
   | 'start_game'
   | 'play_card'
   | 'skill_choice_required'
@@ -106,6 +107,11 @@ export interface PlayerListMessage extends BaseMessage {
 export interface GameStateMessage extends BaseMessage {
   type: 'game_state';
   game_state: any;
+}
+
+export interface GetGameStateMessage extends BaseMessage {
+  type: 'get_game_state';
+  player_id: string;
 }
 
 export interface StartGameMessage extends BaseMessage {
@@ -281,6 +287,7 @@ export type WebSocketMessage =
   | GameStatusMessage
   | PlayerListMessage
   | GameStateMessage
+  | GetGameStateMessage
   | StartGameMessage
   | PlayCardMessage
   | SkillChoiceRequiredMessage
