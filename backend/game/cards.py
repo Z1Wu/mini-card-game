@@ -72,7 +72,7 @@ CARD_DATABASE = {
         "harmony_value": 0,
         "victory_priority": 3,
         "victory_condition": "3 犯人获胜即可获胜",
-        "count": 1
+        "count": 2
     },
     CardType.INFECTED: {
         "cost": 0,

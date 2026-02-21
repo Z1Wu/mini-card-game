@@ -50,8 +50,10 @@ class GameManager:
         if not self.game or self.game.state != GameState.WAITING:
             return False
 
+        # 与 overview 规则一致：3–4 人每人 6 张，5 人 5 张，6 人 4 张
+        n = len(self.game.players)
         hand_count_map = {3: 6, 4: 6, 5: 5, 6: 4}
-        hand_count = hand_count_map.get(self.game.player_count, 6)
+        hand_count = hand_count_map.get(n, 6)
 
         from .cards import create_card_deck
         deck = create_card_deck()

@@ -55,6 +55,22 @@ def test_deal_cards(game_manager):
         assert len(player.hand) == 6
         assert player.current_hand_count == 6
 
+
+@pytest.mark.unit
+def test_deal_cards_hand_count_by_players():
+    """4/5/6 人时每人手牌数：4 人 6 张，5 人 5 张，6 人 4 张（与 overview 规则一致）"""
+    manager = GameManager()
+    manager.create_game("test")
+    expected = {4: 6, 5: 5, 6: 4}
+    for n, want in expected.items():
+        manager.create_game(f"test_{n}")
+        for i in range(n):
+            manager.add_player(f"p{i}_{n}", f"玩家{i+1}")
+        assert manager.deal_cards() is True
+        for p in manager.game.players:
+            assert len(p.hand) == want, f"n={n} expected {want} cards per player"
+            assert p.current_hand_count == want
+
 @pytest.mark.unit
 def test_next_turn(game_manager):
     for i in range(3):
