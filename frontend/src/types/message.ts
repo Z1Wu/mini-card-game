@@ -132,9 +132,19 @@ export interface PlayCardMessage extends BaseMessage {
   harmony_card_id?: string;
 }
 
+export interface SettlementSummary {
+  harmony_total: number;
+  required_harmony_value: number;
+  harmony_reached: boolean;
+  /** 质疑区数值总和最大且>0 的玩家 id 列表（多人并列则都视为被监禁） */
+  imprisoned_player_ids: string[];
+  player_doubt_totals: Record<string, number>;
+}
+
 export interface GameOverMessage extends BaseMessage {
   type: 'game_over';
   winner_id: string;
+  settlement?: SettlementSummary;
 }
 
 /** 大小姐特技：服务端要求客户端选「从目标拿哪张、自己给哪张」。target_hand 仅含 id，不暴露牌面。 */

@@ -42,7 +42,6 @@ def test_card_properties():
     assert len(class_rep_cards) == 2
 
     card = class_rep_cards[0]
-    assert card.cost == 2
     assert card.harmony_value == 2
     assert card.victory_priority == 4
 
@@ -50,8 +49,7 @@ def test_card_properties():
     assert len(alien_cards) == 1
 
     card = alien_cards[0]
-    assert card.cost == -1
-    assert card.harmony_value == 1
+    assert card.harmony_value == -1
     assert card.victory_priority == 1
 
 @pytest.mark.unit

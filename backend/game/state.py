@@ -109,3 +109,23 @@ class GameManager:
             if len(player.hand) > 1:
                 return False
         return True
+
+    def reset_game(self) -> bool:
+        """清除所有对局状态，保留当前玩家列表，回到等待开始状态。"""
+        import logging
+        logger = logging.getLogger(__name__)
+        if not self.game:
+            logger.warning("reset_game: 游戏不存在")
+            return False
+        self.game.harmony_area = []
+        for player in self.game.players:
+            player.hand = []
+            player.field_cards = []
+            player.doubt_cards = []
+            player.current_hand_count = 0
+        self.game.state = GameState.WAITING
+        self.game.current_player_index = 0
+        self.game.turn_count = 0
+        self.game.winner = None
+        logger.info("reset_game: 已清除状态，回到等待开始")
+        return True

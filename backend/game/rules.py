@@ -48,8 +48,23 @@ class GameRules:
             logger.warning("犯人牌不可打出，仅可被其他卡牌效果移动")
             return False
 
-        logger.info(f"卡牌信息: name={card.name}, cost={card.cost}, harmony_value={card.harmony_value}")
+        logger.info(f"卡牌信息: name={card.name}, harmony_value={card.harmony_value}")
 
+        # 质疑/调和：仅移动牌并推进回合，不执行任何牌面特效（不进入任何特技校验与 _execute_card_effect）
+        if usage_type == CardUsageType.HARMONY:
+            logger.info("执行调和出卡（不发动特效）")
+            return self._play_harmony_card(player, card)
+        if usage_type == CardUsageType.DOUBT:
+            logger.info("执行质疑出卡（不发动特效）")
+            return self._play_doubt_card(player, card, target_player_id)
+
+        # 以下仅特技 (SKILL) 路径：校验目标参数并发动牌面效果
+        # 手牌剩一张的玩家处于等待结算阶段，不能被选为任何特技目标
+        if usage_type == CardUsageType.SKILL and target_player_id:
+            target = self._get_player(target_player_id)
+            if target and len(target.hand) <= 1:
+                logger.warning("目标玩家手牌已剩一张，处于等待结算阶段，不可被特技选中")
+                return False
         if card.name == CardType.HEALTH_COMMITTEE and usage_type == CardUsageType.SKILL:
             if not target_player_id or not target_card_id:
                 logger.warning("保健委员特技需要指定目标玩家及目标场牌")
@@ -76,15 +91,9 @@ class GameRules:
         if usage_type == CardUsageType.SKILL:
             logger.info("执行特技出卡")
             return self._play_skill_card(player, card, target_player_id, target_card_id, hand_card_id, harmony_card_id)
-        elif usage_type == CardUsageType.HARMONY:
-            logger.info("执行调和出卡")
-            return self._play_harmony_card(player, card)
-        elif usage_type == CardUsageType.DOUBT:
-            logger.info("执行质疑出卡")
-            return self._play_doubt_card(player, card, target_player_id)
-        else:
-            logger.error(f"未知的出卡方式: usage_type={usage_type}")
-            return False
+
+        logger.error(f"未知的出卡方式: usage_type={usage_type}")
+        return False
 
     def _play_skill_card(
         self,
@@ -370,6 +379,9 @@ class GameRules:
         if self._find_card_in_hand(target_player, take_card_id) is None:
             return False
         if self._find_card_in_hand(player, give_card_id) is None:
+            return False
+        if give_card_id == card_id:
+            logger.warning("大小姐不能把「正在打出的这张牌」选为要还的牌")
             return False
 
         player.hand = [c for c in player.hand if c.id != card.id]

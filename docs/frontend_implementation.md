@@ -236,7 +236,7 @@ export const Card = ({ card, onPlay, isPlayable, isSelected, onClick }: CardProp
     >
       <div className="card-header">
         <span className="card-name">{card.name}</span>
-        <span className="card-cost">{card.cost}</span>
+        <span className="card-harmony">{card.harmony_value}</span>
       </div>
       <div className="card-body">
         <p className="card-description">{card.description}</p>
@@ -313,7 +313,7 @@ export const Card = ({ card, onPlay, isPlayable, isSelected, onClick }: CardProp
 - **卡牌尺寸**: 移动端 80x120px，桌面端 100x150px
 - **卡牌样式**: 圆角矩形，带阴影
 - **卡牌背面**: 统一的卡背图案
-- **卡牌正面**: 包含卡牌名称、描述、费用、调和值
+- **卡牌正面**: 包含卡牌名称、描述、调和值
 
 ## 5. 移动端适配
 

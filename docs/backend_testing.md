@@ -384,7 +384,6 @@ def test_card_properties():
     assert len(class_rep_cards) == 2
 
     card = class_rep_cards[0]
-    assert card.cost == 2
     assert card.harmony_value == 2
     assert card.victory_priority == 4
 
@@ -393,8 +392,7 @@ def test_card_properties():
     assert len(alien_cards) == 1
 
     card = alien_cards[0]
-    assert card.cost == -1
-    assert card.harmony_value == 1
+    assert card.harmony_value == -1
     assert card.victory_priority == 1
 
 def test_card_database():
@@ -453,7 +451,6 @@ def test_check_harmony_victory(victory_checker):
         card = Card(
             id=f"card_{i}",
             name=CardType.CLASS_REP,
-            cost=2,
             description="测试卡牌",
             harmony_value=2,
             victory_priority=4,
