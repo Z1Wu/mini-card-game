@@ -13,7 +13,7 @@ class GameManager:
     def add_player(self, player_id: str, player_name: str) -> bool:
         if not self.game:
             return False
-        if len(self.game.players) >= 6:
+        if len(self.game.players) >= 5:
             return False
 
         player = Player(id=player_id, name=player_name)
@@ -50,13 +50,15 @@ class GameManager:
         if not self.game or self.game.state != GameState.WAITING:
             return False
 
-        # 与 overview 规则一致：3–4 人每人 6 张，5 人 5 张，6 人 4 张
+        # 与 overview 一致：仅支持 3–5 人；3–4 人每人 6 张，5 人 5 张
         n = len(self.game.players)
-        hand_count_map = {3: 6, 4: 6, 5: 5, 6: 4}
-        hand_count = hand_count_map.get(n, 6)
+        hand_count_map = {3: 6, 4: 6, 5: 5}
+        hand_count = hand_count_map.get(n)
+        if hand_count is None:
+            return False
 
         from .cards import create_card_deck
-        deck = create_card_deck()
+        deck = create_card_deck(n)
         random.shuffle(deck)
 
         for player in self.game.players:
@@ -77,7 +79,8 @@ class GameManager:
                     return
 
     def _set_required_harmony_value(self):
-        self.game.required_harmony_value = self.game.player_count + 1
+        # 与 overview 一致：3/4/5 人游玩时调和目标值均为 6 点
+        self.game.required_harmony_value = 6
 
     def get_current_player(self) -> Optional[Player]:
         if not self.game:
@@ -88,12 +91,17 @@ class GameManager:
         if not self.game or self.game.state != GameState.PLAYING:
             return False
 
-        self.game.current_player_index = (self.game.current_player_index + 1) % self.game.player_count
-        self.game.turn_count += 1
-
-        if self._check_game_end_condition():
-            self.game.state = GameState.GAME_OVER
-
+        n = self.game.player_count
+        # 手牌已剩 1 张的玩家不能再出牌，自动跳过直到找到可出牌者或全员都只剩 1 张（则进入胜利判定）
+        while True:
+            self.game.current_player_index = (self.game.current_player_index + 1) % n
+            self.game.turn_count += 1
+            if self._check_game_end_condition():
+                self.game.state = GameState.GAME_OVER
+                return True
+            current = self.game.players[self.game.current_player_index]
+            if len(current.hand) > 1:
+                break
         return True
 
     def _check_game_end_condition(self) -> bool:

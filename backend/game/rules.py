@@ -35,6 +35,10 @@ class GameRules:
             logger.warning(f"不是当前玩家: player_id={player_id}, current_player_id={current_player.id}")
             return False
 
+        if len(current_player.hand) <= 1:
+            logger.warning("手牌已剩一张，本回合不能出牌")
+            return False
+
         card = self._find_card_in_hand(player, card_id)
         if not card:
             logger.warning(f"卡牌不在手牌中: player_id={player_id}, card_id={card_id}")

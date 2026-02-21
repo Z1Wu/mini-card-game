@@ -151,7 +151,7 @@ python test_game_flow.py
     "current_player_index": 0,
     "turn_count": 1,
     "harmony_area_count": 1,
-    "required_harmony_value": 4
+    "required_harmony_value": 6
   }
 }
 ```

@@ -365,7 +365,7 @@ class GameWebSocketServer:
         )
         is_honor_student = card_for_check and card_for_check.name == CardType.HONOR_STUDENT
         if success:
-            if is_honor_student:
+            if is_honor_student and usage_type == CardUsageType.SKILL:
                 g = self.game_manager.game
                 self.pending_honor_student_responders = {}
                 for p in g.players:
@@ -398,13 +398,13 @@ class GameWebSocketServer:
                         "target_player_name": target_player.name,
                         "hand": [c.model_dump() for c in target_player.hand],
                     })
-            if is_library and websocket:
+            if is_library and usage_type == CardUsageType.SKILL and websocket:
                 g = self.game_manager.game
                 await self.send_to_client(websocket, {
                     "type": "view_harmony",
                     "harmony_area": [c.model_dump() for c in g.harmony_area],
                 })
-            if is_news_club:
+            if is_news_club and usage_type == CardUsageType.SKILL:
                 g = self.game_manager.game
                 n = len(g.players)
                 order = [g.players[(g.current_player_index + i) % n].id for i in range(n)]
@@ -427,7 +427,9 @@ class GameWebSocketServer:
                     await self._broadcast_game_over(winner)
         else:
             fail_message = "出牌失败"
-            if card_for_check and card_for_check.name == CardType.CRIMINAL:
+            if current_for_check and len(current_for_check.hand) <= 1:
+                fail_message = "手牌已剩一张，本回合不能出牌，请等待其他玩家"
+            elif card_for_check and card_for_check.name == CardType.CRIMINAL:
                 fail_message = "犯人牌不可打出，仅可被其他卡牌效果移动"
             elif card_for_check and card_for_check.name == CardType.HOME_CLUB and game and (not game.harmony_area or len(game.harmony_area) == 0):
                 fail_message = "调和区为空时无法使用归宅部特技"
@@ -556,6 +558,11 @@ class GameWebSocketServer:
         if idx >= len(order) or order[idx] != player_id:
             await self.send_to_client(websocket, {"type": "error", "message": "当前不是你的选牌回合"})
             return
+        # 不能使用上家递过来的牌进行交换
+        card_received = self.pending_news_club.get("card_received_by_next")
+        if idx >= 1 and card_received and card_id == card_received:
+            await self.send_to_client(websocket, {"type": "error", "message": "不能使用上家递过来的牌进行交换"})
+            return
         from_id = order[idx]
         to_id = order[(idx + 1) % len(order)]
         from_p = next((p for p in self.game_manager.game.players if p.id == from_id), None)
@@ -571,6 +578,8 @@ class GameWebSocketServer:
             return
         if chosen_card_dump:
             await self.send_to_client(websocket, {"type": "news_club_you_chose", "card": chosen_card_dump})
+        # 记录本轮递给下家的牌，下家选牌时不能选这张
+        self.pending_news_club["card_received_by_next"] = card_id
         self.pending_news_club["index"] = idx + 1
         if idx + 1 >= len(order):
             self.game_rules.game_manager.next_turn()
@@ -597,6 +606,7 @@ class GameWebSocketServer:
                     "type": "news_club_choice_required",
                     "your_hand": [c.model_dump() for c in next_player.hand],
                     "next_player_name": next_next_name,
+                    "exclude_card_id": self.pending_news_club.get("card_received_by_next"),
                 })
             await self._broadcast_game_state()
 
