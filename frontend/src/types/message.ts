@@ -12,6 +12,7 @@ export type MessageType =
   | 'game_state'
   | 'get_game_state'
   | 'start_game'
+  | 'reset_game'
   | 'play_card'
   | 'skill_choice_required'
   | 'skill_choice'
@@ -117,6 +118,10 @@ export interface GetGameStateMessage extends BaseMessage {
 export interface StartGameMessage extends BaseMessage {
   type: 'start_game';
   player_id: string;
+}
+
+export interface ResetGameMessage extends BaseMessage {
+  type: 'reset_game';
 }
 
 export interface PlayCardMessage extends BaseMessage {
@@ -300,6 +305,7 @@ export type WebSocketMessage =
   | GameStateMessage
   | GetGameStateMessage
   | StartGameMessage
+  | ResetGameMessage
   | PlayCardMessage
   | SkillChoiceRequiredMessage
   | SkillChoiceMessage
