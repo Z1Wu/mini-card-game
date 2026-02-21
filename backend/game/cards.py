@@ -1,6 +1,7 @@
-from typing import List
+from typing import Dict, List
 from .models import Card, CardType
 
+# 各卡牌类型的基础属性（与人数无关）
 CARD_DATABASE = {
     CardType.CLASS_REP: {
         "cost": 2,
@@ -16,7 +17,7 @@ CARD_DATABASE = {
         "harmony_value": 1,
         "victory_priority": 4,
         "victory_condition": "4 调和成功即可获胜",
-        "count": 2
+        "count": 2  # 3/4 人 2 张，5 人 3 张，见 DECK_COUNTS_BY_PLAYERS
     },
     CardType.ALIEN: {
         "cost": -1,
@@ -72,7 +73,7 @@ CARD_DATABASE = {
         "harmony_value": 0,
         "victory_priority": 3,
         "victory_condition": "3 犯人获胜即可获胜",
-        "count": 2
+        "count": 1  # 默认 4/5 人；3 人时为 0，见 DECK_COUNTS_BY_PLAYERS
     },
     CardType.INFECTED: {
         "cost": 0,
@@ -108,10 +109,48 @@ CARD_DATABASE = {
     }
 }
 
-def create_card_deck() -> List[Card]:
-    deck = []
-    for i, (card_type, card_data) in enumerate(CARD_DATABASE.items()):
-        for j in range(card_data["count"]):
+# 与 overview 附录一致：3/4/5 人时各类型张数（仅列出与默认不同的项）
+DECK_COUNTS_BY_PLAYERS: Dict[int, Dict[CardType, int]] = {
+    3: {
+        CardType.ACCOMPLICE: 0,
+        CardType.HONOR_STUDENT: 1,
+        CardType.DISCIPLINE_COMMITTEE: 1,
+        CardType.HEALTH_COMMITTEE: 2,
+        CardType.LIBRARY_COMMITTEE: 2,
+        CardType.RICH_GIRL: 2,
+        CardType.NEWS_CLUB: 2,
+        CardType.HOME_CLUB: 2,
+    },
+    4: {
+        CardType.ACCOMPLICE: 1,
+        CardType.HONOR_STUDENT: 2,
+        CardType.DISCIPLINE_COMMITTEE: 2,
+        CardType.HEALTH_COMMITTEE: 2,
+        CardType.LIBRARY_COMMITTEE: 2,
+        CardType.RICH_GIRL: 3,
+        CardType.NEWS_CLUB: 3,
+        CardType.HOME_CLUB: 3,
+    },
+    5: {
+        CardType.ACCOMPLICE: 1,
+        CardType.HONOR_STUDENT: 2,
+        CardType.DISCIPLINE_COMMITTEE: 2,
+        CardType.HEALTH_COMMITTEE: 2,
+        CardType.LIBRARY_COMMITTEE: 3,
+        CardType.RICH_GIRL: 3,
+        CardType.NEWS_CLUB: 3,
+        CardType.HOME_CLUB: 3,
+    },
+}
+
+
+def create_card_deck(player_count: int = 5) -> List[Card]:
+    """按玩家人数生成牌组，与 overview 附录 三人/四人/五人卡牌类型一致。仅支持 3、4、5 人。"""
+    counts = DECK_COUNTS_BY_PLAYERS.get(player_count, DECK_COUNTS_BY_PLAYERS[5])
+    deck: List[Card] = []
+    for card_type, card_data in CARD_DATABASE.items():
+        n = counts.get(card_type, card_data["count"])
+        for j in range(n):
             card = Card(
                 id=f"{card_type.value}_{j}",
                 name=card_type,

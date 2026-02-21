@@ -262,11 +262,12 @@ export interface ViewHarmonyMessage extends BaseMessage {
   harmony_area: Card[];
 }
 
-/** 新闻部特技：服务端要求选择一张手牌递给下家 */
+/** 新闻部特技：服务端要求选择一张手牌递给下家；exclude_card_id 为上家递来的牌，不可选 */
 export interface NewsClubChoiceRequiredMessage extends BaseMessage {
   type: 'news_club_choice_required';
   your_hand: Card[];
   next_player_name: string;
+  exclude_card_id?: string;
 }
 
 export interface NewsClubChoiceMessage extends BaseMessage {

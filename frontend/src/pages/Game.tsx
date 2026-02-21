@@ -50,8 +50,8 @@ export const Game: React.FC = () => {
   const [homeClubHarmonyId, setHomeClubHarmonyId] = useState<string | null>(null);
   /** 图书委员：查看调和区结果 */
   const [viewHarmonyResult, setViewHarmonyResult] = useState<CardType[] | null>(null);
-  /** 新闻部：选择一张手牌递给下家 */
-  const [pendingNewsClubChoice, setPendingNewsClubChoice] = useState<{ your_hand: CardType[]; next_player_name: string } | null>(null);
+  /** 新闻部：选择一张手牌递给下家；exclude_card_id 为上家递来的牌不可选 */
+  const [pendingNewsClubChoice, setPendingNewsClubChoice] = useState<{ your_hand: CardType[]; next_player_name: string; exclude_card_id?: string } | null>(null);
   const [newsClubSelectedCardId, setNewsClubSelectedCardId] = useState<string | null>(null);
   /** 新闻部进行中：当前选牌玩家 id，用于提示 */
   const [newsClubCurrentChooserId, setNewsClubCurrentChooserId] = useState<string | null>(null);
@@ -153,6 +153,7 @@ export const Game: React.FC = () => {
       setPendingNewsClubChoice({
         your_hand: message.your_hand,
         next_player_name: message.next_player_name,
+        exclude_card_id: message.exclude_card_id,
       });
       setNewsClubSelectedCardId(null);
     };
@@ -692,6 +693,7 @@ export const Game: React.FC = () => {
                 >
                   <div className="text-white font-medium mb-2">{player.name}</div>
                   <div className="text-slate-400 text-sm mb-2">手牌: {player.current_hand_count}</div>
+                  <div className="text-slate-400 text-sm mb-2">质疑: {(player.doubt_cards?.length ?? 0)}</div>
                   {player.field_cards && player.field_cards.length > 0 && (
                     <div className="mt-2">
                       <div className="text-slate-500 text-xs mb-1">已打出</div>
@@ -785,17 +787,19 @@ export const Game: React.FC = () => {
 
         {pendingNewsClubChoice && (
           <div className="bg-sky-900/30 border border-sky-700 rounded-xl p-4">
-            <p className="text-sky-200 font-medium mb-2">新闻部：选择一张手牌递给 {pendingNewsClubChoice.next_player_name}</p>
+            <p className="text-sky-200 font-medium mb-2">新闻部：选择一张手牌递给 {pendingNewsClubChoice.next_player_name}（上家递来的牌不可选）</p>
             <div className="flex flex-wrap gap-2 mb-3">
-              {pendingNewsClubChoice.your_hand.map((c) => (
-                <div
-                  key={c.id}
-                  className={`w-24 cursor-pointer rounded-lg border-2 p-1 ${newsClubSelectedCardId === c.id ? 'border-sky-400 bg-sky-900/50' : 'border-slate-600 hover:border-sky-500'}`}
-                  onClick={() => setNewsClubSelectedCardId(c.id)}
-                >
-                  <Card card={c} showAsFaceDown={false} />
-                </div>
-              ))}
+              {pendingNewsClubChoice.your_hand
+                .filter((c) => c.id !== pendingNewsClubChoice.exclude_card_id)
+                .map((c) => (
+                  <div
+                    key={c.id}
+                    className={`w-24 cursor-pointer rounded-lg border-2 p-1 ${newsClubSelectedCardId === c.id ? 'border-sky-400 bg-sky-900/50' : 'border-slate-600 hover:border-sky-500'}`}
+                    onClick={() => setNewsClubSelectedCardId(c.id)}
+                  >
+                    <Card card={c} showAsFaceDown={false} />
+                  </div>
+                ))}
             </div>
             <Button variant="primary" size="sm" onClick={handleConfirmNewsClubChoice} disabled={!newsClubSelectedCardId}>确认递给下家</Button>
           </div>
@@ -808,7 +812,10 @@ export const Game: React.FC = () => {
                 我的卡牌
                 {isCurrentPlayer && <span className="ml-2 text-primary-400">(当前回合)</span>}
               </h2>
-              <span className="text-slate-400">手牌: {currentPlayer.hand.length}</span>
+              <div className="text-slate-400 flex gap-4">
+                <span>手牌: {currentPlayer.hand.length}</span>
+                <span>质疑: {currentPlayer.doubt_cards?.length ?? 0}</span>
+              </div>
             </div>
             {newsClubMyChosenCard && (
               <div className="mb-4">
@@ -835,7 +842,7 @@ export const Game: React.FC = () => {
                 <div key={card.id} className="w-32">
                   <Card
                     card={card}
-                    isPlayable={isCurrentPlayer && card.name !== CardTypeEnum.CRIMINAL}
+                    isPlayable={isCurrentPlayer && card.name !== CardTypeEnum.CRIMINAL && currentPlayer.hand.length > 1}
                     isSelected={selectedCard?.id === card.id}
                     onClick={() => setSelectedCard(card)}
                     showActions={selectedCard?.id === card.id && isCurrentPlayer && card.name !== CardTypeEnum.CRIMINAL}

@@ -107,7 +107,7 @@ export const Lobby: React.FC = () => {
           <h1 className="text-3xl font-bold text-white">游戏大厅</h1>
           <div className="text-slate-400">
             {playerName && <span className="mr-4">{playerName}</span>}
-            <span>{players.length} / 6</span>
+            <span>{players.length} / 5</span>
           </div>
         </div>
 

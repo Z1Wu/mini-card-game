@@ -4,7 +4,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
 from backend.game.state import GameManager
-from backend.game.cards import create_card_deck, CARD_DATABASE
+from backend.game.cards import create_card_deck, CARD_DATABASE, DECK_COUNTS_BY_PLAYERS
 from backend.game.models import CardType, GameState, CardUsageType
 
 @pytest.mark.unit
@@ -80,19 +80,21 @@ def test_cards():
     print("=== 测试卡牌系统 ===\n")
 
     print("1. 测试创建卡牌库")
-    deck = create_card_deck()
-    total_cards = sum(card_data["count"] for card_data in CARD_DATABASE.values())
+    deck = create_card_deck(5)
+    total_cards = 25  # 5 人局牌组
     assert len(deck) == total_cards
     print(f"✓ 卡牌库创建成功，共 {len(deck)} 张卡牌")
 
-    print("\n2. 测试卡牌数量")
+    print("\n2. 测试卡牌数量（5 人局）")
     card_counts = {}
     for card in deck:
         card_counts[card.name] = card_counts.get(card.name, 0) + 1
 
+    five_counts = DECK_COUNTS_BY_PLAYERS[5]
     for card_type, card_data in CARD_DATABASE.items():
-        assert card_counts.get(card_type, 0) == card_data["count"]
-        print(f"✓ {card_type.value}: {card_data['count']} 张")
+        expected = five_counts.get(card_type, card_data["count"])
+        assert card_counts.get(card_type, 0) == expected
+        print(f"✓ {card_type.value}: {expected} 张")
 
     print("\n3. 测试卡牌属性")
     class_rep_cards = [card for card in deck if card.name == CardType.CLASS_REP]
@@ -223,6 +225,32 @@ def test_game_rules():
         print("✓ 当前玩家手牌无可直接打出的特技牌，跳过测试")
 
     print("\n=== 游戏规则测试通过 ===\n")
+
+
+@pytest.mark.unit
+def test_play_card_fails_when_current_player_has_one_card():
+    """手牌剩一张时不能出牌（手牌不会为 0）。"""
+    from backend.game.rules import GameRules
+
+    manager = GameManager()
+    manager.create_game("test_one_card_rule")
+    for i in range(3):
+        manager.add_player(f"player_{i+1}", f"玩家{i+1}")
+    manager.deal_cards()
+
+    rules = GameRules(manager)
+    current = manager.get_current_player()
+    assert current is not None and len(current.hand) >= 2
+
+    # 把手牌改成只剩 1 张（手牌不可能为 0，只测 1 张）；用非犯人牌避免因犯人牌规则失败
+    only_card = next((c for c in current.hand if c.name != CardType.CRIMINAL), current.hand[0])
+    current.hand = [only_card]
+    current.current_hand_count = 1
+
+    result = rules.play_card(current.id, only_card.id, CardUsageType.HARMONY)
+    assert result is False  # 手牌剩一张不能出牌
+    assert len(current.hand) == 1
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s"])
