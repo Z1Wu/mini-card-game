@@ -32,7 +32,6 @@ export enum CardUsageType {
 export interface Card {
   id: string;
   name: CardType;
-  cost: number;
   description: string;
   harmony_value: number;
   victory_priority: number;

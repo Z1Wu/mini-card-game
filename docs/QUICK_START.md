@@ -117,6 +117,7 @@ npm run dev
 
 ## 🔗 相关文档
 
+- [开发协作流程与常用 Prompt](./DEVELOPMENT_WORKFLOW.md)
 - [前端实现方案](./frontend_implementation.md)
 - [前端实现总结](./frontend_summary.md)
 - [后端实现文档](./backend_implementation.md)

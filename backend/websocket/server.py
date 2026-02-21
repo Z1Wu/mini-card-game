@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 import websockets
-from typing import Set, Dict
+from typing import Set, Dict, Optional
 from game.state import GameManager
 from game.rules import GameRules
 from game.victory import VictoryChecker
@@ -72,6 +72,8 @@ class GameWebSocketServer:
                 await self._handle_join_game(websocket, data)
             elif message_type == "start_game":
                 await self._handle_start_game(data)
+            elif message_type == "reset_game":
+                await self._handle_reset_game(websocket)
             elif message_type == "play_card":
                 await self._handle_play_card(websocket, data)
             elif message_type == "skill_choice":
@@ -267,6 +269,23 @@ class GameWebSocketServer:
                 "message": "Failed to start game"
             })
 
+    async def _handle_reset_game(self, websocket: websockets.WebSocketServerProtocol):
+        """清除所有对局状态并回到等待开始，广播最新状态。"""
+        self.pending_rich_girl = None
+        self.pending_news_club = None
+        self.pending_class_rep = None
+        self.pending_honor_student_responders = None
+        self.honor_student_actor_id = None
+        self.honor_student_responses.clear()
+        success = self.game_manager.reset_game()
+        if success:
+            await self._broadcast_game_state()
+        else:
+            await self.send_to_client(websocket, {
+                "type": "error",
+                "message": "重置游戏失败"
+            })
+
     def _find_card_in_hand(self, player, card_id: str):
         for c in player.hand:
             if c.id == card_id:
@@ -307,6 +326,9 @@ class GameWebSocketServer:
                     if not target_player or target_player.id == player_id:
                         await self.send_to_client(websocket, {"type": "error", "message": "目标玩家无效"})
                         return
+                    if len(target_player.hand) <= 1:
+                        await self.send_to_client(websocket, {"type": "error", "message": "该玩家手牌已剩一张，处于等待结算阶段，不可选为目标"})
+                        return
                     if not current.hand or not target_player.hand:
                         await self.send_to_client(websocket, {"type": "error", "message": "双方均需有手牌"})
                         return
@@ -326,6 +348,9 @@ class GameWebSocketServer:
                     target_player = next((p for p in game.players if p.id == target_player_id), None)
                     if not target_player:
                         await self.send_to_client(websocket, {"type": "error", "message": "目标玩家不存在"})
+                        return
+                    if len(target_player.hand) <= 1:
+                        await self.send_to_client(websocket, {"type": "error", "message": "该玩家手牌已剩一张，处于等待结算阶段，不可选为目标"})
                         return
                     if not target_player.hand:
                         await self.send_to_client(websocket, {"type": "error", "message": "目标玩家无手牌"})
@@ -365,6 +390,7 @@ class GameWebSocketServer:
         )
         is_honor_student = card_for_check and card_for_check.name == CardType.HONOR_STUDENT
         if success:
+            # 仅当以「特技」出牌时才触发各类牌面后续流程；质疑/调和出牌不触发
             if is_honor_student and usage_type == CardUsageType.SKILL:
                 g = self.game_manager.game
                 self.pending_honor_student_responders = {}
@@ -424,15 +450,20 @@ class GameWebSocketServer:
                 victory_checker = VictoryChecker(self.game_manager.game)
                 winner = victory_checker.check_victory()
                 if winner:
-                    await self._broadcast_game_over(winner)
+                    await self._broadcast_game_over(winner, victory_checker.get_settlement_summary())
         else:
             fail_message = "出牌失败"
             if current_for_check and len(current_for_check.hand) <= 1:
                 fail_message = "手牌已剩一张，本回合不能出牌，请等待其他玩家"
-            elif card_for_check and card_for_check.name == CardType.CRIMINAL:
-                fail_message = "犯人牌不可打出，仅可被其他卡牌效果移动"
-            elif card_for_check and card_for_check.name == CardType.HOME_CLUB and game and (not game.harmony_area or len(game.harmony_area) == 0):
-                fail_message = "调和区为空时无法使用归宅部特技"
+            elif target_player_id and usage_type == CardUsageType.SKILL and game:
+                target_p = next((p for p in game.players if p.id == target_player_id), None)
+                if target_p and len(target_p.hand) <= 1:
+                    fail_message = "该玩家手牌已剩一张，处于等待结算阶段，不可选为目标"
+            if fail_message == "出牌失败":
+                if card_for_check and card_for_check.name == CardType.CRIMINAL:
+                    fail_message = "犯人牌不可打出，仅可被其他卡牌效果移动"
+                elif card_for_check and card_for_check.name == CardType.HOME_CLUB and game and (not game.harmony_area or len(game.harmony_area) == 0):
+                    fail_message = "调和区为空时无法使用归宅部特技"
             await self.send_to_client(websocket, {
                 "type": "error",
                 "message": fail_message
@@ -460,7 +491,9 @@ class GameWebSocketServer:
             return
         if not give_card_id:
             current = next((p for p in g.players if p.id == player_id), None)
-            your_hand = [c.model_dump() for c in current.hand] if current else []
+            card_id = self.pending_rich_girl["card_id"]
+            # 不能选「正在打出的这张大小姐」作为要还的牌，排除出 your_hand
+            your_hand = [c.model_dump() for c in current.hand if c.id != card_id] if current else []
             await self.send_to_client(websocket, {
                 "type": "rich_girl_choose_give",
                 "taken_card": taken_card.model_dump(),
@@ -478,7 +511,7 @@ class GameWebSocketServer:
                 victory_checker = VictoryChecker(self.game_manager.game)
                 winner = victory_checker.check_victory()
                 if winner:
-                    await self._broadcast_game_over(winner)
+                    await self._broadcast_game_over(winner, victory_checker.get_settlement_summary())
         else:
             await self.send_to_client(websocket, {"type": "error", "message": "大小姐选牌执行失败"})
 
@@ -543,7 +576,7 @@ class GameWebSocketServer:
                 victory_checker = VictoryChecker(self.game_manager.game)
                 winner = victory_checker.check_victory()
                 if winner:
-                    await self._broadcast_game_over(winner)
+                    await self._broadcast_game_over(winner, victory_checker.get_settlement_summary())
         else:
             await self.send_to_client(websocket, {"type": "error", "message": "班长交换执行失败"})
 
@@ -591,7 +624,7 @@ class GameWebSocketServer:
                 victory_checker = VictoryChecker(g)
                 winner = victory_checker.check_victory()
                 if winner:
-                    await self._broadcast_game_over(winner)
+                    await self._broadcast_game_over(winner, victory_checker.get_settlement_summary())
         else:
             next_id = order[idx + 1]
             next_player = next((p for p in self.game_manager.game.players if p.id == next_id), None)
@@ -692,7 +725,7 @@ class GameWebSocketServer:
             victory_checker = VictoryChecker(g)
             winner = victory_checker.check_victory()
             if winner:
-                await self._broadcast_game_over(winner)
+                await self._broadcast_game_over(winner, victory_checker.get_settlement_summary())
 
     async def _broadcast_player_list(self):
         if self.game_manager.game:
@@ -716,11 +749,13 @@ class GameWebSocketServer:
                 "game_state": self.game_manager.game.model_dump()
             })
 
-    async def _broadcast_game_over(self, winner_id: str):
-        await self.broadcast({
-            "type": "game_over",
-            "winner_id": winner_id
-        })
+    async def _broadcast_game_over(self, winner_id: str, settlement: Optional[dict] = None):
+        if self.game_manager.game:
+            self.game_manager.game.winner = winner_id
+        payload = {"type": "game_over", "winner_id": winner_id}
+        if settlement is not None:
+            payload["settlement"] = settlement
+        await self.broadcast(payload)
 
     async def handle_client(self, websocket: websockets.WebSocketServerProtocol):
         await self.register_client(websocket)

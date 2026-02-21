@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from .models import Game, Player, Card, CardType
 
 
@@ -8,13 +8,13 @@ class VictoryChecker:
     def __init__(self, game: Game):
         self.game = game
         self._harmony_reached = False
-        self._imprisoned_player: Optional[Player] = None
+        self._imprisoned_player_ids: List[str] = []
 
     def check_victory(self) -> Optional[str]:
         # 判定 1：调和值是否达到
         self._harmony_reached = self._check_harmony_value_reached()
-        # 判定 2：质疑结算，确定被监禁者（质疑区数值总和最大且唯一）
-        self._imprisoned_player = self._check_doubt_settlement()
+        # 判定 2：质疑结算，数值总和最大且 >0 的玩家均视为被监禁（多人并列则都视为被监禁）
+        self._imprisoned_player_ids = self._check_doubt_settlement()
 
         # 判定 3：按胜利优先级 1→5 依次公开手牌，先满足条件者胜
         for priority in [1, 2, 3, 4, 5]:
@@ -28,20 +28,19 @@ class VictoryChecker:
         total = sum(card.harmony_value for card in self.game.harmony_area)
         return total >= self.game.required_harmony_value
 
-    def _check_doubt_settlement(self) -> Optional[Player]:
-        """判定 2：质疑结算，数值总和最大的唯一玩家视为被监禁。"""
+    def _check_doubt_settlement(self) -> List[str]:
+        """判定 2：质疑结算，数值总和最大且 >0 的玩家均视为被监禁（多人并列则都视为被监禁）。"""
         player_doubt_values = {}
         for player in self.game.players:
             total_value = sum(card.harmony_value for card in player.doubt_cards)
             player_doubt_values[player.id] = total_value
 
         if not player_doubt_values:
-            return None
+            return []
         max_value = max(player_doubt_values.values())
-        max_players = [pid for pid, value in player_doubt_values.items() if value == max_value]
-        if len(max_players) != 1:
-            return None
-        return self._get_player(max_players[0])
+        if max_value <= 0:
+            return []
+        return [pid for pid, value in player_doubt_values.items() if value == max_value]
 
     def _find_winner_at_priority(self, priority: int) -> Optional[str]:
         """在给定胜利优先级下，按玩家顺序检查，先满足条件者胜。"""
@@ -82,16 +81,20 @@ class VictoryChecker:
         return False
 
     def _is_player_imprisoned(self, player: Player) -> bool:
-        """该玩家是否为判定 2 确定的被监禁者。"""
-        return self._imprisoned_player is not None and player.id == self._imprisoned_player.id
+        """该玩家是否为判定 2 确定的被监禁者（多人并列最大且>0 时均视为被监禁）。"""
+        return player.id in self._imprisoned_player_ids
 
     def _check_criminal_side_wins(self) -> bool:
-        """犯人方获胜：存在被监禁者且被监禁者手牌中没有犯人。"""
-        if self._imprisoned_player is None:
+        """犯人方获胜：存在被监禁者且所有被监禁者手牌中都没有犯人。"""
+        if not self._imprisoned_player_ids:
             return False
-        for card in self._imprisoned_player.hand:
-            if card.name == CardType.CRIMINAL:
-                return False
+        for pid in self._imprisoned_player_ids:
+            p = self._get_player(pid)
+            if not p:
+                continue
+            for card in p.hand:
+                if card.name == CardType.CRIMINAL:
+                    return False
         return True
 
     def _get_player(self, player_id: str) -> Optional[Player]:
@@ -99,3 +102,18 @@ class VictoryChecker:
             if player.id == player_id:
                 return player
         return None
+
+    def get_settlement_summary(self) -> dict:
+        """结算摘要，供广播 game_over 时一并下发。需在 check_victory() 之后调用。"""
+        harmony_total = sum(c.harmony_value for c in self.game.harmony_area)
+        player_doubt_totals = {
+            p.id: sum(c.harmony_value for c in p.doubt_cards)
+            for p in self.game.players
+        }
+        return {
+            "harmony_total": harmony_total,
+            "required_harmony_value": self.game.required_harmony_value,
+            "harmony_reached": self._harmony_reached,
+            "imprisoned_player_ids": self._imprisoned_player_ids,
+            "player_doubt_totals": player_doubt_totals,
+        }

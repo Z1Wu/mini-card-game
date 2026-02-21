@@ -100,7 +100,6 @@ def test_cards():
     class_rep_cards = [card for card in deck if card.name == CardType.CLASS_REP]
     assert len(class_rep_cards) == 2
     card = class_rep_cards[0]
-    assert card.cost == 2
     assert card.harmony_value == 2
     assert card.victory_priority == 4
     print("✓ 班长卡牌属性正确")
@@ -108,8 +107,7 @@ def test_cards():
     alien_cards = [card for card in deck if card.name == CardType.ALIEN]
     assert len(alien_cards) == 1
     card = alien_cards[0]
-    assert card.cost == -1
-    assert card.harmony_value == 1
+    assert card.harmony_value == -1
     assert card.victory_priority == 1
     print("✓ 外星人卡牌属性正确")
 

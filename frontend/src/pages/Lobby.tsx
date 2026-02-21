@@ -95,6 +95,10 @@ export const Lobby: React.FC = () => {
     // navigate('/game');
   };
 
+  const handleResetGame = () => {
+    send({ type: 'reset_game' });
+  };
+
   const handleLeave = () => {
     wsService.disconnect();
     navigate('/');
@@ -146,19 +150,26 @@ export const Lobby: React.FC = () => {
           )}
         </div>
 
-        <div className="flex gap-4">
+        <div className="flex gap-4 flex-wrap">
           <Button
             onClick={handleStartGame}
             disabled={players.length < MIN_PLAYERS}
-            className="flex-1"
+            className="flex-1 min-w-[120px]"
             variant="primary"
           >
             开始游戏
           </Button>
           <Button
+            onClick={handleResetGame}
+            variant="secondary"
+            className="flex-1 min-w-[120px]"
+          >
+            清除状态重新开始
+          </Button>
+          <Button
             onClick={handleLeave}
             variant="danger"
-            className="flex-1"
+            className="flex-1 min-w-[120px]"
           >
             离开
           </Button>

@@ -6,7 +6,7 @@ import { usePlayerStore } from '../stores/playerStore';
 import { useGameStore } from '../stores/gameStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { wsService } from '../services/websocket';
-import { GameStateMessage, GameOverMessage, PlayCardMessage, SkillChoiceRequiredMessage, ViewHandMessage, ViewHarmonyMessage, NewsClubChoiceRequiredMessage, RichGirlChooseGiveMessage, ClassRepChoiceRequiredMessage, HonorStudentChoiceRequiredMessage, HonorStudentResultMessage, HonorStudentPhaseMessage, ClassRepWaitingMessage, ClassRepPhaseMessage, ClassRepResultMessage, NewsClubInProgressMessage, NewsClubYouChoseMessage } from '../types/message';
+import { GameStateMessage, GameOverMessage, PlayCardMessage, SkillChoiceRequiredMessage, ViewHandMessage, ViewHarmonyMessage, NewsClubChoiceRequiredMessage, RichGirlChooseGiveMessage, ClassRepChoiceRequiredMessage, HonorStudentChoiceRequiredMessage, HonorStudentResultMessage, HonorStudentPhaseMessage, ClassRepWaitingMessage, ClassRepPhaseMessage, ClassRepResultMessage, NewsClubInProgressMessage, NewsClubYouChoseMessage, SettlementSummary } from '../types/message';
 import { Card as CardType, CardUsageType, GameState as GameStateEnum, CardType as CardTypeEnum } from '../types/game';
 
 /** 使用特技时需要选择目标玩家的卡牌（班长、保健委员、风纪委员、大小姐等） */
@@ -28,6 +28,8 @@ export const Game: React.FC = () => {
   const { send } = useWebSocket();
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null);
   const [winnerId, setWinnerId] = useState<string | null>(null);
+  /** 结算摘要（game_over 时下发），用于完整结算展示 */
+  const [settlementSummary, setSettlementSummary] = useState<SettlementSummary | null>(null);
   /** 质疑/特技需选目标：选完目标后再发 play_card */
   const [pendingTargetAction, setPendingTargetAction] = useState<{ card: CardType; usageType: CardUsageType.DOUBT | CardUsageType.SKILL } | null>(null);
   /** 大小姐特技：服务端要求选「从目标拿哪张、自己给哪张」 */
@@ -108,6 +110,13 @@ export const Game: React.FC = () => {
   useEffect(() => {
     const handleGameState = (message: GameStateMessage) => {
       const next = message.game_state;
+      if (next?.state === GameStateEnum.WAITING || next?.state === 'waiting') {
+        setWinnerId(null);
+        setSettlementSummary(null);
+        setGameState(next);
+        navigate('/lobby');
+        return;
+      }
       if (next?.state === GameStateEnum.GAME_OVER && next?.winner) {
         setWinnerId(next.winner);
       }
@@ -124,6 +133,7 @@ export const Game: React.FC = () => {
 
     const handleGameOver = (message: GameOverMessage) => {
       setWinnerId(message.winner_id);
+      setSettlementSummary(message.settlement ?? null);
     };
 
     const handleSkillChoiceRequired = (message: SkillChoiceRequiredMessage) => {
@@ -248,7 +258,7 @@ export const Game: React.FC = () => {
       wsService.off('class_rep_phase');
       wsService.off('class_rep_result');
     };
-  }, [setGameState]);
+  }, [setGameState, navigate]);
 
   const handlePlayCard = (card: CardType, usageType: CardUsageType, targetPlayerId?: string, targetCardId?: string, handCardId?: string, harmonyCardId?: string) => {
     if (usageType === CardUsageType.DOUBT && targetPlayerId == null) {
@@ -301,7 +311,7 @@ export const Game: React.FC = () => {
   };
 
   const handleConfirmHealthCommitteeFieldCard = () => {
-    if (!pendingTargetAction || pendingTargetAction.card.name !== CardTypeEnum.HEALTH_COMMITTEE || !selectedFieldCard) return;
+    if (!pendingTargetAction || pendingTargetAction.card.name !== CardTypeEnum.HEALTH_COMMITTEE || pendingTargetAction.usageType !== CardUsageType.SKILL || !selectedFieldCard) return;
     handlePlayCard(
       pendingTargetAction.card,
       CardUsageType.SKILL,
@@ -366,6 +376,10 @@ export const Game: React.FC = () => {
     navigate('/');
   };
 
+  const handleResetGame = () => {
+    send({ type: 'reset_game' });
+  };
+
   if (!gameState) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -377,19 +391,178 @@ export const Game: React.FC = () => {
   const currentPlayer = gameState.players.find(p => p.id === playerId);
   const isCurrentPlayer = gameState.current_player_index === gameState.players.findIndex(p => p.id === playerId);
   const isGameOver = gameState.state === GameStateEnum.GAME_OVER || winnerId != null;
-  const winner = winnerId ? gameState.players.find(p => p.id === winnerId) : null;
+  const resolvedWinnerId = winnerId ?? gameState.winner ?? null;
+  const winner = resolvedWinnerId ? gameState.players.find(p => p.id === resolvedWinnerId) : null;
+
+  // 顶层横幅文案：等待他人 / 轮到你，统一在固定顶部显示，无需滚到最上方
+  const topBannerMessage = ((): { text: string; type: 'waiting' | 'your-turn' } | null => {
+    if (honorStudentPhase === 'waiting') return { text: '正在等待其他人举手', type: 'waiting' };
+    if (honorStudentWaiting) return { text: '优等生：正在等待其他人举手…', type: 'waiting' };
+    if (classRepWaitingTarget) return { text: `正在等待 ${classRepWaitingTarget} 选牌`, type: 'waiting' };
+    if (classRepPhase?.phase === 'waiting_target') return { text: `班长：${classRepPhase.actor_name ?? ''} 与 ${classRepPhase.target_name ?? ''} 正在选牌`, type: 'waiting' };
+    if (classRepPhase?.phase === 'done') return { text: `班长：${classRepPhase.actor_name ?? ''} 与 ${classRepPhase.target_name ?? ''} 交换完成`, type: 'waiting' };
+    if (newsClubCurrentChooserId) {
+      const name = gameState.players.find(p => p.id === newsClubCurrentChooserId)?.name ?? '某玩家';
+      return newsClubCurrentChooserId === playerId
+        ? { text: '新闻部：请选择一张手牌递给下家', type: 'your-turn' }
+        : { text: `新闻部：${name} 正在选牌…`, type: 'waiting' };
+    }
+    if (isCurrentPlayer) return { text: '轮到你出牌！', type: 'your-turn' };
+    const idx = gameState.current_player_index;
+    const who = gameState.players[idx]?.name ?? '某玩家';
+    return { text: `轮到 ${who} 出牌`, type: 'waiting' };
+  })();
 
   if (isGameOver) {
+    const harmonyTotal = settlementSummary?.harmony_total ?? gameState.harmony_area.reduce((s, c) => s + c.harmony_value, 0);
+    const requiredHarmony = settlementSummary?.required_harmony_value ?? gameState.required_harmony_value ?? 0;
+    const harmonyReached = settlementSummary?.harmony_reached ?? (harmonyTotal >= requiredHarmony);
+    const doubtTotals = settlementSummary?.player_doubt_totals ?? Object.fromEntries(
+      gameState.players.map(p => [p.id, p.doubt_cards.reduce((s, c) => s + c.harmony_value, 0)])
+    );
+    const imprisonedIds = settlementSummary?.imprisoned_player_ids ?? [];
+
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <div className="bg-slate-800 rounded-2xl p-8 border border-slate-700 text-center max-w-md">
-          <h1 className="text-2xl font-bold text-white mb-4">游戏结束</h1>
-          <p className="text-primary-400 text-xl mb-6">
-            {winner ? `${winner.name} 获胜！` : '未知获胜者'}
-          </p>
-          <Button onClick={handleLeave} variant="primary">
-            返回登录
-          </Button>
+      <div className="min-h-screen bg-slate-900 text-slate-200 overflow-auto">
+        <div className="max-w-4xl mx-auto p-6 space-y-8 pb-24">
+          <div className="flex justify-between items-center flex-wrap gap-2">
+            <h1 className="text-2xl font-bold text-white">游戏结束 · 完整结算</h1>
+            <div className="flex gap-2">
+              <Button onClick={handleResetGame} variant="secondary" size="sm">重新开始一局</Button>
+              <Button onClick={handleLeave} variant="primary" size="sm">返回登录</Button>
+            </div>
+          </div>
+
+          {/* 判定 1：调和值 */}
+          <section className="bg-slate-800 rounded-xl p-4 border border-slate-600">
+            <h2 className="text-lg font-semibold text-amber-200 mb-3">判定 1：调和值</h2>
+            <p className="text-slate-400 text-sm mb-2">调和区卡牌（正面）及数值总和</p>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {gameState.harmony_area.length === 0 ? (
+                <span className="text-slate-500">无</span>
+              ) : (
+                gameState.harmony_area.map((c) => (
+                  <div key={c.id} className="w-16">
+                    <Card card={c} showAsFaceDown={false} />
+                  </div>
+                ))
+              )}
+            </div>
+            <p className="text-slate-300">
+              总和 = <strong className="text-white">{harmonyTotal}</strong>
+              {' '}/ 要求 <strong className="text-white">{requiredHarmony}</strong>
+              {' '}
+              <span className={harmonyReached ? 'text-emerald-400' : 'text-red-400'}>
+                {harmonyReached ? '达成' : '未达成'}
+              </span>
+            </p>
+          </section>
+
+          {/* 已出卡片区（正面出牌） */}
+          <section className="bg-slate-800 rounded-xl p-4 border border-slate-600">
+            <h2 className="text-lg font-semibold text-slate-300 mb-3">已出卡片区 · 正面出牌</h2>
+            <div className="flex flex-wrap gap-3">
+              {gameState.players.flatMap((p) =>
+                (p.field_cards ?? []).map((c) => (
+                  <div key={c.id} className="flex flex-col items-center gap-1">
+                    <span className="text-xs text-slate-500">{p.name}</span>
+                    <div className="w-16">
+                      <Card card={c} showAsFaceDown={false} />
+                    </div>
+                  </div>
+                ))
+              )}
+              {gameState.players.every((p) => !(p.field_cards?.length)) && (
+                <span className="text-slate-500">无</span>
+              )}
+            </div>
+          </section>
+
+          {/* 判定 2：质疑结算 */}
+          <section className="bg-slate-800 rounded-xl p-4 border border-slate-600">
+            <h2 className="text-lg font-semibold text-amber-200 mb-3">判定 2：质疑结算</h2>
+            <p className="text-slate-400 text-sm mb-3">各玩家被质疑的牌（正面）及数值总和，数值最大且唯一者被监禁</p>
+            <div className="space-y-4">
+              {gameState.players.map((p) => {
+                const total = doubtTotals[p.id] ?? 0;
+                const isImprisoned = imprisonedIds.includes(p.id);
+                return (
+                  <div
+                    key={p.id}
+                    className={`rounded-lg p-3 border-2 ${isImprisoned ? 'border-red-500 bg-red-900/20' : 'border-slate-600 bg-slate-700/50'}`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="font-medium text-white">{p.name}</span>
+                      <span className="text-slate-400 text-sm">质疑区总和 = {total}</span>
+                      {isImprisoned && (
+                        <span className="text-xs font-medium text-red-400 bg-red-900/50 px-2 py-0.5 rounded">被监禁</span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      {(p.doubt_cards ?? []).length === 0 ? (
+                        <span className="text-slate-500 text-sm">无</span>
+                      ) : (
+                        (p.doubt_cards ?? []).map((c) => (
+                          <div key={c.id} className="w-24 min-w-[5rem]">
+                            <Card card={c} showAsFaceDown={false} showVictoryPriority={false} />
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* 判定 3：最终手牌与胜者 */}
+          <section className="bg-slate-800 rounded-xl p-4 border border-slate-600">
+            <h2 className="text-lg font-semibold text-amber-200 mb-3">判定 3：最终手牌与胜者</h2>
+            <p className="text-slate-400 text-sm mb-3">按胜利优先级依次公开手牌，先满足条件者胜</p>
+            <div className="space-y-4">
+              {gameState.players.map((p) => {
+                const hand = p.hand ?? [];
+                const isWinner = resolvedWinnerId === p.id;
+                return (
+                  <div
+                    key={p.id}
+                    className={`rounded-lg p-3 border-2 ${isWinner ? 'border-primary-500 bg-primary-900/20' : 'border-slate-600 bg-slate-700/50'}`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="font-medium text-white">{p.name}</span>
+                      {isWinner && (
+                        <span className="text-primary-400 font-bold">获胜</span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      {hand.length === 0 ? (
+                        <span className="text-slate-500 text-sm">无</span>
+                      ) : (
+                        hand.map((c) => (
+                          <div key={c.id} className="w-24 min-w-[5rem] flex flex-col items-center gap-0.5">
+                            <Card card={c} showAsFaceDown={false} showVictoryPriority={true} />
+                            {typeof c.victory_priority === 'number' && (
+                              <span className="text-[10px] text-slate-500">胜利优先级 {c.victory_priority}</span>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          <div className="text-center pt-4">
+            <p className="text-primary-400 text-xl font-semibold mb-4">
+              {winner ? `${winner.name} 获胜！` : '本局无人达成胜利条件'}
+            </p>
+            <div className="flex gap-3 justify-center flex-wrap">
+              <Button onClick={handleResetGame} variant="secondary">重新开始一局</Button>
+              <Button onClick={handleLeave} variant="primary">返回登录</Button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -397,246 +570,202 @@ export const Game: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
-      <div className="bg-slate-800 border-b border-slate-700 p-4">
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold text-white">游戏进行中</h1>
-            {playerName && <span className="text-slate-400">({playerName})</span>}
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-slate-300">
-              回合: {gameState.turn_count}
-            </span>
-            <Button onClick={handleLeave} variant="danger" size="sm">
-              离开
-            </Button>
+      <div className="fixed top-0 left-0 right-0 z-50 bg-slate-800 border-b border-slate-700">
+        <div className="p-4">
+          <div className="max-w-6xl mx-auto flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              {playerName && <span className="text-slate-300">{playerName}</span>}
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-slate-300">回合: {gameState.turn_count}</span>
+              <Button onClick={handleResetGame} variant="secondary" size="sm">重新开始</Button>
+              <Button onClick={handleLeave} variant="danger" size="sm">离开</Button>
+            </div>
           </div>
         </div>
+        {topBannerMessage && (
+          <div
+            className={`px-4 py-2.5 text-center text-sm font-medium ${
+              topBannerMessage.type === 'your-turn'
+                ? 'bg-primary-600/90 text-white border-t border-primary-500'
+                : 'bg-slate-700/95 text-slate-200 border-t border-slate-600'
+            }`}
+          >
+            {topBannerMessage.type === 'your-turn' && <span className="mr-1">▶</span>}
+            {topBannerMessage.text}
+            {topBannerMessage.type === 'your-turn' && topBannerMessage.text === '轮到你出牌！' && (
+              <span className="block text-xs text-primary-100 mt-0.5 font-normal">请选择一张手牌并选择出牌方式（调和 / 质疑 / 特技）</span>
+            )}
+          </div>
+        )}
       </div>
 
-      <div className="flex-1 max-w-6xl mx-auto w-full p-4 space-y-6">
+      <div className={`flex-1 max-w-6xl mx-auto w-full p-4 space-y-6 ${topBannerMessage ? 'pt-28' : 'pt-24'}`}>
         {gameError && (
           <div className="bg-red-900/50 border border-red-600 rounded-xl p-3 flex items-center justify-between">
             <span className="text-red-200">{gameError}</span>
             <Button variant="danger" size="sm" onClick={() => setGameError(null)}>关闭</Button>
           </div>
         )}
-        {honorStudentPhase === 'waiting' && (
-          <div className="bg-amber-900/30 border border-amber-600 rounded-xl p-3 text-center">
-            <span className="text-amber-200">正在等待其他人举手</span>
-          </div>
-        )}
-        {classRepWaitingTarget && (
-          <div className="bg-violet-900/30 border border-violet-600 rounded-xl p-3 text-center">
-            <span className="text-violet-200">正在等待 {classRepWaitingTarget} 选牌</span>
-          </div>
-        )}
-        {classRepPhase && (
-          <div className={`rounded-xl p-3 text-center border ${classRepPhase.phase === 'done' ? 'bg-emerald-900/30 border-emerald-600 text-emerald-200' : 'bg-violet-900/30 border-violet-600 text-violet-200'}`}>
-            {classRepPhase.phase === 'waiting_target'
-              ? `班长：${classRepPhase.actor_name ?? ''} 与 ${classRepPhase.target_name ?? ''} 正在选牌`
-              : `班长：${classRepPhase.actor_name ?? ''} 与 ${classRepPhase.target_name ?? ''} 交换完成`}
-          </div>
-        )}
-        {turnChangeToast && (
-          <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-slate-700/95 text-white px-6 py-3 rounded-xl shadow-lg border border-slate-600">
-            {turnChangeToast}
-          </div>
-        )}
-        {pendingTargetAction && pendingTargetAction.card.name !== CardTypeEnum.HEALTH_COMMITTEE && (
-          <div className="bg-amber-900/30 border border-amber-700 rounded-xl p-4">
-            <p className="text-amber-200 font-medium mb-3">
-              {pendingTargetAction.usageType === CardUsageType.DOUBT ? '选择要质疑的玩家' : '选择目标玩家'}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {gameState.players
-                .filter(p => p.id !== playerId)
-                .map((player) => (
-                  <Button
-                    key={player.id}
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleConfirmTarget(player.id)}
-                  >
-                    {player.name}
-                  </Button>
-                ))}
-              <Button variant="danger" size="sm" onClick={() => setPendingTargetAction(null)}>
-                取消
-              </Button>
+        {pendingTargetAction && (pendingTargetAction.card.name !== CardTypeEnum.HEALTH_COMMITTEE || pendingTargetAction.usageType === CardUsageType.DOUBT) && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setPendingTargetAction(null)}>
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-sm w-full shadow-xl" onClick={e => e.stopPropagation()}>
+              <p className="text-amber-200 font-medium mb-2">
+                {pendingTargetAction.usageType === CardUsageType.DOUBT ? '选择要质疑的玩家' : '选择目标玩家'}
+              </p>
+              {pendingTargetAction.usageType === CardUsageType.SKILL && (
+                <p className="text-slate-400 text-xs mb-4">手牌剩一张的玩家处于等待结算阶段，不可选为特技目标</p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {gameState.players
+                  .filter(p => p.id !== playerId && (pendingTargetAction.usageType === CardUsageType.DOUBT || p.current_hand_count > 1))
+                  .map((player) => (
+                    <Button key={player.id} variant="secondary" size="sm" onClick={() => handleConfirmTarget(player.id)}>{player.name}</Button>
+                  ))}
+                {pendingTargetAction.usageType === CardUsageType.SKILL && gameState.players.filter(p => p.id !== playerId && p.current_hand_count <= 1).length > 0 && (
+                  <span className="text-slate-500 text-xs w-full">（部分玩家手牌已剩一张，已排除）</span>
+                )}
+                <Button variant="danger" size="sm" onClick={() => setPendingTargetAction(null)}>取消</Button>
+              </div>
             </div>
           </div>
         )}
 
         {pendingHomeClub && (
-          <div className="bg-emerald-900/30 border border-emerald-700 rounded-xl p-4">
-            <p className="text-emerald-200 font-medium mb-3">归宅部：选择一张手牌与调和区的一张牌进行替换</p>
-            <div className="grid grid-cols-2 gap-4 mb-3">
-              <div>
-                <p className="text-slate-300 text-sm mb-2">选择一张手牌</p>
-                {currentPlayer && (
-                  <div className="flex flex-wrap gap-2">
-                    {currentPlayer.hand.filter(c => c.id !== pendingHomeClub.card.id).map((c) => (
-                      <div
-                        key={c.id}
-                        className={`w-24 cursor-pointer rounded-lg border-2 p-1 ${homeClubHandId === c.id ? 'border-emerald-400 bg-emerald-900/50' : 'border-slate-600 hover:border-emerald-500'}`}
-                        onClick={() => setHomeClubHandId(c.id)}
-                      >
-                        <Card card={c} showAsFaceDown={false} />
-                      </div>
-                    ))}
-                  </div>
-                )}
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setPendingHomeClub(null); setHomeClubHandId(null); setHomeClubHarmonyId(null); }}>
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl max-h-[90vh] overflow-auto" onClick={e => e.stopPropagation()}>
+              <p className="text-emerald-200 font-medium mb-4">归宅部：选择一张手牌与调和区的一张牌进行替换</p>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <p className="text-slate-300 text-sm mb-2">选择一张手牌</p>
+                  {currentPlayer && (
+                    <div className="flex flex-wrap gap-2">
+                      {currentPlayer.hand.filter(c => c.id !== pendingHomeClub.card.id).map((c) => (
+                        <div key={c.id} className={`w-24 cursor-pointer rounded-lg border-2 p-1 ${homeClubHandId === c.id ? 'border-emerald-400 bg-emerald-900/50' : 'border-slate-600 hover:border-emerald-500'}`} onClick={() => setHomeClubHandId(c.id)}>
+                          <Card card={c} showAsFaceDown={false} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className="text-slate-300 text-sm mb-2">选择调和区一张牌</p>
+                  {gameState.harmony_area.length === 0 ? (
+                    <p className="text-slate-500 text-sm">调和区为空</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {gameState.harmony_area.map((c) => (
+                        <div key={c.id} className={`w-24 cursor-pointer rounded-lg border-2 p-1 ${homeClubHarmonyId === c.id ? 'border-emerald-400 bg-emerald-900/50' : 'border-slate-600 hover:border-emerald-500'}`} onClick={() => setHomeClubHarmonyId(c.id)}>
+                          <Card card={c} showAsFaceDown />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-              <div>
-                <p className="text-slate-300 text-sm mb-2">选择调和区一张牌</p>
-                {gameState.harmony_area.length === 0 ? (
-                  <p className="text-slate-500 text-sm">调和区为空</p>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {gameState.harmony_area.map((c) => (
-                      <div
-                        key={c.id}
-                        className={`w-24 cursor-pointer rounded-lg border-2 p-1 ${homeClubHarmonyId === c.id ? 'border-emerald-400 bg-emerald-900/50' : 'border-slate-600 hover:border-emerald-500'}`}
-                        onClick={() => setHomeClubHarmonyId(c.id)}
-                      >
-                        <Card card={c} showAsFaceDown />
-                      </div>
-                    ))}
-                  </div>
-                )}
+              <div className="flex gap-2">
+                <Button variant="primary" size="sm" onClick={handleConfirmHomeClub} disabled={!homeClubHandId || !homeClubHarmonyId}>确认替换</Button>
+                <Button variant="danger" size="sm" onClick={() => { setPendingHomeClub(null); setHomeClubHandId(null); setHomeClubHarmonyId(null); }}>取消</Button>
               </div>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="primary" size="sm" onClick={handleConfirmHomeClub} disabled={!homeClubHandId || !homeClubHarmonyId}>确认替换</Button>
-              <Button variant="danger" size="sm" onClick={() => { setPendingHomeClub(null); setHomeClubHandId(null); setHomeClubHarmonyId(null); }}>取消</Button>
             </div>
           </div>
         )}
 
-        {pendingTargetAction && pendingTargetAction.card.name === CardTypeEnum.HEALTH_COMMITTEE && (
-          <div className="bg-amber-900/30 border border-amber-700 rounded-xl p-4">
-            <p className="text-amber-200 font-medium mb-3">保健委员：选择一张场上正面朝上的卡牌，归入自己的手牌</p>
-            {!gameState.players.some(p => p.field_cards.length > 0) ? (
-              <p className="text-slate-400 text-sm">场上暂无正面朝上的卡牌</p>
-            ) : (
-            <div className="flex flex-wrap gap-4">
-              {gameState.players.map((player) =>
-                player.field_cards.map((card) => (
-                  <div
-                    key={card.id}
-                    className={`w-28 cursor-pointer rounded-lg border-2 p-1 ${
-                      selectedFieldCard?.target_card_id === card.id ? 'border-amber-400 bg-amber-900/50' : 'border-slate-600 hover:border-amber-500'
-                    }`}
-                    onClick={() => setSelectedFieldCard({ target_player_id: player.id, target_card_id: card.id })}
-                  >
-                    <div className="text-slate-400 text-xs mb-1">{player.name} 的场牌</div>
-                    <Card card={card} showAsFaceDown={false} />
-                  </div>
-                ))
+        {pendingTargetAction && pendingTargetAction.card.name === CardTypeEnum.HEALTH_COMMITTEE && pendingTargetAction.usageType === CardUsageType.SKILL && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setPendingTargetAction(null); setSelectedFieldCard(null); }}>
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-2xl w-full shadow-xl max-h-[90vh] overflow-auto" onClick={e => e.stopPropagation()}>
+              <p className="text-amber-200 font-medium mb-2">保健委员：选择一张场上正面朝上的卡牌，归入自己的手牌</p>
+              <p className="text-slate-400 text-xs mb-4">手牌剩一张的玩家处于等待结算阶段，其场牌不可选</p>
+              {!gameState.players.some(p => p.current_hand_count > 1 && p.field_cards.length > 0) ? (
+                <p className="text-slate-400 text-sm">场上暂无可选正面朝上的卡牌（手牌剩一张的玩家场牌不可选）</p>
+              ) : (
+                <div className="flex flex-wrap gap-4 mb-4">
+                  {gameState.players
+                    .filter((player) => player.current_hand_count > 1)
+                    .map((player) =>
+                      player.field_cards.map((card) => (
+                        <div key={card.id} className={`w-28 cursor-pointer rounded-lg border-2 p-1 ${selectedFieldCard?.target_card_id === card.id ? 'border-amber-400 bg-amber-900/50' : 'border-slate-600 hover:border-amber-500'}`} onClick={() => setSelectedFieldCard({ target_player_id: player.id, target_card_id: card.id })}>
+                          <div className="text-slate-400 text-xs mb-1">{player.name} 的场牌</div>
+                          <Card card={card} showAsFaceDown={false} />
+                        </div>
+                      ))
+                    )}
+                </div>
               )}
-            </div>
-            )}
-            <div className="flex gap-2 mt-3">
-              <Button variant="primary" size="sm" onClick={handleConfirmHealthCommitteeFieldCard} disabled={!selectedFieldCard}>
-                确认选择
-              </Button>
-              <Button variant="danger" size="sm" onClick={() => { setPendingTargetAction(null); setSelectedFieldCard(null); }}>
-                取消
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="primary" size="sm" onClick={handleConfirmHealthCommitteeFieldCard} disabled={!selectedFieldCard}>确认选择</Button>
+                <Button variant="danger" size="sm" onClick={() => { setPendingTargetAction(null); setSelectedFieldCard(null); }}>取消</Button>
+              </div>
             </div>
           </div>
         )}
 
         {pendingSkillChoice && pendingSkillChoice.skill_type === 'rich_girl' && (
-          <div className="bg-violet-900/30 border border-violet-700 rounded-xl p-4 space-y-4">
-            {!richGirlGivePhase ? (
-              <>
-                <p className="text-violet-200 font-medium">大小姐：先选一张从 {pendingSkillChoice.target_player_name} 拿的牌（牌背），确认后可看到牌面再选要还给对方的牌</p>
-                <div>
-                  <p className="text-slate-300 text-sm mb-2">从 {pendingSkillChoice.target_player_name} 手牌选一张拿取（不可见对方牌面）</p>
-                  <div className="flex flex-wrap gap-2">
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setPendingSkillChoice(null); setRichGirlTakeId(null); setRichGirlGiveId(null); setRichGirlGivePhase(null); }}>
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl max-h-[90vh] overflow-auto" onClick={e => e.stopPropagation()}>
+              {!richGirlGivePhase ? (
+                <>
+                  <p className="text-violet-200 font-medium mb-4">大小姐：从 {pendingSkillChoice.target_player_name} 手牌选一张拿取（牌背），确认后再选要还给对方的牌</p>
+                  <div className="flex flex-wrap gap-2 mb-4">
                     {pendingSkillChoice.target_hand.map((c) => (
-                      <div
-                        key={c.id}
-                        className={`w-24 cursor-pointer rounded-lg border-2 p-1 ${richGirlTakeId === c.id ? 'border-violet-400 bg-violet-900/50' : 'border-slate-600 hover:border-violet-500'}`}
-                        onClick={() => setRichGirlTakeId(c.id)}
-                      >
-                        <div className="relative rounded-lg border-2 border-slate-600 bg-gradient-to-br from-slate-600 to-slate-700 aspect-[2/3] min-h-[100px] flex items-center justify-center">
+                      <div key={c.id} className={`w-24 cursor-pointer rounded-lg border-2 p-1 ${richGirlTakeId === c.id ? 'border-violet-400 bg-violet-900/50' : 'border-slate-600 hover:border-violet-500'}`} onClick={() => setRichGirlTakeId(c.id)}>
+                        <div className="rounded-lg border-2 border-slate-600 bg-gradient-to-br from-slate-600 to-slate-700 aspect-[2/3] min-h-[100px] flex items-center justify-center">
                           <span className="text-slate-500 text-xs">牌背</span>
                         </div>
                       </div>
                     ))}
                   </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="primary" size="sm" onClick={handleConfirmSkillChoice} disabled={!richGirlTakeId}>
-                    确认（查看拿到的牌）
-                  </Button>
-                  <Button variant="danger" size="sm" onClick={() => { setPendingSkillChoice(null); setRichGirlTakeId(null); setRichGirlGiveId(null); setRichGirlGivePhase(null); }}>取消</Button>
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="text-violet-200 font-medium">你拿到的牌如下，选择要交给 {pendingSkillChoice.target_player_name} 的牌（可还回刚拿的牌或选自己手牌）</p>
-                <div>
-                  <p className="text-slate-300 text-sm mb-2">拿到的牌</p>
-                  <div className="w-24 inline-block">
-                    <Card card={richGirlGivePhase.taken_card} showAsFaceDown={false} />
+                  <div className="flex gap-2">
+                    <Button variant="primary" size="sm" onClick={handleConfirmSkillChoice} disabled={!richGirlTakeId}>确认（查看拿到的牌）</Button>
+                    <Button variant="danger" size="sm" onClick={() => { setPendingSkillChoice(null); setRichGirlTakeId(null); setRichGirlGiveId(null); setRichGirlGivePhase(null); }}>取消</Button>
                   </div>
-                </div>
-                <div>
-                  <p className="text-slate-300 text-sm mb-2">选择要交给对方的牌</p>
-                  <div className="flex flex-wrap gap-2">
-                    <div
-                      className={`w-24 cursor-pointer rounded-lg border-2 p-1 ${richGirlGiveId === richGirlGivePhase.taken_card.id ? 'border-violet-400 bg-violet-900/50' : 'border-slate-600 hover:border-violet-500'}`}
-                      onClick={() => setRichGirlGiveId(richGirlGivePhase.taken_card.id)}
-                    >
-                      <div className="rounded-lg border-2 border-violet-600 bg-violet-900/50 aspect-[2/3] min-h-[100px] flex items-center justify-center">
-                        <span className="text-violet-200 text-xs px-1">刚拿的牌</span>
+                </>
+              ) : (
+                <>
+                  <p className="text-violet-200 font-medium mb-4">选择要交给 {pendingSkillChoice.target_player_name} 的牌（可还回刚拿的牌或选自己手牌）</p>
+                  <div className="mb-2">
+                    <p className="text-slate-300 text-sm mb-1">拿到的牌</p>
+                    <div className="w-24"><Card card={richGirlGivePhase.taken_card} showAsFaceDown={false} /></div>
+                  </div>
+                  <div className="mb-4">
+                    <p className="text-slate-300 text-sm mb-2">选择要交给对方的牌</p>
+                    <div className="flex flex-wrap gap-2">
+                      <div className={`w-24 cursor-pointer rounded-lg border-2 p-1 ${richGirlGiveId === richGirlGivePhase.taken_card.id ? 'border-violet-400 bg-violet-900/50' : 'border-slate-600 hover:border-violet-500'}`} onClick={() => setRichGirlGiveId(richGirlGivePhase.taken_card.id)}>
+                        <div className="rounded-lg border-2 border-violet-600 bg-violet-900/50 aspect-[2/3] min-h-[100px] flex items-center justify-center"><span className="text-violet-200 text-xs px-1">刚拿的牌</span></div>
                       </div>
+                      {richGirlGivePhase.your_hand.map((c) => (
+                        <div key={c.id} className={`w-24 cursor-pointer rounded-lg border-2 p-1 ${richGirlGiveId === c.id ? 'border-violet-400 bg-violet-900/50' : 'border-slate-600 hover:border-violet-500'}`} onClick={() => setRichGirlGiveId(c.id)}>
+                          <Card card={c} showAsFaceDown={false} />
+                        </div>
+                      ))}
                     </div>
-                    {richGirlGivePhase.your_hand.map((c) => (
-                      <div
-                        key={c.id}
-                        className={`w-24 cursor-pointer rounded-lg border-2 p-1 ${richGirlGiveId === c.id ? 'border-violet-400 bg-violet-900/50' : 'border-slate-600 hover:border-violet-500'}`}
-                        onClick={() => setRichGirlGiveId(c.id)}
-                      >
-                        <Card card={c} showAsFaceDown={false} />
-                      </div>
-                    ))}
                   </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="primary" size="sm" onClick={handleConfirmSkillChoice} disabled={!richGirlGiveId}>确认交换</Button>
-                  <Button variant="danger" size="sm" onClick={() => { setRichGirlGivePhase(null); setRichGirlGiveId(null); }}>取消</Button>
-                </div>
-              </>
-            )}
+                  <div className="flex gap-2">
+                    <Button variant="primary" size="sm" onClick={handleConfirmSkillChoice} disabled={!richGirlGiveId}>确认交换</Button>
+                    <Button variant="danger" size="sm" onClick={() => { setRichGirlGivePhase(null); setRichGirlGiveId(null); }}>取消</Button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         )}
 
         {pendingClassRepChoice && (
-          <div className="bg-amber-900/30 border border-amber-700 rounded-xl p-4">
-            <p className="text-amber-200 font-medium mb-2">班长：选一张手牌与 {pendingClassRepChoice.target_player_name} 交换</p>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {pendingClassRepChoice.your_hand.map((c) => (
-                <div
-                  key={c.id}
-                  className={`w-24 cursor-pointer rounded-lg border-2 p-1 ${classRepSelectedCardId === c.id ? 'border-amber-400 bg-amber-900/50' : 'border-slate-600 hover:border-amber-500'}`}
-                  onClick={() => setClassRepSelectedCardId(c.id)}
-                >
-                  <Card card={c} showAsFaceDown={false} />
-                </div>
-              ))}
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setPendingClassRepChoice(null); setClassRepSelectedCardId(null); }}>
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-md w-full shadow-xl" onClick={e => e.stopPropagation()}>
+              <p className="text-amber-200 font-medium mb-4">班长：选一张手牌与 {pendingClassRepChoice.target_player_name} 交换</p>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {pendingClassRepChoice.your_hand.map((c) => (
+                  <div key={c.id} className={`w-24 cursor-pointer rounded-lg border-2 p-1 ${classRepSelectedCardId === c.id ? 'border-amber-400 bg-amber-900/50' : 'border-slate-600 hover:border-amber-500'}`} onClick={() => setClassRepSelectedCardId(c.id)}>
+                    <Card card={c} showAsFaceDown={false} />
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="primary" size="sm" onClick={handleConfirmClassRepChoice} disabled={!classRepSelectedCardId}>确认</Button>
+                <Button variant="danger" size="sm" onClick={() => { setPendingClassRepChoice(null); setClassRepSelectedCardId(null); }}>取消</Button>
+              </div>
             </div>
-            <Button variant="primary" size="sm" onClick={handleConfirmClassRepChoice} disabled={!classRepSelectedCardId}>确认</Button>
-          </div>
-        )}
-
-        {honorStudentWaiting && (
-          <div className="bg-sky-900/30 border border-sky-700 rounded-xl p-4 text-center">
-            <p className="text-sky-200 font-medium">优等生：正在等待其他人举手…</p>
           </div>
         )}
 
@@ -653,72 +782,111 @@ export const Game: React.FC = () => {
         )}
 
         {pendingHonorStudentChoice === 'criminal' && (
-          <div className="bg-sky-900/30 border border-sky-700 rounded-xl p-4">
-            <p className="text-sky-200 font-medium mb-2">优等生特技：你持有犯人卡，必须举手示意</p>
-            <Button variant="primary" size="sm" onClick={() => handleHonorStudentResponse('raise_hand')}>举手</Button>
-          </div>
-        )}
-
-        {pendingHonorStudentChoice === 'alien' && (
-          <div className="bg-sky-900/30 border border-sky-700 rounded-xl p-4">
-            <p className="text-sky-200 font-medium mb-2">优等生特技：你持有外星人卡，可以假装犯人举手</p>
-            <div className="flex gap-2">
-              <Button variant="primary" size="sm" onClick={() => handleHonorStudentResponse('raise_hand')}>举手（假装犯人）</Button>
-              <Button variant="secondary" size="sm" onClick={() => handleHonorStudentResponse('none')}>不举手</Button>
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-sm w-full shadow-xl">
+              <p className="text-sky-200 font-medium mb-4">优等生特技：你持有犯人卡，必须举手示意</p>
+              <Button variant="primary" onClick={() => handleHonorStudentResponse('raise_hand')}>举手</Button>
             </div>
           </div>
         )}
 
-        {newsClubCurrentChooserId && (
-          <div className="bg-sky-800/50 border border-sky-600 rounded-xl p-3 text-center">
-            <span className="text-sky-200">
-              {newsClubCurrentChooserId === playerId ? '请选择一张手牌递给下家' : `${gameState.players.find(p => p.id === newsClubCurrentChooserId)?.name ?? '某玩家'} 正在选牌…`}
-            </span>
+        {pendingHonorStudentChoice === 'alien' && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-sm w-full shadow-xl">
+              <p className="text-sky-200 font-medium mb-4">优等生特技：你持有外星人卡，可以假装犯人举手</p>
+              <div className="flex gap-2">
+                <Button variant="primary" onClick={() => handleHonorStudentResponse('raise_hand')}>举手（假装犯人）</Button>
+                <Button variant="secondary" onClick={() => handleHonorStudentResponse('none')}>不举手</Button>
+              </div>
+            </div>
           </div>
         )}
 
-        <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-          <h2 className="text-lg font-semibold text-slate-300 mb-4">其他玩家</h2>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="bg-slate-800 rounded-xl p-3 border border-slate-700">
+          <h2 className="text-base font-semibold text-slate-300 mb-2">其他玩家</h2>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
             {gameState.players
               .filter(p => p.id !== playerId)
-              .map((player) => (
-                <div
-                  key={player.id}
-                  className={`bg-slate-700 rounded-lg p-4 border-2 ${
-                    gameState.current_player_index === gameState.players.findIndex(p => p.id === player.id)
-                      ? 'border-primary-500'
-                      : 'border-slate-600'
-                  }`}
-                >
-                  <div className="text-white font-medium mb-2">{player.name}</div>
-                  <div className="text-slate-400 text-sm mb-2">手牌: {player.current_hand_count}</div>
-                  <div className="text-slate-400 text-sm mb-2">质疑: {(player.doubt_cards?.length ?? 0)}</div>
-                  {player.field_cards && player.field_cards.length > 0 && (
-                    <div className="mt-2">
-                      <div className="text-slate-500 text-xs mb-1">已打出</div>
-                      <div className="flex flex-wrap gap-1">
-                        {player.field_cards.map((c) => (
-                          <div key={c.id} className="w-16">
-                            <Card card={c} showAsFaceDown={false} />
-                          </div>
-                        ))}
-                      </div>
+              .map((player) => {
+                const isWaitingSettlement = player.current_hand_count === 1;
+                const isTheirTurn = gameState.current_player_index === gameState.players.findIndex(p => p.id === player.id);
+                return (
+                  <div
+                    key={player.id}
+                    className={`bg-slate-700 rounded-lg p-2 border-2 transition-all ${
+                      isWaitingSettlement
+                        ? 'border-red-500 ring-2 ring-red-400 ring-offset-2 ring-offset-slate-800 shadow-lg shadow-red-900/20'
+                        : isTheirTurn
+                          ? 'border-primary-500'
+                          : 'border-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-white font-medium text-sm">{player.name}</span>
+                      {isWaitingSettlement && (
+                        <span className="text-[10px] font-medium text-red-300 bg-red-900/50 px-1.5 py-0.5 rounded">等待结算</span>
+                      )}
                     </div>
-                  )}
-                </div>
-              ))}
+                    <div className="text-slate-400 text-xs mt-0.5">手牌: {player.current_hand_count} 质疑: {(player.doubt_cards?.length ?? 0)}</div>
+                  </div>
+                );
+              })}
           </div>
         </div>
 
         <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-          <h2 className="text-lg font-semibold text-slate-300 mb-4">调和区（背面朝上，有顺序）</h2>
-          <div className="flex flex-wrap gap-4">
+          <h2 className="text-lg font-semibold text-slate-300 mb-3">已出卡片区</h2>
+          <div className="space-y-3">
+            <div>
+              <div className="text-slate-400 text-sm mb-2">正面出牌</div>
+              <div className="flex flex-wrap gap-2 items-end">
+                {gameState.players.flatMap((p) =>
+                  (p.field_cards ?? []).map((c) => (
+                    <div key={c.id} className="flex flex-col items-center gap-0.5">
+                      <span className="text-xs text-slate-500">{p.name}</span>
+                      <div className="w-16">
+                        <Card card={c} showAsFaceDown={false} />
+                      </div>
+                    </div>
+                  ))
+                )}
+                {gameState.players.every((p) => !p.field_cards?.length) && (
+                  <span className="text-slate-500 text-sm">暂无</span>
+                )}
+              </div>
+            </div>
+            <div>
+              <div className="text-slate-400 text-sm mb-2">质疑牌（背面，结算时揭晓）</div>
+              <div className="flex flex-wrap gap-2 items-end">
+                {gameState.players.flatMap((p) =>
+                  (p.doubt_cards ?? []).map((c) => (
+                    <div key={`${p.id}-${c.id}`} className="flex flex-col items-center gap-0.5">
+                      <span className="text-xs text-slate-500">→ {p.name}</span>
+                      <div className="w-12">
+                        <Card
+                          card={c}
+                          showAsFaceDown={gameState.state !== GameStateEnum.GAME_OVER}
+                        />
+                      </div>
+                    </div>
+                  ))
+                )}
+                {gameState.players.every((p) => !p.doubt_cards?.length) && (
+                  <span className="text-slate-500 text-sm">暂无</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-slate-800 rounded-xl p-3 border border-slate-700">
+          <h2 className="text-base font-semibold text-slate-300 mb-2">调和区（背面朝上，有顺序）</h2>
+          <div className="flex flex-wrap gap-2">
             {gameState.harmony_area.length === 0 ? (
-              <p className="text-slate-500">调和区为空</p>
+              <p className="text-slate-500 text-sm">调和区为空</p>
             ) : (
               gameState.harmony_area.map((card) => (
-                <div key={card.id} className="w-24">
+                <div key={card.id} className="w-14">
                   <Card card={card} showAsFaceDown />
                 </div>
               ))
@@ -786,31 +954,41 @@ export const Game: React.FC = () => {
         )}
 
         {pendingNewsClubChoice && (
-          <div className="bg-sky-900/30 border border-sky-700 rounded-xl p-4">
-            <p className="text-sky-200 font-medium mb-2">新闻部：选择一张手牌递给 {pendingNewsClubChoice.next_player_name}（上家递来的牌不可选）</p>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {pendingNewsClubChoice.your_hand
-                .filter((c) => c.id !== pendingNewsClubChoice.exclude_card_id)
-                .map((c) => (
-                  <div
-                    key={c.id}
-                    className={`w-24 cursor-pointer rounded-lg border-2 p-1 ${newsClubSelectedCardId === c.id ? 'border-sky-400 bg-sky-900/50' : 'border-slate-600 hover:border-sky-500'}`}
-                    onClick={() => setNewsClubSelectedCardId(c.id)}
-                  >
-                    <Card card={c} showAsFaceDown={false} />
-                  </div>
-                ))}
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setPendingNewsClubChoice(null); setNewsClubSelectedCardId(null); }}>
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-md w-full shadow-xl" onClick={e => e.stopPropagation()}>
+              <p className="text-sky-200 font-medium mb-4">新闻部：选择一张手牌递给 {pendingNewsClubChoice.next_player_name}（上家递来的牌不可选）</p>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {pendingNewsClubChoice.your_hand
+                  .filter((c) => c.id !== pendingNewsClubChoice.exclude_card_id)
+                  .map((c) => (
+                    <div key={c.id} className={`w-24 cursor-pointer rounded-lg border-2 p-1 ${newsClubSelectedCardId === c.id ? 'border-sky-400 bg-sky-900/50' : 'border-slate-600 hover:border-sky-500'}`} onClick={() => setNewsClubSelectedCardId(c.id)}>
+                      <Card card={c} showAsFaceDown={false} />
+                    </div>
+                  ))}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="primary" size="sm" onClick={handleConfirmNewsClubChoice} disabled={!newsClubSelectedCardId}>确认递给下家</Button>
+                <Button variant="danger" size="sm" onClick={() => { setPendingNewsClubChoice(null); setNewsClubSelectedCardId(null); }}>取消</Button>
+              </div>
             </div>
-            <Button variant="primary" size="sm" onClick={handleConfirmNewsClubChoice} disabled={!newsClubSelectedCardId}>确认递给下家</Button>
           </div>
         )}
 
         {currentPlayer && (
-          <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+          <div
+            className={`rounded-xl p-4 border-2 transition-all ${
+              currentPlayer.current_hand_count === 1
+                ? 'bg-slate-800 ring-2 ring-red-400 ring-offset-2 ring-offset-slate-900 border-red-500 shadow-lg shadow-red-900/20'
+                : isCurrentPlayer
+                  ? 'bg-slate-800 ring-2 ring-primary-400 ring-offset-2 ring-offset-slate-900 border-primary-500 shadow-lg shadow-primary-900/20'
+                  : 'bg-slate-800 border border-slate-700'
+            }`}
+          >
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-slate-300">
                 我的卡牌
-                {isCurrentPlayer && <span className="ml-2 text-primary-400">(当前回合)</span>}
+                {currentPlayer.current_hand_count === 1 && <span className="ml-2 text-red-400 font-bold">(等待结算)</span>}
+                {isCurrentPlayer && currentPlayer.current_hand_count > 1 && <span className="ml-2 text-primary-400 font-bold">(当前回合)</span>}
               </h2>
               <div className="text-slate-400 flex gap-4">
                 <span>手牌: {currentPlayer.hand.length}</span>
@@ -822,18 +1000,6 @@ export const Game: React.FC = () => {
                 <div className="text-sky-400 text-sm mb-2">新闻部：我选的牌（递给下家）</div>
                 <div className="w-20">
                   <Card card={newsClubMyChosenCard} showAsFaceDown={false} />
-                </div>
-              </div>
-            )}
-            {currentPlayer.field_cards && currentPlayer.field_cards.length > 0 && (
-              <div className="mb-4">
-                <div className="text-slate-400 text-sm mb-2">已打出的牌</div>
-                <div className="flex flex-wrap gap-2">
-                  {currentPlayer.field_cards.map((card) => (
-                    <div key={card.id} className="w-20">
-                      <Card card={card} showAsFaceDown={false} />
-                    </div>
-                  ))}
                 </div>
               </div>
             )}

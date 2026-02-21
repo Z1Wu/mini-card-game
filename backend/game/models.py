@@ -25,7 +25,6 @@ class CardUsageType(str, Enum):
 class Card(BaseModel):
     id: str
     name: CardType
-    cost: int
     description: str
     harmony_value: int
     victory_priority: int
