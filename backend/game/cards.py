@@ -33,7 +33,7 @@ CARD_DATABASE = {
     },
     CardType.HEALTH_COMMITTEE: {
         "description": "选择一张已经被正面打出的卡牌，将它归入自己的手牌。",
-        "harmony_value": 2,
+        "harmony_value": 1,
         "victory_priority": 4,
         "victory_condition": "4 调和成功即可获胜",
         "count": 2

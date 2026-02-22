@@ -382,6 +382,7 @@ class GameWebSocketServer:
             game and usage_type == CardUsageType.SKILL and target_player_id
             and card_for_check and card_for_check.name == CardType.DISCIPLINE_COMMITTEE
         )
+        is_health_committee = card_for_check and card_for_check.name == CardType.HEALTH_COMMITTEE
         is_library = card_for_check and card_for_check.name == CardType.LIBRARY_COMMITTEE
         is_news_club = card_for_check and card_for_check.name == CardType.NEWS_CLUB
         success = self.game_rules.play_card(
@@ -423,6 +424,18 @@ class GameWebSocketServer:
                         "target_player_id": target_player_id,
                         "target_player_name": target_player.name,
                         "hand": [c.model_dump() for c in target_player.hand],
+                    })
+            if is_health_committee and usage_type == CardUsageType.SKILL and target_player_id:
+                g = self.game_manager.game
+                actor = next((p for p in g.players if p.id == player_id), None)
+                target_player = next((p for p in g.players if p.id == target_player_id), None)
+                if actor and target_player:
+                    await self.broadcast({
+                        "type": "health_committee_effect",
+                        "actor_id": player_id,
+                        "actor_name": actor.name,
+                        "target_player_id": target_player_id,
+                        "target_player_name": target_player.name,
                     })
             if is_library and usage_type == CardUsageType.SKILL and websocket:
                 g = self.game_manager.game

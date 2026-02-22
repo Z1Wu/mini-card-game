@@ -59,10 +59,10 @@ class GameRules:
             return self._play_doubt_card(player, card, target_player_id)
 
         # 以下仅特技 (SKILL) 路径：校验目标参数并发动牌面效果
-        # 手牌剩一张的玩家处于等待结算阶段，不能被选为任何特技目标
+        # 手牌剩一张的玩家处于等待结算阶段，不能被选为需要「移动牌/交换」的特技目标；风纪委员仅查看，可查看该玩家
         if usage_type == CardUsageType.SKILL and target_player_id:
             target = self._get_player(target_player_id)
-            if target and len(target.hand) <= 1:
+            if target and len(target.hand) <= 1 and card.name != CardType.DISCIPLINE_COMMITTEE:
                 logger.warning("目标玩家手牌已剩一张，处于等待结算阶段，不可被特技选中")
                 return False
         if card.name == CardType.HEALTH_COMMITTEE and usage_type == CardUsageType.SKILL:
