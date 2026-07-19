@@ -84,5 +84,33 @@ async def test_maximum_five_players(server_uri):
         await close_clients(clients)
 
 
+@pytest.mark.e2e
+async def test_duplicate_player_id_is_rejected(server_uri):
+    original = GameTestClient(server_uri)
+    duplicate = GameTestClient(server_uri)
+    try:
+        assert (await original.connect("same-player", "原玩家"))["type"] == "join_success"
+        response = await duplicate.connect("same-player", "重复玩家")
+        assert response == {"type": "error", "message": "Failed to join game"}
+    finally:
+        await duplicate.close()
+        await original.close()
+
+
+@pytest.mark.e2e
+async def test_new_player_cannot_join_active_game(server_uri):
+    clients = await connect_players(server_uri, 3)
+    late_joiner = GameTestClient(server_uri)
+    try:
+        started = await clients[0].start_game()
+        assert started["game_state"]["state"] == GameState.PLAYING.value
+
+        response = await late_joiner.connect("late-player", "迟到玩家")
+        assert response == {"type": "error", "message": "Failed to join game"}
+    finally:
+        await late_joiner.close()
+        await close_clients(clients)
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s"])

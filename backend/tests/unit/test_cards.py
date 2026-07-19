@@ -34,6 +34,13 @@ def test_create_card_deck_by_players():
     accomplice_count = sum(1 for c in deck3 if c.name == CardType.ACCOMPLICE)
     assert accomplice_count == 0
 
+
+@pytest.mark.unit
+@pytest.mark.parametrize("player_count", [0, 1, 2, 6, 99])
+def test_create_card_deck_rejects_unsupported_player_counts(player_count):
+    with pytest.raises(ValueError, match="unsupported player count"):
+        create_card_deck(player_count)
+
 @pytest.mark.unit
 def test_card_properties():
     deck = create_card_deck(5)
@@ -72,3 +79,32 @@ def test_card_database():
 
     for card_type in expected_cards:
         assert card_type in CARD_DATABASE
+
+    assert set(CARD_DATABASE) == set(CardType)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("card_type", "harmony_value", "victory_priority"),
+    [
+        (CardType.CLASS_REP, 2, 4),
+        (CardType.LIBRARY_COMMITTEE, 1, 4),
+        (CardType.ALIEN, -1, 1),
+        (CardType.HOME_CLUB, 0, 5),
+        (CardType.HEALTH_COMMITTEE, 1, 4),
+        (CardType.DISCIPLINE_COMMITTEE, 2, 4),
+        (CardType.NEWS_CLUB, 1, 4),
+        (CardType.RICH_GIRL, 1, 4),
+        (CardType.ACCOMPLICE, 0, 3),
+        (CardType.INFECTED, 0, 2),
+        (CardType.CRIMINAL, 0, 3),
+        (CardType.STUDENT_COUNCIL_PRESIDENT, 3, 4),
+        (CardType.HONOR_STUDENT, 2, 3),
+    ],
+)
+def test_card_rule_table(card_type, harmony_value, victory_priority):
+    card_data = CARD_DATABASE[card_type]
+    assert card_data["harmony_value"] == harmony_value
+    assert card_data["victory_priority"] == victory_priority
+    assert card_data["description"]
+    assert card_data["victory_condition"]

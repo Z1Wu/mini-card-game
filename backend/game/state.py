@@ -1,19 +1,29 @@
-import random
+from random import Random
 from typing import Optional
 from .models import Game, Player, Card, GameState, CardType
 
+
+HAND_COUNT_BY_PLAYERS = {3: 6, 4: 6, 5: 5}
+MIN_PLAYERS = min(HAND_COUNT_BY_PLAYERS)
+MAX_PLAYERS = max(HAND_COUNT_BY_PLAYERS)
+
 class GameManager:
-    def __init__(self):
+    def __init__(self, rng: Optional[Random] = None):
         self.game: Optional[Game] = None
+        self._rng = rng or Random()
 
     def create_game(self, game_id: str) -> Game:
         self.game = Game(id=game_id)
         return self.game
 
     def add_player(self, player_id: str, player_name: str) -> bool:
-        if not self.game:
+        if not self.game or self.game.state != GameState.WAITING:
             return False
-        if len(self.game.players) >= 5:
+        if not player_id or not player_name:
+            return False
+        if any(player.id == player_id for player in self.game.players):
+            return False
+        if len(self.game.players) >= MAX_PLAYERS:
             return False
 
         player = Player(id=player_id, name=player_name)
@@ -38,8 +48,8 @@ class GameManager:
         if not self.game:
             logger.warning("游戏不存在")
             return False
-        if len(self.game.players) < 3:
-            logger.warning(f"玩家数量不足: {len(self.game.players)}")
+        if len(self.game.players) not in HAND_COUNT_BY_PLAYERS:
+            logger.warning(f"不支持的玩家数量: {len(self.game.players)}")
             return False
         
         result = self.deal_cards()
@@ -52,14 +62,13 @@ class GameManager:
 
         # 与 overview 一致：仅支持 3–5 人；3–4 人每人 6 张，5 人 5 张
         n = len(self.game.players)
-        hand_count_map = {3: 6, 4: 6, 5: 5}
-        hand_count = hand_count_map.get(n)
+        hand_count = HAND_COUNT_BY_PLAYERS.get(n)
         if hand_count is None:
             return False
 
         from .cards import create_card_deck
         deck = create_card_deck(n)
-        random.shuffle(deck)
+        self._rng.shuffle(deck)
 
         for player in self.game.players:
             player.hand = deck[:hand_count]
@@ -127,5 +136,6 @@ class GameManager:
         self.game.current_player_index = 0
         self.game.turn_count = 0
         self.game.winner = None
+        self.game.required_harmony_value = 0
         logger.info("reset_game: 已清除状态，回到等待开始")
         return True
