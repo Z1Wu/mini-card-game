@@ -29,7 +29,7 @@ tests/
 - **位置**: `tests/e2e/`
 - **标记**: `@pytest.mark.e2e`
 - **特点**:
-  - 需要运行中的服务端
+  - 测试会为每个用例启动隔离的临时服务端
   - 测试完整的游戏流程
   - 使用 WebSocket 客户端
   - 执行速度较慢
@@ -44,11 +44,6 @@ uv run pytest tests/unit/ -v
 
 ### 运行所有 E2E 测试
 ```bash
-# 终端1：启动服务端
-cd backend
-uv run python main.py
-
-# 终端2：运行 E2E 测试
 cd backend
 uv run pytest tests/e2e/ -v -s
 ```
