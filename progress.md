@@ -37,4 +37,4 @@ Original prompt: 你修复下把
 
 ## CI maintenance
 
-- Upgraded GitHub-maintained action runtimes to `checkout@v7`, `setup-node@v7`, and `setup-uv@v8` to remove Node 20 runtime deprecation warnings.
+- Upgraded action runtimes to `checkout@v7`, `setup-node@v7`, and the published `setup-uv@v8.3.2` tag to remove Node 20 runtime deprecation warnings.
