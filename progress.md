@@ -26,3 +26,4 @@ Original prompt: 你修复下把
 - Corrected the overview's Library Committee / Discipline Committee harmony values to match the authoritative card table.
 - Added a credential-safe `render_game_to_text` browser hook for route, connection, turn, and public zone-count observability.
 - Browser observability distinguishes raw WebSocket transport health from authenticated-player state.
+- CI now runs for stacked pull requests regardless of their temporary base branch.
