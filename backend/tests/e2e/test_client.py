@@ -18,7 +18,7 @@ class GameTestClient:
         self.player_id = player_id
         self.player_name = player_name
 
-        self.websocket = await websockets.connect(self.uri)
+        await self.open()
         print(f"[ok] {player_name} 已连接")
 
         await self.send_message({
@@ -71,6 +71,20 @@ class GameTestClient:
         response = await self.receive_message({"game_state", "error"})
         print(f"  收到: {response}")
         return response
+
+    async def open(self):
+        if self.websocket is None:
+            self.websocket = await websockets.connect(self.uri)
+
+    async def create_room(self):
+        await self.open()
+        await self.send_message({"type": "create_room"})
+        return await self.receive_message({"room_created", "error"})
+
+    async def join_room(self, room_code: str):
+        await self.open()
+        await self.send_message({"type": "join_room", "room_code": room_code})
+        return await self.receive_message({"room_joined", "error"})
 
     async def get_game_state(self):
         await self.send_message({

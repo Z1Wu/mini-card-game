@@ -70,6 +70,17 @@ python test_game_flow.py
 
 ### 客户端 -> 服务器
 
+#### 房间选择（可选）
+
+未发送房间消息的旧客户端会继续进入 `default` 房间。新客户端应在登录前创建或选择房间：
+
+```json
+{"type": "create_room"}
+{"type": "join_room", "room_code": "ABC123"}
+```
+
+服务端分别返回 `room_created` 或 `room_joined`，并附带标准化后的 `room_code`。已登录连接必须先断开，才能切换房间。非默认空房间会在 `ROOM_TTL_SECONDS`（默认 300 秒）后清理。
+
 #### 加入游戏
 ```json
 {

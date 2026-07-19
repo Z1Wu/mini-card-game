@@ -36,10 +36,33 @@ export type MessageType =
   | 'news_club_ended'
   | 'game_over'
   | 'query_game_status'
-  | 'game_status';
+  | 'game_status'
+  | 'create_room'
+  | 'room_created'
+  | 'join_room'
+  | 'room_joined';
 
 export interface BaseMessage {
   type: MessageType;
+}
+
+export interface CreateRoomMessage extends BaseMessage {
+  type: 'create_room';
+}
+
+export interface RoomCreatedMessage extends BaseMessage {
+  type: 'room_created';
+  room_code: string;
+}
+
+export interface JoinRoomMessage extends BaseMessage {
+  type: 'join_room';
+  room_code: string;
+}
+
+export interface RoomJoinedMessage extends BaseMessage {
+  type: 'room_joined';
+  room_code: string;
 }
 
 export interface LoginMessage extends BaseMessage {
@@ -80,6 +103,7 @@ export interface JoinSuccessMessage extends BaseMessage {
 
 export interface ErrorMessage extends BaseMessage {
   type: 'error';
+  code?: string;
   message: string;
 }
 
@@ -292,6 +316,10 @@ export interface NewsClubChoiceMessage extends BaseMessage {
 }
 
 export type WebSocketMessage =
+  | CreateRoomMessage
+  | RoomCreatedMessage
+  | JoinRoomMessage
+  | RoomJoinedMessage
   | LoginMessage
   | LoginSuccessMessage
   | ReconnectMessage

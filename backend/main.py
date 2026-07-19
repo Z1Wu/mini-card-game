@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from websocket.server import GameWebSocketServer
+from websocket.hub import RoomHubWebSocketServer
 from config import Config
 
 logging.basicConfig(
@@ -10,7 +10,11 @@ logging.basicConfig(
 )
 
 async def main():
-    server = GameWebSocketServer(host=Config.HOST, port=Config.PORT)
+    server = RoomHubWebSocketServer(
+        host=Config.HOST,
+        port=Config.PORT,
+        room_ttl_seconds=Config.ROOM_TTL_SECONDS,
+    )
     await server.start()
 
 if __name__ == "__main__":
