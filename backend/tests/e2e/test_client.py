@@ -1,10 +1,14 @@
 import asyncio
 import json
+from collections.abc import Collection
+
 import websockets
 
+
 class GameTestClient:
-    def __init__(self, uri: str = "ws://localhost:8765"):
+    def __init__(self, uri: str = "ws://localhost:8765", receive_timeout: float = 5.0):
         self.uri = uri
+        self.receive_timeout = receive_timeout
         self.websocket = None
         self.player_id = None
         self.player_name = None
@@ -15,7 +19,7 @@ class GameTestClient:
         self.player_name = player_name
 
         self.websocket = await websockets.connect(self.uri)
-        print(f"✓ {player_name} 已连接")
+        print(f"[ok] {player_name} 已连接")
 
         await self.send_message({
             "type": "join_game",
@@ -23,7 +27,7 @@ class GameTestClient:
             "player_name": player_name
         })
 
-        response = await self.receive_message()
+        response = await self.receive_message({"join_success", "error"})
         print(f"  收到: {response}")
 
         return response
@@ -33,13 +37,25 @@ class GameTestClient:
             await self.websocket.send(json.dumps(message))
             print(f"  发送: {message}")
 
-    async def receive_message(self) -> dict:
-        if self.websocket:
-            message = await self.websocket.recv()
+    async def receive_message(self, expected_types: Collection[str] | None = None) -> dict:
+        if not self.websocket:
+            raise RuntimeError("WebSocket is not connected")
+
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + self.receive_timeout
+        while True:
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                raise TimeoutError(f"Timed out waiting for message types: {expected_types}")
+            try:
+                message = await asyncio.wait_for(self.websocket.recv(), timeout=remaining)
+            except asyncio.TimeoutError as exc:
+                raise TimeoutError(f"Timed out waiting for message types: {expected_types}") from exc
+
             data = json.loads(message)
             self.messages.append(data)
-            return data
-        return None
+            if expected_types is None or data.get("type") in expected_types:
+                return data
 
     async def play_card(self, card_id: str, usage_type: str, target_player_id: str = None):
         message = {
@@ -52,7 +68,7 @@ class GameTestClient:
             message["target_player_id"] = target_player_id
 
         await self.send_message(message)
-        response = await self.receive_message()
+        response = await self.receive_message({"game_state", "error"})
         print(f"  收到: {response}")
         return response
 
@@ -61,7 +77,18 @@ class GameTestClient:
             "type": "get_game_state",
             "player_id": self.player_id
         })
-        return await self.receive_message()
+        return await self.receive_message({"game_state", "error"})
+
+    async def start_game(self):
+        await self.send_message({
+            "type": "start_game",
+            "player_id": self.player_id,
+        })
+        return await self.receive_message({"game_state", "error"})
+
+    async def reset_game(self):
+        await self.send_message({"type": "reset_game"})
+        return await self.receive_message({"game_state", "error"})
 
     async def respond_honor_student(self, response: str):
         await self.send_message({
@@ -69,12 +96,12 @@ class GameTestClient:
             "player_id": self.player_id,
             "response": response
         })
-        return await self.receive_message()
+        return await self.receive_message({"game_state", "error", "honor_student_phase"})
 
     async def close(self):
         if self.websocket:
             await self.websocket.close()
-            print(f"✓ {self.player_name} 已断开连接")
+            print(f"[ok] {self.player_name} 已断开连接")
 
     async def listen(self):
         try:
@@ -83,4 +110,4 @@ class GameTestClient:
                 self.messages.append(data)
                 print(f"  {self.player_name} 收到: {data}")
         except websockets.exceptions.ConnectionClosed:
-            print(f"✗ {self.player_name} 连接已关闭")
+            print(f"[closed] {self.player_name} 连接已关闭")

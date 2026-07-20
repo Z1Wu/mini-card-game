@@ -9,7 +9,7 @@ _DEFAULT_AUTH_USERS_FILE = os.path.join(os.path.dirname(__file__), "auth", "user
 class Config:
     HOST = os.getenv("HOST", "0.0.0.0")
     PORT = int(os.getenv("PORT", 8765))
-    MAX_PLAYERS = 6
+    MAX_PLAYERS = 5
     MIN_PLAYERS = 3
     PING_INTERVAL = 20
     PING_TIMEOUT = 20

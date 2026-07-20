@@ -26,7 +26,7 @@ jobs:
         working-directory: backend
         run: |
           uv sync --frozen
-          uv run pytest tests/ -m unit -v --tb=short
+          uv run pytest tests/ -v --tb=short
 
   frontend:
     name: Frontend
