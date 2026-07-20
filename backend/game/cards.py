@@ -133,7 +133,9 @@ DECK_COUNTS_BY_PLAYERS: Dict[int, Dict[CardType, int]] = {
 
 def create_card_deck(player_count: int = 5) -> List[Card]:
     """按玩家人数生成牌组，与 overview 附录 三人/四人/五人卡牌类型一致。仅支持 3、4、5 人。"""
-    counts = DECK_COUNTS_BY_PLAYERS.get(player_count, DECK_COUNTS_BY_PLAYERS[5])
+    if player_count not in DECK_COUNTS_BY_PLAYERS:
+        raise ValueError(f"unsupported player count: {player_count}; expected one of {sorted(DECK_COUNTS_BY_PLAYERS)}")
+    counts = DECK_COUNTS_BY_PLAYERS[player_count]
     deck: List[Card] = []
     for card_type, card_data in CARD_DATABASE.items():
         n = counts.get(card_type, card_data["count"])

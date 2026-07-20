@@ -1,4 +1,5 @@
 import pytest
+from random import Random
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -32,6 +33,19 @@ def test_add_too_many_players(game_manager):
     result = game_manager.add_player("player_6", "玩家6")
     assert result is False
     assert len(game_manager.game.players) == 5
+
+
+@pytest.mark.unit
+def test_add_player_rejects_duplicate_id_and_active_game(game_manager):
+    assert game_manager.add_player("player_1", "玩家1") is True
+    assert game_manager.add_player("player_1", "重复玩家") is False
+    assert len(game_manager.game.players) == 1
+
+    for i in range(2, 4):
+        assert game_manager.add_player(f"player_{i}", f"玩家{i}") is True
+    assert game_manager.start_game() is True
+    assert game_manager.add_player("player_4", "玩家4") is False
+    assert len(game_manager.game.players) == 3
 
 @pytest.mark.unit
 def test_remove_player(game_manager):
@@ -70,6 +84,34 @@ def test_deal_cards_hand_count_by_players():
         for p in manager.game.players:
             assert len(p.hand) == want, f"n={n} expected {want} cards per player"
             assert p.current_hand_count == want
+
+
+@pytest.mark.unit
+def test_seeded_dealing_is_reproducible():
+    def deal(seed):
+        manager = GameManager(rng=Random(seed))
+        manager.create_game("seeded")
+        for i in range(3):
+            assert manager.add_player(f"player_{i + 1}", f"玩家{i + 1}")
+        assert manager.start_game()
+        return (
+            [[card.id for card in player.hand] for player in manager.game.players],
+            manager.game.current_player_index,
+        )
+
+    assert deal(2026) == deal(2026)
+    assert deal(2026) != deal(2027)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("count", [0, 1, 2])
+def test_start_game_rejects_unsupported_player_count(count):
+    manager = GameManager(rng=Random(1))
+    manager.create_game("unsupported")
+    for i in range(count):
+        assert manager.add_player(f"player_{i}", f"玩家{i}")
+    assert manager.start_game() is False
+    assert manager.game.state == GameState.WAITING
 
 @pytest.mark.unit
 def test_next_turn(game_manager):
@@ -138,3 +180,20 @@ def test_next_turn_skips_player_with_one_card_and_ends_when_all_have_one():
     ok = manager.next_turn()
     assert ok is True
     assert manager.game.state == GameState.GAME_OVER
+
+
+@pytest.mark.unit
+def test_reset_game_clears_round_state_but_preserves_players():
+    manager = GameManager(rng=Random(1))
+    manager.create_game("reset")
+    for i in range(3):
+        assert manager.add_player(f"player_{i}", f"玩家{i}")
+    assert manager.start_game()
+    assert manager.game.required_harmony_value == 6
+
+    assert manager.reset_game()
+    assert manager.game.state == GameState.WAITING
+    assert manager.game.player_count == 3
+    assert manager.game.required_harmony_value == 0
+    assert manager.game.turn_count == 0
+    assert all(not player.hand and player.current_hand_count == 0 for player in manager.game.players)

@@ -13,3 +13,17 @@ Original prompt: 你修复下把
 
 - Consider replacing the demo plaintext credential file before any public production deployment.
 - Add dedicated frontend component tests when the UI begins changing frequently.
+- Clarify whether the Infected card's "next turn" ability is optional and one-shot before implementing its missing interactive flow.
+
+## Rules-engine hardening
+
+- Added injectable seeded randomness for reproducible deals and first-player selection.
+- Added strict player lifecycle invariants: unique IDs, waiting-room-only joins, and supported player counts only.
+- Added WebSocket E2E coverage for duplicate identities and late joins after a game starts.
+- Unsupported deck sizes now fail explicitly instead of silently producing a five-player deck.
+- Added table-driven coverage for every card's harmony value and victory priority.
+- Added scenario coverage for all five victory priorities, tied imprisonment, non-positive doubt totals, and settlement summaries.
+- Corrected the overview's Library Committee / Discipline Committee harmony values to match the authoritative card table.
+- Added a credential-safe `render_game_to_text` browser hook for route, connection, turn, and public zone-count observability.
+- Browser observability distinguishes raw WebSocket transport health from authenticated-player state.
+- CI now runs for stacked pull requests regardless of their temporary base branch.
