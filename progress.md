@@ -34,3 +34,7 @@ Original prompt: 你修复下把
 - Added configurable empty-room expiry via `ROOM_TTL_SECONDS`.
 - Authenticated connections cannot switch rooms without disconnecting, preventing cross-room identity leakage.
 - Added E2E coverage for room isolation, missing-room errors, legacy compatibility, reconnect, switch guards, and TTL cleanup.
+
+## CI maintenance
+
+- Upgraded action runtimes to `checkout@v7`, `setup-node@v7`, and the published `setup-uv@v8.3.2` tag to remove Node 20 runtime deprecation warnings.
