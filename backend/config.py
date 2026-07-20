@@ -13,4 +13,5 @@ class Config:
     MIN_PLAYERS = 3
     PING_INTERVAL = 20
     PING_TIMEOUT = 20
+    ROOM_TTL_SECONDS = float(os.getenv("ROOM_TTL_SECONDS", 300))
     AUTH_USERS_FILE = os.getenv("AUTH_USERS_FILE", _DEFAULT_AUTH_USERS_FILE)

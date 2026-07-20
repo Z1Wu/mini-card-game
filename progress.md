@@ -27,3 +27,10 @@ Original prompt: 你修复下把
 - Added a credential-safe `render_game_to_text` browser hook for route, connection, turn, and public zone-count observability.
 - Browser observability distinguishes raw WebSocket transport health from authenticated-player state.
 - CI now runs for stacked pull requests regardless of their temporary base branch.
+
+## Room architecture
+
+- Added a backwards-compatible room hub; legacy clients remain in `default`, while new clients can create/join isolated room codes before login.
+- Added configurable empty-room expiry via `ROOM_TTL_SECONDS`.
+- Authenticated connections cannot switch rooms without disconnecting, preventing cross-room identity leakage.
+- Added E2E coverage for room isolation, missing-room errors, legacy compatibility, reconnect, switch guards, and TTL cleanup.
