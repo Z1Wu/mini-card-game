@@ -38,3 +38,26 @@ Original prompt: 你修复下把
 ## CI maintenance
 
 - Upgraded action runtimes to `checkout@v7`, `setup-node@v7`, and the published `setup-uv@v8.3.2` tag to remove Node 20 runtime deprecation warnings.
+
+## 2026-07-20 local merged-version smoke check
+
+- Fast-forwarded local `main` to the four merged pull requests and launched the backend on port 8765 and frontend on port 3000.
+- Restored the frontend dependency tree with `npm ci` because the previous ignored `node_modules` directory was incomplete after cleanup.
+- Browser verification passed: the login screen rendered correctly, `render_game_to_text` reported an active WebSocket connection, and no console errors were captured.
+
+## 2026-07-21 recorded multiplayer test
+
+- Automated and recorded a complete three-player browser match using the demo player1-player3 accounts.
+- The match completed in 15 turns with every player at one remaining card; all plays used the Harmony action to exercise the standard turn and settlement path deterministically.
+- Verified the 23.76-second, 1280x720 WebM by decoding and visually inspecting frames from the lobby, early game, midgame, late game, and final settlement.
+- No page or console errors were captured. The post-recording login smoke check also remained connected to the WebSocket backend.
+- Follow-up: the settlement UI correctly displayed Player 3 as winner, but `render_game_to_text` returned `winner_id: null`; align the test hook with the `game_over` event/local winner state.
+
+## Recorded browser E2E procedure
+
+- Added `npm run test:e2e`, which builds the frontend with an isolated WebSocket URL, starts dedicated backend/frontend services on ports 8876/3100, runs three browser sessions through a complete match, and cleans up both services.
+- The procedure asserts 15 turns, all players reaching one card, 15 cards in the harmony area, a visible settlement winner, winner parity in `render_game_to_text`, and zero browser console/page errors.
+- Each run writes a fresh WebM, full settlement screenshot, and JSON report beneath `frontend/test-results/full-game/`; the directory is ignored by Git.
+- Fixed the game-over handler so the winner from the `game_over` message is also written to the shared game store and exposed by `render_game_to_text`.
+- Added a Browser E2E CI job that installs Chromium, runs the procedure after backend/frontend checks, and uploads artifacts for 14 days even on failure.
+- Verification: the recorded E2E passed twice after startup hardening; latest run completed 15 turns with Player 2 as winner and zero browser errors. Existing 61 backend tests and frontend lint also pass.

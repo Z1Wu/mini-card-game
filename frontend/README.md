@@ -157,6 +157,17 @@ function MyComponent() {
 
 ## 测试
 
+### 完整三人浏览器 E2E
+
+该流程会在隔离端口启动后端和前端，使用 `player1` 至 `player3` 完成一局三人游戏，验证回合推进、调和区、结算页、获胜者状态和浏览器错误，并保存 WebM 录像、最终截图及 JSON 报告。
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
+测试服务使用前端端口 `3100` 和 WebSocket 端口 `8876`，不会干扰默认的本地开发服务。产物位于 `test-results/full-game/`。
+
 ### 手动测试
 
 1. 启动后端服务器
