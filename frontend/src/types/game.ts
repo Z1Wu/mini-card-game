@@ -40,6 +40,8 @@ export interface Card {
   is_face_up: boolean;
   location: 'hand' | 'field' | 'harmony' | 'discard';
   target_player_id: string | null;
+  /** True for an opaque card placeholder in harmony/doubt zones. */
+  hidden?: boolean;
 }
 
 export interface Player {

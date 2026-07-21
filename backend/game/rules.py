@@ -15,6 +15,7 @@ class GameRules:
         usage_type: CardUsageType,
         target_player_id: Optional[str] = None,
         target_card_id: Optional[str] = None,
+        source_player_id: Optional[str] = None,
         hand_card_id: Optional[str] = None,
         harmony_card_id: Optional[str] = None,
     ) -> bool:
@@ -60,9 +61,14 @@ class GameRules:
 
         # 以下仅特技 (SKILL) 路径：校验目标参数并发动牌面效果
         # 手牌剩一张的玩家处于等待结算阶段，不能被选为需要「移动牌/交换」的特技目标；风纪委员仅查看，可查看该玩家
-        if usage_type == CardUsageType.SKILL and target_player_id:
+        hand_affecting_target_skills = {
+            CardType.CLASS_REP,
+            CardType.HEALTH_COMMITTEE,
+            CardType.RICH_GIRL,
+        }
+        if usage_type == CardUsageType.SKILL and target_player_id and card.name in hand_affecting_target_skills:
             target = self._get_player(target_player_id)
-            if target and len(target.hand) <= 1 and card.name != CardType.DISCIPLINE_COMMITTEE:
+            if target and len(target.hand) <= 1:
                 logger.warning("目标玩家手牌已剩一张，处于等待结算阶段，不可被特技选中")
                 return False
         if card.name == CardType.HEALTH_COMMITTEE and usage_type == CardUsageType.SKILL:
@@ -88,9 +94,30 @@ class GameRules:
                 logger.warning(f"归宅部：调和区未找到 harmony_card_id={harmony_card_id}")
                 return False
 
+        if card.name == CardType.ACCOMPLICE and usage_type == CardUsageType.SKILL:
+            if not source_player_id or not target_player_id or not target_card_id:
+                logger.warning("共犯特技需要指定来源玩家、质疑牌和目标玩家")
+                return False
+            source_player = self._get_player(source_player_id)
+            target_player = self._get_player(target_player_id)
+            if (
+                not source_player
+                or not target_player
+                or target_player_id == player.id
+                or target_player_id == source_player_id
+            ):
+                logger.warning("共犯特技的来源或目标玩家无效")
+                return False
+            if not any(c.id == target_card_id for c in source_player.doubt_cards):
+                logger.warning("共犯特技所选质疑牌不存在")
+                return False
+
         if usage_type == CardUsageType.SKILL:
             logger.info("执行特技出卡")
-            return self._play_skill_card(player, card, target_player_id, target_card_id, hand_card_id, harmony_card_id)
+            return self._play_skill_card(
+                player, card, target_player_id, target_card_id,
+                source_player_id, hand_card_id, harmony_card_id,
+            )
 
         logger.error(f"未知的出卡方式: usage_type={usage_type}")
         return False
@@ -101,6 +128,7 @@ class GameRules:
         card: Card,
         target_player_id: Optional[str],
         target_card_id: Optional[str] = None,
+        source_player_id: Optional[str] = None,
         hand_card_id: Optional[str] = None,
         harmony_card_id: Optional[str] = None,
     ) -> bool:
@@ -120,7 +148,10 @@ class GameRules:
         card.location = "field"
         player.field_cards.append(card)
 
-        self._execute_card_effect(player, card, target_player_id, target_card_id, hand_card_id, harmony_card_id)
+        self._execute_card_effect(
+            player, card, target_player_id, target_card_id,
+            source_player_id, hand_card_id, harmony_card_id,
+        )
         if card.name != CardType.NEWS_CLUB:
             self.game_manager.next_turn()
         logger.info("特技出卡成功")
@@ -202,6 +233,7 @@ class GameRules:
         card: Card,
         target_player_id: Optional[str],
         target_card_id: Optional[str] = None,
+        source_player_id: Optional[str] = None,
         hand_card_id: Optional[str] = None,
         harmony_card_id: Optional[str] = None,
     ):
@@ -219,9 +251,11 @@ class GameRules:
         elif card.name == CardType.RICH_GIRL:
             self._effect_rich_girl(player, target_player_id)
         elif card.name == CardType.ACCOMPLICE:
-            self._effect_accomplice(player, target_player_id)
+            self._effect_accomplice(player, source_player_id, target_player_id, target_card_id)
         elif card.name == CardType.HOME_CLUB:
             self._effect_home_club(player, hand_card_id, harmony_card_id)
+        elif card.name == CardType.INFECTED:
+            logger.info("感染者效果将在该玩家的下一个回合开始时结算")
         else:
             logger.warning(f"卡牌效果未实现: {card.name}")
 
@@ -395,18 +429,31 @@ class GameRules:
         logger.info("大小姐特技（选牌）执行成功")
         return True
 
-    def _effect_accomplice(self, player: Player, target_player_id: str):
-        logger.info(f"执行共犯效果: player={player.name}, target_player_id={target_player_id}")
-        if not player.doubt_cards:
-            logger.warning(f"玩家无质疑卡: player={player.name}")
-            return
-
+    def _effect_accomplice(
+        self,
+        player: Player,
+        source_player_id: str,
+        target_player_id: str,
+        target_card_id: str,
+    ):
+        """共犯：把任意质疑区的一张指定牌移动到另一名非自己的玩家处。"""
+        logger.info(
+            "执行共犯效果: player=%s, source=%s, target=%s, card=%s",
+            player.name, source_player_id, target_player_id, target_card_id,
+        )
+        source_player = self._get_player(source_player_id)
         target_player = self._get_player(target_player_id)
-        if not target_player or target_player_id == player.id:
-            logger.warning(f"目标玩家无效: target_player_id={target_player_id}")
+        if (
+            not source_player
+            or not target_player
+            or target_player_id == player.id
+            or target_player_id == source_player_id
+        ):
             return
-
-        card = player.doubt_cards.pop(0)
+        card = self._find_and_remove_card(source_player.doubt_cards, target_card_id)
+        if not card:
+            return
+        card.target_player_id = target_player_id
         target_player.doubt_cards.append(card)
         logger.info(f"共犯效果完成: 目标玩家质疑区卡牌数={len(target_player.doubt_cards)}")
 

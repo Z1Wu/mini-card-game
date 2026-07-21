@@ -4,11 +4,11 @@ import { Button } from '../components/common/Button';
 import { usePlayerStore } from '../stores/playerStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { wsService } from '../services/websocket';
-import { LoginMessage, ReconnectMessage, GameStatusMessage } from '../types/message';
+import { LoginMessage, ReconnectMessage, GameStatusMessage, LoginSuccessMessage, ReconnectSuccessMessage, RoomCreatedMessage, RoomJoinedMessage } from '../types/message';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { setPlayer, setConnected, setUsername, setPassword } = usePlayerStore();
+  const { roomCode, setPlayer, setConnected, setUsername, setPassword, setRoomCode, setReconnectToken } = usePlayerStore();
   const { connect, send, error } = useWebSocket();
   const [isConnecting, setIsConnecting] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
@@ -18,6 +18,9 @@ export const Login: React.FC = () => {
   /** 对局状态（登录前查询）：null=加载中/未请求 */
   const [gameStatus, setGameStatus] = useState<{ has_game: boolean; state: string | null; player_names: string[] } | null>(null);
   const [gameStatusError, setGameStatusError] = useState<string | null>(null);
+  const [roomCodeInput, setRoomCodeInput] = useState('');
+  const [roomBusy, setRoomBusy] = useState(false);
+  const [roomError, setRoomError] = useState('');
 
   const isGameInProgressError = serverError?.includes('游戏正在进行中') ?? false;
 
@@ -44,40 +47,88 @@ export const Login: React.FC = () => {
   useEffect(() => {
     const handleError = (message: any) => {
       console.error('Error from server:', message.message);
+      if (message.code?.startsWith('room_')) {
+        setRoomError(message.message);
+        setRoomBusy(false);
+        return;
+      }
       setServerError(message.message);
       setIsConnecting(false);
       setIsReconnecting(false);
     };
 
-    const handleLoginSuccess = (message: { player_id?: string; player_name?: string }) => {
+    const handleLoginSuccess = (message: LoginSuccessMessage) => {
       setServerError('');
       setIsConnecting(false);
       setIsReconnecting(false);
       if (message.player_id && message.player_name) {
         setPlayer(message.player_id, message.player_name);
       }
+      setReconnectToken(message.reconnect_token);
+      wsService.setSession(roomCode, username.trim(), message.reconnect_token);
+      setPassword('');
       navigate('/lobby');
     };
 
-    const handleReconnectSuccess = (message: { player_id?: string; player_name?: string }) => {
+    const handleReconnectSuccess = (message: ReconnectSuccessMessage) => {
       setServerError('');
       setIsReconnecting(false);
       if (message.player_id && message.player_name) {
         setPlayer(message.player_id, message.player_name);
       }
+      if (message.reconnect_token) setReconnectToken(message.reconnect_token);
       navigate('/lobby');
+    };
+
+    const handleRoomReady = (message: RoomCreatedMessage | RoomJoinedMessage) => {
+      setRoomCode(message.room_code);
+      setRoomCodeInput(message.room_code);
+      setRoomBusy(false);
+      setRoomError('');
+      setGameStatus(null);
+      send({ type: 'query_game_status' });
     };
 
     wsService.on('error', handleError);
     wsService.on('login_success', handleLoginSuccess);
     wsService.on('reconnect_success', handleReconnectSuccess);
+    wsService.on('room_created', handleRoomReady);
+    wsService.on('room_joined', handleRoomReady);
 
     return () => {
       wsService.off('error');
       wsService.off('login_success');
       wsService.off('reconnect_success');
+      wsService.off('room_created');
+      wsService.off('room_joined');
     };
-  }, [navigate, setPlayer]);
+  }, [navigate, roomCode, send, setPassword, setPlayer, setReconnectToken, setRoomCode, username]);
+
+  const handleCreateRoom = async () => {
+    setRoomBusy(true);
+    setRoomError('');
+    try {
+      await connect();
+      send({ type: 'create_room' });
+    } catch {
+      setRoomBusy(false);
+      setRoomError('无法连接服务器');
+    }
+  };
+
+  const handleJoinRoom = async () => {
+    const code = roomCodeInput.trim().toUpperCase();
+    if (!code) return;
+    setRoomBusy(true);
+    setRoomError('');
+    try {
+      await connect();
+      send({ type: 'join_room', room_code: code });
+    } catch {
+      setRoomBusy(false);
+      setRoomError('无法连接服务器');
+    }
+  };
 
   const handleLogin = async () => {
     const u = username.trim();
@@ -109,8 +160,9 @@ export const Login: React.FC = () => {
 
   const handleReconnect = async () => {
     const u = usePlayerStore.getState().username;
+    const token = usePlayerStore.getState().reconnectToken;
     const p = usePlayerStore.getState().password;
-    if (!u || !p) {
+    if (!u || (!token && !p)) {
       alert('请先使用用户名和密码登录');
       return;
     }
@@ -126,7 +178,7 @@ export const Login: React.FC = () => {
       const message: ReconnectMessage = {
         type: 'reconnect',
         username: u,
-        password: p,
+        ...(token ? { reconnect_token: token } : { password: p! }),
       };
       send(message);
     } catch (err) {
@@ -192,6 +244,27 @@ export const Login: React.FC = () => {
             </div>
           </div>
         )}
+
+        <div className="mb-6 p-4 bg-slate-700/50 border border-slate-600 rounded-xl">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium text-slate-300">游戏房间</span>
+            <span className="text-xs text-primary-300">{roomCode === 'default' ? '默认大厅' : roomCode}</span>
+          </div>
+          <div className="flex gap-2">
+            <input
+              value={roomCodeInput}
+              onChange={event => setRoomCodeInput(event.target.value.toUpperCase())}
+              placeholder="输入 6 位房间码"
+              maxLength={6}
+              className="min-w-0 flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white uppercase placeholder-slate-500"
+              disabled={roomBusy}
+            />
+            <Button type="button" variant="secondary" size="sm" onClick={handleJoinRoom} disabled={roomBusy || !roomCodeInput.trim()}>加入</Button>
+            <Button type="button" variant="primary" size="sm" onClick={handleCreateRoom} disabled={roomBusy}>创建</Button>
+          </div>
+          {roomError && <p className="text-red-300 text-xs mt-2">{roomError}</p>}
+          <p className="text-slate-500 text-xs mt-2">登录前选择房间；创建后可把房间码发给其他玩家。</p>
+        </div>
 
         {/* 对局状态（登录前可见） */}
         <div className="mb-6 p-4 bg-slate-700/50 border border-slate-600 rounded-xl">

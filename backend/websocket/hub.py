@@ -4,6 +4,7 @@ import logging
 import secrets
 import string
 import time
+from collections import deque
 from dataclasses import dataclass
 from typing import Callable, Optional
 
@@ -37,11 +38,17 @@ class RoomHubWebSocketServer:
         port: int = 8765,
         room_ttl_seconds: float = 300,
         code_factory: Optional[Callable[[], str]] = None,
+        origins: Optional[list[str]] = None,
+        max_messages_per_second: int = 30,
+        allow_legacy_join_game: bool = True,
     ):
         self.host = host
         self.port = port
         self.room_ttl_seconds = room_ttl_seconds
         self._code_factory = code_factory or self._generate_room_code
+        self.origins = origins
+        self.max_messages_per_second = max(1, max_messages_per_second)
+        self.allow_legacy_join_game = allow_legacy_join_game
         self._rooms: dict[str, RoomEntry] = {}
         self._connection_rooms: dict[object, str] = {}
         self._room_lock = asyncio.Lock()
@@ -52,7 +59,11 @@ class RoomHubWebSocketServer:
         return set(self._rooms)
 
     def _new_room(self, code: str) -> RoomEntry:
-        return RoomEntry(code=code, server=GameWebSocketServer(host=self.host, port=self.port))
+        return RoomEntry(code=code, server=GameWebSocketServer(
+            host=self.host,
+            port=self.port,
+            allow_legacy_join_game=self.allow_legacy_join_game,
+        ))
 
     def _generate_room_code(self) -> str:
         return "".join(secrets.choice(ROOM_CODE_ALPHABET) for _ in range(6))
@@ -148,9 +159,21 @@ class RoomHubWebSocketServer:
 
     async def handle_client(self, websocket) -> None:
         self._connection_rooms[websocket] = DEFAULT_ROOM_CODE
+        recent_messages: deque[float] = deque()
         await self._rooms[DEFAULT_ROOM_CODE].server.register_client(websocket)
         try:
             async for message in websocket:
+                now = time.monotonic()
+                while recent_messages and now - recent_messages[0] >= 1:
+                    recent_messages.popleft()
+                if len(recent_messages) >= self.max_messages_per_second:
+                    await self._send(websocket, {
+                        "type": "error",
+                        "code": "rate_limited",
+                        "message": "Too many messages",
+                    })
+                    continue
+                recent_messages.append(now)
                 try:
                     data = json.loads(message)
                 except json.JSONDecodeError:
@@ -180,5 +203,10 @@ class RoomHubWebSocketServer:
                     entry.empty_since = time.monotonic()
 
     async def start(self) -> None:
-        async with websockets.serve(self.handle_client, self.host, self.port):
+        async with websockets.serve(
+            self.handle_client,
+            self.host,
+            self.port,
+            origins=self.origins,
+        ):
             await asyncio.Future()

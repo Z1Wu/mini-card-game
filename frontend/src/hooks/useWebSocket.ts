@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { wsService } from '../services/websocket';
 import { WebSocketMessage } from '../types/message';
+import { usePlayerStore } from '../stores/playerStore';
 
 interface UseWebSocketReturn {
   connect: () => Promise<void>;
@@ -13,6 +14,11 @@ interface UseWebSocketReturn {
 export function useWebSocket(): UseWebSocketReturn {
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => wsService.onConnectionChange((connected) => {
+    setIsConnected(connected);
+    usePlayerStore.getState().setConnected(connected);
+  }), []);
 
   const connect = useCallback(async () => {
     try {

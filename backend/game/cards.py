@@ -137,11 +137,14 @@ def create_card_deck(player_count: int = 5) -> List[Card]:
         raise ValueError(f"unsupported player count: {player_count}; expected one of {sorted(DECK_COUNTS_BY_PLAYERS)}")
     counts = DECK_COUNTS_BY_PLAYERS[player_count]
     deck: List[Card] = []
+    card_index = 0
     for card_type, card_data in CARD_DATABASE.items():
         n = counts.get(card_type, card_data["count"])
-        for j in range(n):
+        for _ in range(n):
             card = Card(
-                id=f"{card_type.value}_{j}",
+                # IDs are intentionally opaque: hidden-zone payloads expose IDs for
+                # selection, so role names must never be encoded in the identifier.
+                id=f"card_{card_index}",
                 name=card_type,
                 description=card_data["description"],
                 harmony_value=card_data["harmony_value"],
@@ -149,4 +152,5 @@ def create_card_deck(player_count: int = 5) -> List[Card]:
                 victory_condition=card_data["victory_condition"]
             )
             deck.append(card)
+            card_index += 1
     return deck
