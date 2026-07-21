@@ -112,5 +112,71 @@ async def test_new_player_cannot_join_active_game(server_uri):
         await close_clients(clients)
 
 
+@pytest.mark.e2e
+async def test_playing_state_only_reveals_each_players_own_hand(server_uri):
+    clients = await connect_players(server_uri, 3)
+    try:
+        host_state = (await clients[0].start_game())["game_state"]
+        for player in host_state["players"]:
+            expected_visible = 6 if player["id"] == clients[0].player_id else 0
+            assert len(player["hand"]) == expected_visible
+            assert player["current_hand_count"] == 6
+
+        second_state = (await clients[1].get_game_state())["game_state"]
+        for player in second_state["players"]:
+            expected_visible = 6 if player["id"] == clients[1].player_id else 0
+            assert len(player["hand"]) == expected_visible
+    finally:
+        await close_clients(clients)
+
+
+@pytest.mark.e2e
+async def test_socket_cannot_spoof_another_players_action(server_uri):
+    clients = await connect_players(server_uri, 3)
+    try:
+        state = (await clients[0].start_game())["game_state"]
+        current_id = state["players"][state["current_player_index"]]["id"]
+        current_client = next(client for client in clients if client.player_id == current_id)
+        attacker = next(client for client in clients if client.player_id != current_id)
+        current_state = (await current_client.get_game_state())["game_state"]
+        current_player = next(player for player in current_state["players"] if player["id"] == current_id)
+        card_id = current_player["hand"][0]["id"]
+
+        await attacker.send_message({
+            "type": "play_card",
+            "player_id": current_id,
+            "card_id": card_id,
+            "usage_type": "调和",
+        })
+        response = await attacker.receive_message({"error"})
+        assert response["message"] == "玩家身份与当前连接不匹配"
+
+        unchanged = (await current_client.get_game_state())["game_state"]
+        assert unchanged["turn_count"] == state["turn_count"]
+        current_after = next(player for player in unchanged["players"] if player["id"] == current_id)
+        assert current_after["current_hand_count"] == 6
+    finally:
+        await close_clients(clients)
+
+
+@pytest.mark.e2e
+async def test_only_host_can_start_or_reset_game(server_uri):
+    clients = await connect_players(server_uri, 3)
+    try:
+        start_error = await clients[1].start_game()
+        assert start_error == {"type": "error", "message": "只有房主可以开始游戏"}
+
+        started = await clients[0].start_game()
+        assert started["game_state"]["state"] == GameState.PLAYING.value
+        await clients[1].receive_message({"game_state"})
+
+        reset_error = await clients[1].reset_game()
+        assert reset_error == {"type": "error", "message": "只有房主可以重置游戏"}
+        still_playing = await clients[0].get_game_state()
+        assert still_playing["game_state"]["state"] == GameState.PLAYING.value
+    finally:
+        await close_clients(clients)
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s"])

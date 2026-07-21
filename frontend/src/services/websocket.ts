@@ -3,61 +3,93 @@ import { WebSocketMessage } from '../types/message';
 
 class WebSocketService {
   private ws: WebSocket | null = null;
-  private messageHandlers: Map<string, (message: any) => void> = new Map();
+  private messageHandlers: Map<string, Set<(message: any) => void>> = new Map();
+  private connectionHandlers = new Set<(connected: boolean) => void>();
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
   private connectionPromise: Promise<void> | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private manualDisconnect = false;
+  private session: { roomCode: string; username: string; reconnectToken: string } | null = null;
+
+  constructor() {
+    try {
+      const saved = window.sessionStorage.getItem('card-game-session');
+      if (saved) this.session = JSON.parse(saved);
+    } catch {
+      this.session = null;
+    }
+  }
 
   connect(): Promise<void> {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      return Promise.resolve();
+    }
     if (this.connectionPromise) {
       return this.connectionPromise;
     }
 
+    this.manualDisconnect = false;
+
     this.connectionPromise = new Promise((resolve, reject) => {
       try {
         console.log('Attempting to connect to:', WS_URL);
-        this.ws = new WebSocket(WS_URL);
+        const socket = new WebSocket(WS_URL);
+        this.ws = socket;
 
         const timeout = setTimeout(() => {
-          if (this.ws && this.ws.readyState !== WebSocket.OPEN) {
-            this.ws.close();
+          if (socket.readyState !== WebSocket.OPEN) {
+            socket.close();
             reject(new Error('Connection timeout'));
           }
         }, 5000);
 
-        this.ws.onopen = () => {
+        socket.onopen = () => {
           console.log('WebSocket connected');
           clearTimeout(timeout);
           this.reconnectAttempts = 0;
           this.connectionPromise = null;
+          this.emitConnection(true);
+          if (this.session) {
+            if (this.session.roomCode !== 'default') {
+              socket.send(JSON.stringify({ type: 'join_room', room_code: this.session.roomCode }));
+            }
+            socket.send(JSON.stringify({
+              type: 'reconnect',
+              username: this.session.username,
+              reconnect_token: this.session.reconnectToken,
+            }));
+          }
           resolve();
         };
 
-        this.ws.onmessage = (event) => {
+        socket.onmessage = (event) => {
           try {
             const message: WebSocketMessage = JSON.parse(event.data);
-            const handler = this.messageHandlers.get(message.type);
-            if (handler) {
-              handler(message);
+            const handlers = this.messageHandlers.get(message.type);
+            if (handlers) {
+              handlers.forEach(handler => handler(message));
             }
           } catch (error) {
             console.error('Error parsing message:', error);
           }
         };
 
-        this.ws.onerror = (error) => {
+        socket.onerror = (error) => {
           console.error('WebSocket error:', error);
           clearTimeout(timeout);
           this.connectionPromise = null;
           reject(new Error('WebSocket connection failed'));
         };
 
-        this.ws.onclose = () => {
+        socket.onclose = () => {
           console.log('WebSocket disconnected');
           clearTimeout(timeout);
+          if (this.ws === socket) this.ws = null;
           this.connectionPromise = null;
-          this.attemptReconnect();
+          this.emitConnection(false);
+          if (!this.manualDisconnect) this.attemptReconnect();
         };
       } catch (error) {
         this.connectionPromise = null;
@@ -69,10 +101,17 @@ class WebSocketService {
   }
 
   disconnect(): void {
+    this.manualDisconnect = true;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     if (this.ws) {
       this.ws.close();
       this.ws = null;
     }
+    this.clearSession();
+    this.emitConnection(false);
   }
 
   send(message: WebSocketMessage): void {
@@ -84,11 +123,43 @@ class WebSocketService {
   }
 
   on(messageType: string, handler: (message: any) => void): void {
-    this.messageHandlers.set(messageType, handler);
+    const handlers = this.messageHandlers.get(messageType) ?? new Set();
+    handlers.add(handler);
+    this.messageHandlers.set(messageType, handlers);
   }
 
-  off(messageType: string): void {
-    this.messageHandlers.delete(messageType);
+  off(messageType: string, handler?: (message: any) => void): void {
+    if (!handler) {
+      this.messageHandlers.delete(messageType);
+      return;
+    }
+    const handlers = this.messageHandlers.get(messageType);
+    handlers?.delete(handler);
+    if (handlers?.size === 0) this.messageHandlers.delete(messageType);
+  }
+
+  onConnectionChange(handler: (connected: boolean) => void): () => void {
+    this.connectionHandlers.add(handler);
+    handler(this.isConnected());
+    return () => this.connectionHandlers.delete(handler);
+  }
+
+  setSession(roomCode: string, username: string, reconnectToken: string): void {
+    this.session = { roomCode, username, reconnectToken };
+    window.sessionStorage.setItem('card-game-session', JSON.stringify(this.session));
+  }
+
+  clearSession(): void {
+    this.session = null;
+    window.sessionStorage.removeItem('card-game-session');
+  }
+
+  getSessionRoomCode(): string {
+    return this.session?.roomCode ?? 'default';
+  }
+
+  private emitConnection(connected: boolean): void {
+    this.connectionHandlers.forEach(handler => handler(connected));
   }
 
   private attemptReconnect(): void {
@@ -96,7 +167,8 @@ class WebSocketService {
       this.reconnectAttempts++;
       const delay = this.reconnectDelay * this.reconnectAttempts;
       console.log(`Attempting to reconnect in ${delay}ms...`);
-      setTimeout(() => {
+      this.reconnectTimer = setTimeout(() => {
+        this.reconnectTimer = null;
         this.connect().catch((error) => {
           console.error('Reconnection failed:', error);
         });

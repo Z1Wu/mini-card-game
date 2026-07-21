@@ -14,6 +14,9 @@ async def main():
         host=Config.HOST,
         port=Config.PORT,
         room_ttl_seconds=Config.ROOM_TTL_SECONDS,
+        origins=Config.ALLOWED_ORIGINS,
+        max_messages_per_second=Config.MAX_MESSAGES_PER_SECOND,
+        allow_legacy_join_game=Config.ALLOW_LEGACY_JOIN_GAME,
     )
     await server.start()
 

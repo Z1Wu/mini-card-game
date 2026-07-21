@@ -10,10 +10,11 @@ import { MIN_PLAYERS } from '../utils/constants';
 
 export const Lobby: React.FC = () => {
   const navigate = useNavigate();
-  const { playerId, playerName, isConnected } = usePlayerStore();
-  const { setGameState } = useGameStore();
+  const { playerId, playerName, isConnected, roomCode, reset: resetPlayer } = usePlayerStore();
+  const { setGameState, resetGame } = useGameStore();
   const { send } = useWebSocket();
   const [players, setPlayers] = useState<Array<{ id: string; name: string; hand_count: number }>>([]);
+  const isHost = players[0]?.id === playerId;
 
   useEffect(() => {
     if (!playerId) {
@@ -101,6 +102,8 @@ export const Lobby: React.FC = () => {
 
   const handleLeave = () => {
     wsService.disconnect();
+    resetPlayer();
+    resetGame();
     navigate('/');
   };
 
@@ -108,7 +111,10 @@ export const Lobby: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
       <div className="max-w-2xl w-full bg-slate-800 rounded-2xl shadow-2xl p-8 border border-slate-700">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-white">游戏大厅</h1>
+          <div>
+            <h1 className="text-3xl font-bold text-white">游戏大厅</h1>
+            <p className="text-slate-500 text-xs mt-1">房间：{roomCode === 'default' ? '默认大厅' : roomCode}</p>
+          </div>
           <div className="text-slate-400">
             {playerName && <span className="mr-4">{playerName}</span>}
             <span>{players.length} / 5</span>
@@ -141,7 +147,7 @@ export const Lobby: React.FC = () => {
                   className="bg-slate-700 rounded-lg p-4 border border-slate-600"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-white font-medium">{player.name}</span>
+                    <span className="text-white font-medium">{player.name}{players[0]?.id === player.id ? '（房主）' : ''}</span>
                     <span className="text-slate-400 text-sm">手牌: {player.hand_count}</span>
                   </div>
                 </div>
@@ -153,14 +159,15 @@ export const Lobby: React.FC = () => {
         <div className="flex gap-4 flex-wrap">
           <Button
             onClick={handleStartGame}
-            disabled={players.length < MIN_PLAYERS}
+            disabled={!isHost || players.length < MIN_PLAYERS}
             className="flex-1 min-w-[120px]"
             variant="primary"
           >
-            开始游戏
+            {isHost ? '开始游戏' : '等待房主开始'}
           </Button>
           <Button
             onClick={handleResetGame}
+            disabled={!isHost}
             variant="secondary"
             className="flex-1 min-w-[120px]"
           >
@@ -178,7 +185,7 @@ export const Lobby: React.FC = () => {
         <p className="text-center text-slate-500 text-sm mt-6">
           {players.length < MIN_PLAYERS
             ? `还需要 ${MIN_PLAYERS - players.length} 名玩家才能开始游戏`
-            : '所有玩家已就绪，可以开始游戏'}
+            : isHost ? '所有玩家已就绪，可以开始游戏' : '所有玩家已就绪，等待房主开始'}
         </p>
       </div>
     </div>

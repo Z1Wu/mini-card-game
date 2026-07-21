@@ -70,3 +70,22 @@ Original prompt: 你修复下把
 - Verification passed: frontend lint, production build, and the complete 15-turn recorded browser game all succeed with zero console errors.
 - Visually inspected the final settlement and auxiliary Playwright captures; role colors, emblems, values, card names, and winner presentation remain legible.
 - Temporary backend/frontend validation services were stopped after the browser checks.
+
+## 2026-07-21 security and roadmap implementation
+
+- Began the requested development roadmap with the authoritative-server security slice.
+- Bound gameplay actions to the player identity associated with the WebSocket connection and reject spoofed `player_id` payloads.
+- Restricted game start/reset to the first joined player (room host).
+- Replaced full-state broadcasts with recipient-specific views: each player sees only their own hand during play, while harmony/doubt card faces stay hidden until settlement.
+- Added E2E regressions for private-hand visibility, spoofed actions, and host-only controls.
+- Completed the first rules gap pass: Accomplice now moves a specifically selected doubt card between valid players, and Infected now offers an optional, one-shot harmony-card take at the beginning of its owner's next turn.
+- Made generated card IDs opaque so hidden-zone selection identifiers no longer reveal card roles.
+- Added UI flows for Accomplice and Infected plus backend unit coverage; backend suite is now 67 tests.
+- Exposed room creation/joining on the login screen, added room/host presentation, and restricted start/reset controls to the host in the UI.
+- Added room-aware reconnect tokens stored in session storage, automatic room rejoin/re-authentication, live connection-state subscriptions, and intentional-disconnect suppression.
+- Reconnecting players now receive the correct outstanding prompt for Infected, Rich Girl, Class Representative, News Club, or Honor Student multi-step phases.
+- Added PBKDF2-SHA256 password-hash support and a CLI generator for deployment user files while retaining plaintext only for local demo accounts.
+- Added configurable WebSocket origin allowlisting and per-connection message rate limiting for deployments.
+- Disabled the legacy unauthenticated `join_game` path in the application entrypoint by default; an explicit compatibility flag remains for older clients and isolated tests.
+- Final verification: 72 backend tests pass; frontend lint and production build pass; the recorded three-browser match completes 15 turns with winner parity and zero console/page errors.
+- Visually inspected the refreshed room-creation screen and final settlement screenshots; room code/controls, settlement sections, card faces, and winner presentation are legible with no observed layout regressions.

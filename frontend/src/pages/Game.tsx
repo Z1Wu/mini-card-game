@@ -6,7 +6,7 @@ import { usePlayerStore } from '../stores/playerStore';
 import { useGameStore } from '../stores/gameStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { wsService } from '../services/websocket';
-import { GameStateMessage, GameOverMessage, PlayCardMessage, SkillChoiceRequiredMessage, ViewHandMessage, ViewHarmonyMessage, NewsClubChoiceRequiredMessage, RichGirlChooseGiveMessage, ClassRepChoiceRequiredMessage, HonorStudentChoiceRequiredMessage, HonorStudentResultMessage, HonorStudentPhaseMessage, ClassRepWaitingMessage, ClassRepPhaseMessage, ClassRepResultMessage, NewsClubInProgressMessage, NewsClubYouChoseMessage, SettlementSummary } from '../types/message';
+import { GameStateMessage, GameOverMessage, PlayCardMessage, SkillChoiceRequiredMessage, ViewHandMessage, ViewHarmonyMessage, NewsClubChoiceRequiredMessage, RichGirlChooseGiveMessage, ClassRepChoiceRequiredMessage, HonorStudentChoiceRequiredMessage, HonorStudentResultMessage, HonorStudentPhaseMessage, ClassRepWaitingMessage, ClassRepPhaseMessage, ClassRepResultMessage, NewsClubInProgressMessage, NewsClubYouChoseMessage, SettlementSummary, InfectedChoiceRequiredMessage } from '../types/message';
 import { Card as CardType, CardUsageType, GameState as GameStateEnum, CardType as CardTypeEnum } from '../types/game';
 
 /** 使用特技时需要选择目标玩家的卡牌（班长、保健委员、风纪委员、大小姐等） */
@@ -23,8 +23,8 @@ function skillNeedsTarget(card: CardType): boolean {
 
 export const Game: React.FC = () => {
   const navigate = useNavigate();
-  const { playerId, playerName } = usePlayerStore();
-  const { gameState, setGameState } = useGameStore();
+  const { playerId, playerName, reset: resetPlayer } = usePlayerStore();
+  const { gameState, setGameState, resetGame } = useGameStore();
   const { send } = useWebSocket();
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null);
   const [winnerId, setWinnerId] = useState<string | null>(null);
@@ -50,6 +50,13 @@ export const Game: React.FC = () => {
   const [pendingHomeClub, setPendingHomeClub] = useState<{ card: CardType } | null>(null);
   const [homeClubHandId, setHomeClubHandId] = useState<string | null>(null);
   const [homeClubHarmonyId, setHomeClubHarmonyId] = useState<string | null>(null);
+  /** 共犯：选择质疑牌来源、具体牌和非自己的目标玩家。 */
+  const [pendingAccomplice, setPendingAccomplice] = useState<{ card: CardType } | null>(null);
+  const [accompliceDoubtCard, setAccompliceDoubtCard] = useState<{ source_player_id: string; target_card_id: string } | null>(null);
+  const [accompliceDestinationId, setAccompliceDestinationId] = useState<string | null>(null);
+  /** 感染者：下个自己的回合开始时可拿一张调和牌，也可跳过。 */
+  const [pendingInfectedChoice, setPendingInfectedChoice] = useState<Array<{ id: string }> | null>(null);
+  const [infectedHarmonyCardId, setInfectedHarmonyCardId] = useState<string | null>(null);
   /** 图书委员：查看调和区结果 */
   const [viewHarmonyResult, setViewHarmonyResult] = useState<CardType[] | null>(null);
   /** 新闻部：选择一张手牌递给下家；exclude_card_id 为上家递来的牌不可选 */
@@ -110,7 +117,7 @@ export const Game: React.FC = () => {
   useEffect(() => {
     const handleGameState = (message: GameStateMessage) => {
       const next = message.game_state;
-      if (next?.state === GameStateEnum.WAITING || next?.state === 'waiting') {
+      if (next?.state === GameStateEnum.WAITING) {
         setWinnerId(null);
         setSettlementSummary(null);
         setGameState(next);
@@ -161,6 +168,10 @@ export const Game: React.FC = () => {
     };
     const handleViewHarmony = (message: ViewHarmonyMessage) => {
       setViewHarmonyResult(message.harmony_area);
+    };
+    const handleInfectedChoiceRequired = (message: InfectedChoiceRequiredMessage) => {
+      setPendingInfectedChoice(message.harmony_cards);
+      setInfectedHarmonyCardId(null);
     };
     const handleNewsClubChoiceRequired = (message: NewsClubChoiceRequiredMessage) => {
       setPendingNewsClubChoice({
@@ -227,6 +238,7 @@ export const Game: React.FC = () => {
     wsService.on('rich_girl_choose_give', handleRichGirlChooseGive);
     wsService.on('view_hand', handleViewHand);
     wsService.on('view_harmony', handleViewHarmony);
+    wsService.on('infected_choice_required', handleInfectedChoiceRequired);
     wsService.on('news_club_choice_required', handleNewsClubChoiceRequired);
     wsService.on('news_club_in_progress', handleNewsClubInProgress);
     wsService.on('news_club_you_chose', handleNewsClubYouChose);
@@ -247,6 +259,7 @@ export const Game: React.FC = () => {
       wsService.off('rich_girl_choose_give');
       wsService.off('view_hand');
       wsService.off('view_harmony');
+      wsService.off('infected_choice_required');
       wsService.off('news_club_choice_required');
       wsService.off('news_club_in_progress');
       wsService.off('news_club_you_chose');
@@ -263,7 +276,7 @@ export const Game: React.FC = () => {
     };
   }, [setGameState, navigate]);
 
-  const handlePlayCard = (card: CardType, usageType: CardUsageType, targetPlayerId?: string, targetCardId?: string, handCardId?: string, harmonyCardId?: string) => {
+  const handlePlayCard = (card: CardType, usageType: CardUsageType, targetPlayerId?: string, targetCardId?: string, handCardId?: string, harmonyCardId?: string, sourcePlayerId?: string) => {
     if (usageType === CardUsageType.DOUBT && targetPlayerId == null) {
       setPendingTargetAction({ card, usageType: CardUsageType.DOUBT });
       return;
@@ -278,6 +291,12 @@ export const Game: React.FC = () => {
         setHomeClubHarmonyId(null);
         return;
       }
+    }
+    if (usageType === CardUsageType.SKILL && card.name === CardTypeEnum.ACCOMPLICE && (!sourcePlayerId || !targetPlayerId || !targetCardId)) {
+      setPendingAccomplice({ card });
+      setAccompliceDoubtCard(null);
+      setAccompliceDestinationId(null);
+      return;
     }
     if (usageType === CardUsageType.SKILL && skillNeedsTarget(card) && targetPlayerId == null && card.name !== CardTypeEnum.HEALTH_COMMITTEE) {
       setPendingTargetAction({ card, usageType: CardUsageType.SKILL });
@@ -296,6 +315,7 @@ export const Game: React.FC = () => {
       usage_type: usageType,
       ...(targetPlayerId != null ? { target_player_id: targetPlayerId } : {}),
       ...(targetCardId != null ? { target_card_id: targetCardId } : {}),
+      ...(sourcePlayerId != null ? { source_player_id: sourcePlayerId } : {}),
       ...(handCardId != null ? { hand_card_id: handCardId } : {}),
       ...(harmonyCardId != null ? { harmony_card_id: harmonyCardId } : {}),
     };
@@ -306,6 +326,9 @@ export const Game: React.FC = () => {
     setPendingHomeClub(null);
     setHomeClubHandId(null);
     setHomeClubHarmonyId(null);
+    setPendingAccomplice(null);
+    setAccompliceDoubtCard(null);
+    setAccompliceDestinationId(null);
   };
 
   const handleConfirmTarget = (targetPlayerId: string) => {
@@ -326,6 +349,31 @@ export const Game: React.FC = () => {
   const handleConfirmHomeClub = () => {
     if (!pendingHomeClub || !homeClubHandId || !homeClubHarmonyId) return;
     handlePlayCard(pendingHomeClub.card, CardUsageType.SKILL, undefined, undefined, homeClubHandId, homeClubHarmonyId);
+  };
+
+  const handleConfirmAccomplice = () => {
+    if (!pendingAccomplice || !accompliceDoubtCard || !accompliceDestinationId) return;
+    handlePlayCard(
+      pendingAccomplice.card,
+      CardUsageType.SKILL,
+      accompliceDestinationId,
+      accompliceDoubtCard.target_card_id,
+      undefined,
+      undefined,
+      accompliceDoubtCard.source_player_id,
+    );
+  };
+
+  const handleInfectedChoice = (takeCard: boolean) => {
+    if (!playerId || (takeCard && !infectedHarmonyCardId)) return;
+    send({
+      type: 'infected_choice',
+      player_id: playerId,
+      take_card: takeCard,
+      ...(takeCard ? { harmony_card_id: infectedHarmonyCardId! } : {}),
+    });
+    setPendingInfectedChoice(null);
+    setInfectedHarmonyCardId(null);
   };
 
   const handleConfirmNewsClubChoice = () => {
@@ -376,6 +424,8 @@ export const Game: React.FC = () => {
 
   const handleLeave = () => {
     wsService.disconnect();
+    resetPlayer();
+    resetGame();
     navigate('/');
   };
 
@@ -392,6 +442,7 @@ export const Game: React.FC = () => {
   }
 
   const currentPlayer = gameState.players.find(p => p.id === playerId);
+  const isHost = gameState.players[0]?.id === playerId;
   const isCurrentPlayer = gameState.current_player_index === gameState.players.findIndex(p => p.id === playerId);
   const isGameOver = gameState.state === GameStateEnum.GAME_OVER || winnerId != null;
   const resolvedWinnerId = winnerId ?? gameState.winner ?? null;
@@ -431,7 +482,7 @@ export const Game: React.FC = () => {
           <div className="flex justify-between items-center flex-wrap gap-2">
             <h1 className="text-2xl font-bold text-white">游戏结束 · 完整结算</h1>
             <div className="flex gap-2">
-              <Button onClick={handleResetGame} variant="secondary" size="sm">重新开始一局</Button>
+              <Button onClick={handleResetGame} variant="secondary" size="sm" disabled={!isHost}>{isHost ? '重新开始一局' : '等待房主重新开始'}</Button>
               <Button onClick={handleLeave} variant="primary" size="sm">返回登录</Button>
             </div>
           </div>
@@ -484,7 +535,7 @@ export const Game: React.FC = () => {
           {/* 判定 2：质疑结算 */}
           <section className="bg-slate-800 rounded-xl p-4 border border-slate-600">
             <h2 className="text-lg font-semibold text-amber-200 mb-3">判定 2：质疑结算</h2>
-            <p className="text-slate-400 text-sm mb-3">各玩家被质疑的牌（正面）及数值总和，数值最大且唯一者被监禁</p>
+            <p className="text-slate-400 text-sm mb-3">各玩家被质疑的牌（正面）及数值总和，最大值大于 0 的玩家均被监禁（可并列）</p>
             <div className="space-y-4">
               {gameState.players.map((p) => {
                 const total = doubtTotals[p.id] ?? 0;
@@ -562,7 +613,7 @@ export const Game: React.FC = () => {
               {winner ? `${winner.name} 获胜！` : '本局无人达成胜利条件'}
             </p>
             <div className="flex gap-3 justify-center flex-wrap">
-              <Button onClick={handleResetGame} variant="secondary">重新开始一局</Button>
+              <Button onClick={handleResetGame} variant="secondary" disabled={!isHost}>{isHost ? '重新开始一局' : '等待房主重新开始'}</Button>
               <Button onClick={handleLeave} variant="primary">返回登录</Button>
             </div>
           </div>
@@ -581,7 +632,7 @@ export const Game: React.FC = () => {
             </div>
             <div className="flex items-center gap-4">
               <span className="text-slate-300">回合: {gameState.turn_count}</span>
-              <Button onClick={handleResetGame} variant="secondary" size="sm">重新开始</Button>
+              <Button onClick={handleResetGame} variant="secondary" size="sm" disabled={!isHost}>{isHost ? '重新开始' : '等待房主'}</Button>
               <Button onClick={handleLeave} variant="danger" size="sm">离开</Button>
             </div>
           </div>
@@ -669,6 +720,83 @@ export const Game: React.FC = () => {
               <div className="flex gap-2">
                 <Button variant="primary" size="sm" onClick={handleConfirmHomeClub} disabled={!homeClubHandId || !homeClubHarmonyId}>确认替换</Button>
                 <Button variant="danger" size="sm" onClick={() => { setPendingHomeClub(null); setHomeClubHandId(null); setHomeClubHarmonyId(null); }}>取消</Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {pendingAccomplice && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setPendingAccomplice(null)}>
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl max-h-[90vh] overflow-auto" onClick={e => e.stopPropagation()}>
+              <p className="text-violet-200 font-medium mb-2">共犯：移动一张质疑牌</p>
+              <p className="text-slate-400 text-xs mb-4">先选择场上的质疑牌，再选择新的目标玩家；不能移到自己或原位置。</p>
+              <div className="mb-4">
+                <p className="text-slate-300 text-sm mb-2">1. 选择质疑牌</p>
+                <div className="flex flex-wrap gap-2">
+                  {gameState.players.flatMap(source => source.doubt_cards.map((card, index) => (
+                    <Button
+                      key={`${source.id}-${card.id}`}
+                      variant={accompliceDoubtCard?.target_card_id === card.id ? 'primary' : 'secondary'}
+                      size="sm"
+                      onClick={() => {
+                        setAccompliceDoubtCard({ source_player_id: source.id, target_card_id: card.id });
+                        setAccompliceDestinationId(null);
+                      }}
+                    >
+                      {source.name} 的质疑牌 {index + 1}
+                    </Button>
+                  )))}
+                  {!gameState.players.some(source => source.doubt_cards.length > 0) && (
+                    <span className="text-slate-500 text-sm">场上暂无质疑牌</span>
+                  )}
+                </div>
+              </div>
+              <div className="mb-4">
+                <p className="text-slate-300 text-sm mb-2">2. 选择新目标</p>
+                <div className="flex flex-wrap gap-2">
+                  {gameState.players
+                    .filter(target => target.id !== playerId && target.id !== accompliceDoubtCard?.source_player_id)
+                    .map(target => (
+                      <Button
+                        key={target.id}
+                        variant={accompliceDestinationId === target.id ? 'primary' : 'secondary'}
+                        size="sm"
+                        disabled={!accompliceDoubtCard}
+                        onClick={() => setAccompliceDestinationId(target.id)}
+                      >
+                        {target.name}
+                      </Button>
+                    ))}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="primary" size="sm" onClick={handleConfirmAccomplice} disabled={!accompliceDoubtCard || !accompliceDestinationId}>确认移动</Button>
+                <Button variant="danger" size="sm" onClick={() => setPendingAccomplice(null)}>取消</Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {pendingInfectedChoice && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4">
+            <div className="bg-slate-800 rounded-xl p-6 border border-lime-600 max-w-md w-full shadow-xl">
+              <p className="text-lime-200 font-medium mb-2">感染者：回合开始效果</p>
+              <p className="text-slate-300 text-sm mb-4">你可以从调和区拿一张牌加入手牌，也可以放弃。本效果只结算一次。</p>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {pendingInfectedChoice.map((card, index) => (
+                  <Button
+                    key={card.id}
+                    variant={infectedHarmonyCardId === card.id ? 'primary' : 'secondary'}
+                    size="sm"
+                    onClick={() => setInfectedHarmonyCardId(card.id)}
+                  >
+                    调和牌 {index + 1}
+                  </Button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="primary" size="sm" disabled={!infectedHarmonyCardId} onClick={() => handleInfectedChoice(true)}>拿取所选牌</Button>
+                <Button variant="secondary" size="sm" onClick={() => handleInfectedChoice(false)}>放弃</Button>
               </div>
             </div>
           </div>

@@ -103,12 +103,18 @@ async def test_player_can_reconnect_to_the_same_room(room_hub):
         created = await original.create_room()
         code = created["room_code"]
         await original.send_message({"type": "login", "username": "player1", "password": "password1"})
-        assert (await original.receive_message({"login_success", "error"}))["type"] == "login_success"
+        login = await original.receive_message({"login_success", "error"})
+        assert login["type"] == "login_success"
+        assert login["reconnect_token"]
         await original.close()
         await asyncio.sleep(0)
 
         assert (await reconnecting.join_room(code))["type"] == "room_joined"
-        await reconnecting.send_message({"type": "reconnect", "username": "player1", "password": "password1"})
+        await reconnecting.send_message({
+            "type": "reconnect",
+            "username": "player1",
+            "reconnect_token": login["reconnect_token"],
+        })
         response = await reconnecting.receive_message({"reconnect_success", "error"})
         assert response["type"] == "reconnect_success"
         assert response["player_id"] == "player1"

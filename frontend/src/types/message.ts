@@ -1,4 +1,4 @@
-import { CardUsageType, Card } from './game';
+import { CardUsageType, Card, Game } from './game';
 
 export type MessageType =
   | 'login'
@@ -28,6 +28,8 @@ export type MessageType =
   | 'honor_student_result'
   | 'honor_student_response'
   | 'honor_student_phase'
+  | 'infected_choice_required'
+  | 'infected_choice'
   | 'class_rep_waiting'
   | 'class_rep_phase'
   | 'class_rep_result'
@@ -75,18 +77,21 @@ export interface LoginSuccessMessage extends BaseMessage {
   type: 'login_success';
   player_id: string;
   player_name: string;
+  reconnect_token: string;
 }
 
 export interface ReconnectMessage extends BaseMessage {
   type: 'reconnect';
   username: string;
-  password: string;
+  password?: string;
+  reconnect_token?: string;
 }
 
 export interface ReconnectSuccessMessage extends BaseMessage {
   type: 'reconnect_success';
   player_id: string;
   player_name: string;
+  reconnect_token?: string;
 }
 
 export interface JoinGameMessage extends BaseMessage {
@@ -131,7 +136,7 @@ export interface PlayerListMessage extends BaseMessage {
 
 export interface GameStateMessage extends BaseMessage {
   type: 'game_state';
-  game_state: any;
+  game_state: Game;
 }
 
 export interface GetGameStateMessage extends BaseMessage {
@@ -156,6 +161,8 @@ export interface PlayCardMessage extends BaseMessage {
   target_player_id?: string;
   /** 保健委员：所选场上正面牌的 id（该牌所在玩家由 target_player_id 指定） */
   target_card_id?: string;
+  /** 共犯：质疑牌当前所在玩家。 */
+  source_player_id?: string;
   /** 归宅部：所选手牌 id、调和区卡牌 id */
   hand_card_id?: string;
   harmony_card_id?: string;
@@ -214,6 +221,18 @@ export interface HonorStudentResponseMessage extends BaseMessage {
   type: 'honor_student_response';
   player_id: string;
   response: 'raise_hand' | 'none';
+}
+
+export interface InfectedChoiceRequiredMessage extends BaseMessage {
+  type: 'infected_choice_required';
+  harmony_cards: Array<{ id: string }>;
+}
+
+export interface InfectedChoiceMessage extends BaseMessage {
+  type: 'infected_choice';
+  player_id: string;
+  take_card: boolean;
+  harmony_card_id?: string;
 }
 
 /** 大小姐第二阶段：看到拿到的牌后，选择要交给对方的牌 */
@@ -340,6 +359,8 @@ export type WebSocketMessage =
   | NewsClubChoiceMessage
   | ClassRepChoiceMessage
   | HonorStudentResponseMessage
+  | InfectedChoiceRequiredMessage
+  | InfectedChoiceMessage
   | ViewHandMessage
   | ViewHarmonyMessage
   | RichGirlChooseGiveMessage

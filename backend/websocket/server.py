@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import secrets
 import websockets
 from typing import Set, Dict, Optional
 from game.state import GameManager
@@ -12,9 +13,10 @@ logger = logging.getLogger(__name__)
 
 
 class GameWebSocketServer:
-    def __init__(self, host: str = "localhost", port: int = 8765):
+    def __init__(self, host: str = "localhost", port: int = 8765, allow_legacy_join_game: bool = True):
         self.host = host
         self.port = port
+        self.allow_legacy_join_game = allow_legacy_join_game
         self.clients: Set[websockets.WebSocketServerProtocol] = set()
         self.player_connections: Dict[str, websockets.WebSocketServerProtocol] = {}
         self.game_manager = GameManager()
@@ -26,6 +28,9 @@ class GameWebSocketServer:
         self.pending_class_rep: dict | None = None  # { player_id, card_id, target_player_id, my_card_id?: str }
         self.pending_honor_student_responders: dict | None = None  # { player_id: "criminal"|"alien" } 仅持犯人/外星人的玩家需响应
         self.honor_student_actor_id: str | None = None  # 打出优等生的玩家，结束后需收到举手结果
+        self.pending_infected: dict | None = None  # { player_id, card_id }
+        self.resolved_infected_card_ids: set[str] = set()
+        self.reconnect_tokens: Dict[str, str] = {}
 
     async def register_client(self, websocket: websockets.WebSocketServerProtocol):
         self.clients.add(websocket)
@@ -45,6 +50,62 @@ class GameWebSocketServer:
             if ws == websocket:
                 return player_id
         return None
+
+    async def _authenticated_actor_id(
+        self,
+        websocket: websockets.WebSocketServerProtocol,
+        data: dict,
+    ) -> Optional[str]:
+        """Return the identity bound to this socket and reject spoofed payload ids."""
+        actual_player_id = self._get_player_id_by_websocket(websocket)
+        if not actual_player_id:
+            await self.send_to_client(websocket, {
+                "type": "error",
+                "message": "请先登录或加入游戏",
+            })
+            return None
+
+        claimed_player_id = data.get("player_id")
+        if claimed_player_id and claimed_player_id != actual_player_id:
+            await self.send_to_client(websocket, {
+                "type": "error",
+                "message": "玩家身份与当前连接不匹配",
+            })
+            return None
+        return actual_player_id
+
+    def _serialize_game_state(self, viewer_id: Optional[str] = None) -> Optional[dict]:
+        """Build a recipient-specific state without leaking hidden card faces."""
+        game = self.game_manager.game
+        if not game:
+            return None
+
+        payload = game.model_dump()
+        reveal_hidden_cards = game.state == GameState.GAME_OVER
+        if reveal_hidden_cards:
+            return payload
+
+        def hidden_card(card: dict) -> dict:
+            return {
+                "id": card.get("id"),
+                "name": CardType.HOME_CLUB.value,
+                "description": "",
+                "harmony_value": 0,
+                "victory_priority": 0,
+                "victory_condition": "",
+                "is_face_up": False,
+                "location": card.get("location"),
+                "owner_id": None,
+                "target_player_id": card.get("target_player_id"),
+                "hidden": True,
+            }
+
+        for player in payload["players"]:
+            if player["id"] != viewer_id:
+                player["hand"] = []
+            player["doubt_cards"] = [hidden_card(card) for card in player["doubt_cards"]]
+        payload["harmony_area"] = [hidden_card(card) for card in payload["harmony_area"]]
+        return payload
 
     async def broadcast(self, message: dict):
         if self.clients:
@@ -69,9 +130,16 @@ class GameWebSocketServer:
             elif message_type == "reconnect":
                 await self._handle_reconnect(websocket, data)
             elif message_type == "join_game":
-                await self._handle_join_game(websocket, data)
+                if self.allow_legacy_join_game:
+                    await self._handle_join_game(websocket, data)
+                else:
+                    await self.send_to_client(websocket, {
+                        "type": "error",
+                        "code": "authentication_required",
+                        "message": "Please log in before joining a game",
+                    })
             elif message_type == "start_game":
-                await self._handle_start_game(data)
+                await self._handle_start_game(websocket, data)
             elif message_type == "reset_game":
                 await self._handle_reset_game(websocket)
             elif message_type == "play_card":
@@ -84,8 +152,10 @@ class GameWebSocketServer:
                 await self._handle_class_rep_choice(websocket, data)
             elif message_type == "honor_student_response":
                 await self._handle_honor_student_response(websocket, data)
+            elif message_type == "infected_choice":
+                await self._handle_infected_choice(websocket, data)
             elif message_type == "get_game_state":
-                await self._handle_get_game_state(data)
+                await self._handle_get_game_state(websocket, data)
             elif message_type == "query_game_status":
                 await self._handle_query_game_status(websocket)
             else:
@@ -135,6 +205,8 @@ class GameWebSocketServer:
             return
         
         player_name = get_user_name(username)
+        reconnect_token = secrets.token_urlsafe(32)
+        self.reconnect_tokens[player_id] = reconnect_token
         
         existing_player = None
         if self.game_manager.game:
@@ -148,7 +220,8 @@ class GameWebSocketServer:
             await self.send_to_client(websocket, {
                 "type": "login_success",
                 "player_id": player_id,
-                "player_name": existing_player.name
+                "player_name": existing_player.name,
+                "reconnect_token": reconnect_token,
             })
             await self._broadcast_game_state()
         else:
@@ -165,7 +238,8 @@ class GameWebSocketServer:
                 await self.send_to_client(websocket, {
                     "type": "login_success",
                     "player_id": player_id,
-                    "player_name": player_name
+                    "player_name": player_name,
+                    "reconnect_token": reconnect_token,
                 })
                 await self._broadcast_player_list()
             else:
@@ -179,18 +253,24 @@ class GameWebSocketServer:
         
         username = data.get("username")
         password = data.get("password")
+        reconnect_token = data.get("reconnect_token")
         
-        if not username or not password:
+        if not username or (not password and not reconnect_token):
             await self.send_to_client(websocket, {
                 "type": "error",
-                "message": "Missing username or password"
+                "message": "Missing reconnect credentials"
             })
             return
-        
-        if not authenticate_user(username, password):
+
+        token_is_valid = bool(
+            reconnect_token
+            and self.reconnect_tokens.get(username)
+            and secrets.compare_digest(self.reconnect_tokens[username], reconnect_token)
+        )
+        if not token_is_valid and not (password and authenticate_user(username, password)):
             await self.send_to_client(websocket, {
                 "type": "error",
-                "message": "Invalid username or password"
+                "message": "Invalid reconnect credentials"
             })
             return
         
@@ -214,9 +294,96 @@ class GameWebSocketServer:
         await self.send_to_client(websocket, {
             "type": "reconnect_success",
             "player_id": player_id,
-            "player_name": existing_player.name
+            "player_name": existing_player.name,
+            "reconnect_token": self.reconnect_tokens.get(player_id),
         })
         await self._broadcast_game_state()
+        await self._resume_pending_interaction(player_id, websocket)
+
+    async def _resume_pending_interaction(self, player_id: str, websocket) -> None:
+        """Re-send a private multi-step prompt after a player reconnects."""
+        game = self.game_manager.game
+        if not game:
+            return
+
+        if self.pending_infected and self.pending_infected.get("player_id") == player_id:
+            await self._send_infected_prompt(websocket)
+            return
+
+        if self.pending_rich_girl and self.pending_rich_girl.get("player_id") == player_id:
+            target_id = self.pending_rich_girl["target_player_id"]
+            target = next((p for p in game.players if p.id == target_id), None)
+            actor = next((p for p in game.players if p.id == player_id), None)
+            if target and actor:
+                await self.send_to_client(websocket, {
+                    "type": "skill_choice_required",
+                    "skill_type": "rich_girl",
+                    "target_player_id": target_id,
+                    "target_player_name": target.name,
+                    "target_hand": [{"id": card.id} for card in target.hand],
+                    "your_hand": [
+                        card.model_dump() for card in actor.hand
+                        if card.id != self.pending_rich_girl["card_id"]
+                    ],
+                })
+            return
+
+        if self.pending_class_rep:
+            actor_id = self.pending_class_rep["player_id"]
+            target_id = self.pending_class_rep["target_player_id"]
+            actor = next((p for p in game.players if p.id == actor_id), None)
+            target = next((p for p in game.players if p.id == target_id), None)
+            if player_id == actor_id and actor and target:
+                if self.pending_class_rep.get("my_card_id") is None:
+                    await self.send_to_client(websocket, {
+                        "type": "class_rep_choice_required",
+                        "your_hand": [
+                            card.model_dump() for card in actor.hand
+                            if card.id != self.pending_class_rep["card_id"]
+                        ],
+                        "target_player_name": target.name,
+                    })
+                else:
+                    await self.send_to_client(websocket, {
+                        "type": "class_rep_waiting",
+                        "target_player_name": target.name,
+                    })
+                return
+            if (
+                player_id == target_id
+                and self.pending_class_rep.get("my_card_id") is not None
+                and actor
+                and target
+            ):
+                await self.send_to_client(websocket, {
+                    "type": "class_rep_choice_required",
+                    "your_hand": [card.model_dump() for card in target.hand],
+                    "target_player_name": actor.name,
+                })
+                return
+
+        if self.pending_news_club:
+            order = self.pending_news_club["order"]
+            index = self.pending_news_club["index"]
+            if index < len(order) and order[index] == player_id:
+                player = next((p for p in game.players if p.id == player_id), None)
+                next_player = next((p for p in game.players if p.id == order[(index + 1) % len(order)]), None)
+                if player and next_player:
+                    await self.send_to_client(websocket, {
+                        "type": "news_club_choice_required",
+                        "your_hand": [card.model_dump() for card in player.hand],
+                        "next_player_name": next_player.name,
+                        "exclude_card_id": self.pending_news_club.get("card_received_by_next"),
+                    })
+                return
+
+        if self.pending_honor_student_responders and player_id in self.pending_honor_student_responders:
+            await self.send_to_client(websocket, {
+                "type": "honor_student_choice_required",
+                "role": self.pending_honor_student_responders[player_id],
+            })
+        elif self.honor_student_actor_id == player_id:
+            await self.send_to_client(websocket, {"type": "honor_student_waiting"})
 
     async def _handle_join_game(self, websocket: websockets.WebSocketServerProtocol, data: dict):
         player_id = data.get("player_id")
@@ -244,17 +411,27 @@ class GameWebSocketServer:
                 "message": "Failed to join game"
             })
 
-    async def _handle_start_game(self, data: dict):
-        player_id = data.get("player_id")
+    async def _handle_start_game(self, websocket: websockets.WebSocketServerProtocol, data: dict):
+        player_id = await self._authenticated_actor_id(websocket, data)
+        if not player_id:
+            return
         if not self.game_manager.game:
-            await self.broadcast({
+            await self.send_to_client(websocket, {
                 "type": "error",
                 "message": "No game exists"
             })
             return
 
+        host_id = self.game_manager.game.players[0].id if self.game_manager.game.players else None
+        if player_id != host_id:
+            await self.send_to_client(websocket, {
+                "type": "error",
+                "message": "只有房主可以开始游戏",
+            })
+            return
+
         if len(self.game_manager.game.players) < 3:
-            await self.broadcast({
+            await self.send_to_client(websocket, {
                 "type": "error",
                 "message": "Need at least 3 players to start"
             })
@@ -264,19 +441,32 @@ class GameWebSocketServer:
         if success:
             await self._broadcast_game_state()
         else:
-            await self.broadcast({
+            await self.send_to_client(websocket, {
                 "type": "error",
                 "message": "Failed to start game"
             })
 
     async def _handle_reset_game(self, websocket: websockets.WebSocketServerProtocol):
         """清除所有对局状态并回到等待开始，广播最新状态。"""
+        player_id = await self._authenticated_actor_id(websocket, {})
+        if not player_id:
+            return
+        game = self.game_manager.game
+        host_id = game.players[0].id if game and game.players else None
+        if player_id != host_id:
+            await self.send_to_client(websocket, {
+                "type": "error",
+                "message": "只有房主可以重置游戏",
+            })
+            return
         self.pending_rich_girl = None
         self.pending_news_club = None
         self.pending_class_rep = None
         self.pending_honor_student_responders = None
         self.honor_student_actor_id = None
         self.honor_student_responses.clear()
+        self.pending_infected = None
+        self.resolved_infected_card_ids.clear()
         success = self.game_manager.reset_game()
         if success:
             await self._broadcast_game_state()
@@ -295,13 +485,15 @@ class GameWebSocketServer:
     async def _handle_play_card(self, websocket: websockets.WebSocketServerProtocol, data: dict):
         from game.models import CardUsageType
 
-        player_id = data.get("player_id")
+        player_id = await self._authenticated_actor_id(websocket, data)
+        if not player_id:
+            return
         card_id = data.get("card_id")
         usage_type_str = data.get("usage_type")
         target_player_id = data.get("target_player_id")
 
-        if not player_id or not card_id or not usage_type_str:
-            await self.broadcast({
+        if not card_id or not usage_type_str:
+            await self.send_to_client(websocket, {
                 "type": "error",
                 "message": "Missing required fields"
             })
@@ -310,7 +502,7 @@ class GameWebSocketServer:
         try:
             usage_type = CardUsageType(usage_type_str)
         except ValueError:
-            await self.broadcast({
+            await self.send_to_client(websocket, {
                 "type": "error",
                 "message": f"Invalid usage type: {usage_type_str}"
             })
@@ -374,6 +566,7 @@ class GameWebSocketServer:
                     return
 
         target_card_id = data.get("target_card_id")
+        source_player_id = data.get("source_player_id")
         hand_card_id = data.get("hand_card_id")
         harmony_card_id = data.get("harmony_card_id")
         current_for_check = game.players[game.current_player_index] if game and game.state == GameState.PLAYING else None
@@ -385,12 +578,16 @@ class GameWebSocketServer:
         is_health_committee = card_for_check and card_for_check.name == CardType.HEALTH_COMMITTEE
         is_library = card_for_check and card_for_check.name == CardType.LIBRARY_COMMITTEE
         is_news_club = card_for_check and card_for_check.name == CardType.NEWS_CLUB
+        is_infected = card_for_check and card_for_check.name == CardType.INFECTED
         success = self.game_rules.play_card(
             player_id, card_id, usage_type, target_player_id, target_card_id,
+            source_player_id=source_player_id,
             hand_card_id=hand_card_id, harmony_card_id=harmony_card_id
         )
         is_honor_student = card_for_check and card_for_check.name == CardType.HONOR_STUDENT
         if success:
+            if is_infected and usage_type == CardUsageType.SKILL:
+                self.resolved_infected_card_ids.discard(card_id)
             # 仅当以「特技」出牌时才触发各类牌面后续流程；质疑/调和出牌不触发
             if is_honor_student and usage_type == CardUsageType.SKILL:
                 g = self.game_manager.game
@@ -483,7 +680,9 @@ class GameWebSocketServer:
             })
 
     async def _handle_skill_choice(self, websocket: websockets.WebSocketServerProtocol, data: dict):
-        player_id = data.get("player_id")
+        player_id = await self._authenticated_actor_id(websocket, data)
+        if not player_id:
+            return
         target_player_id = data.get("target_player_id")
         take_card_id = data.get("take_card_id")
         give_card_id = data.get("give_card_id")
@@ -529,7 +728,9 @@ class GameWebSocketServer:
             await self.send_to_client(websocket, {"type": "error", "message": "大小姐选牌执行失败"})
 
     async def _handle_class_rep_choice(self, websocket: websockets.WebSocketServerProtocol, data: dict):
-        player_id = data.get("player_id")
+        player_id = await self._authenticated_actor_id(websocket, data)
+        if not player_id:
+            return
         card_id = data.get("card_id")  # 所选的手牌 id
         if not self.pending_class_rep or not card_id:
             await self.send_to_client(websocket, {"type": "error", "message": "班长选牌参数不完整"})
@@ -594,7 +795,9 @@ class GameWebSocketServer:
             await self.send_to_client(websocket, {"type": "error", "message": "班长交换执行失败"})
 
     async def _handle_news_club_choice(self, websocket: websockets.WebSocketServerProtocol, data: dict):
-        player_id = data.get("player_id")
+        player_id = await self._authenticated_actor_id(websocket, data)
+        if not player_id:
+            return
         card_id = data.get("card_id")
         if not self.pending_news_club or not player_id or not card_id:
             await self.send_to_client(websocket, {"type": "error", "message": "新闻部选牌参数不完整"})
@@ -656,14 +859,14 @@ class GameWebSocketServer:
                 })
             await self._broadcast_game_state()
 
-    async def _handle_get_game_state(self, data: dict):
-        player_id = data.get("player_id")
-        websocket = self.player_connections.get(player_id)
-        if websocket:
-            await self.send_to_client(websocket, {
-                "type": "game_state",
-                "game_state": self.game_manager.game.model_dump() if self.game_manager.game else None
-            })
+    async def _handle_get_game_state(self, websocket: websockets.WebSocketServerProtocol, data: dict):
+        player_id = await self._authenticated_actor_id(websocket, data)
+        if not player_id:
+            return
+        await self.send_to_client(websocket, {
+            "type": "game_state",
+            "game_state": self._serialize_game_state(player_id),
+        })
 
     async def _handle_query_game_status(self, websocket: websockets.WebSocketServerProtocol):
         """无需登录即可查询：当前是否有对局、对局状态、参与玩家名称。"""
@@ -686,7 +889,9 @@ class GameWebSocketServer:
         })
 
     async def _handle_honor_student_response(self, websocket: websockets.WebSocketServerProtocol, data: dict):
-        player_id = data.get("player_id")
+        player_id = await self._authenticated_actor_id(websocket, data)
+        if not player_id:
+            return
         response = data.get("response")  # "raise_hand" | "none"
         if not player_id:
             await self.send_to_client(websocket, {"type": "error", "message": "优等生响应参数不完整"})
@@ -740,6 +945,71 @@ class GameWebSocketServer:
             if winner:
                 await self._broadcast_game_over(winner, victory_checker.get_settlement_summary())
 
+    async def _maybe_begin_infected_phase(self) -> None:
+        """Offer the one-shot next-turn Infected ability before normal play."""
+        game = self.game_manager.game
+        if not game or game.state != GameState.PLAYING or self.pending_infected:
+            return
+        current = game.players[game.current_player_index]
+        infected = next((
+            card for card in current.field_cards
+            if card.name == CardType.INFECTED
+            and card.is_face_up
+            and card.id not in self.resolved_infected_card_ids
+        ), None)
+        if not infected:
+            return
+        if not game.harmony_area:
+            self.resolved_infected_card_ids.add(infected.id)
+            return
+
+        self.pending_infected = {"player_id": current.id, "card_id": infected.id}
+        game.state = GameState.SPECIAL_PHASE
+        websocket = self.player_connections.get(current.id)
+        if websocket:
+            await self._send_infected_prompt(websocket)
+
+    async def _send_infected_prompt(self, websocket) -> None:
+        game = self.game_manager.game
+        if not game or not self.pending_infected:
+            return
+        await self.send_to_client(websocket, {
+            "type": "infected_choice_required",
+            "harmony_cards": [{"id": card.id} for card in game.harmony_area],
+        })
+
+    async def _handle_infected_choice(self, websocket, data: dict) -> None:
+        player_id = await self._authenticated_actor_id(websocket, data)
+        if not player_id:
+            return
+        if not self.pending_infected or self.pending_infected["player_id"] != player_id:
+            await self.send_to_client(websocket, {"type": "error", "message": "当前没有待处理的感染者效果"})
+            return
+        game = self.game_manager.game
+        if not game or game.state != GameState.SPECIAL_PHASE:
+            await self.send_to_client(websocket, {"type": "error", "message": "感染者阶段已结束"})
+            return
+
+        take_card = bool(data.get("take_card"))
+        harmony_card_id = data.get("harmony_card_id")
+        if take_card:
+            card = next((c for c in game.harmony_area if c.id == harmony_card_id), None)
+            if not card:
+                await self.send_to_client(websocket, {"type": "error", "message": "所选调和牌不存在"})
+                return
+            game.harmony_area.remove(card)
+            player = next(p for p in game.players if p.id == player_id)
+            card.location = "hand"
+            card.owner_id = player_id
+            card.target_player_id = None
+            player.hand.append(card)
+            player.current_hand_count = len(player.hand)
+
+        self.resolved_infected_card_ids.add(self.pending_infected["card_id"])
+        self.pending_infected = None
+        game.state = GameState.PLAYING
+        await self._broadcast_game_state()
+
     async def _broadcast_player_list(self):
         if self.game_manager.game:
             players = [
@@ -756,11 +1026,17 @@ class GameWebSocketServer:
             })
 
     async def _broadcast_game_state(self):
-        if self.game_manager.game:
-            await self.broadcast({
-                "type": "game_state",
-                "game_state": self.game_manager.game.model_dump()
-            })
+        if self.game_manager.game and self.clients:
+            await self._maybe_begin_infected_phase()
+            await asyncio.gather(*[
+                self.send_to_client(client, {
+                    "type": "game_state",
+                    "game_state": self._serialize_game_state(
+                        self._get_player_id_by_websocket(client)
+                    ),
+                })
+                for client in list(self.clients)
+            ])
 
     async def _broadcast_game_over(self, winner_id: str, settlement: Optional[dict] = None):
         if self.game_manager.game:
