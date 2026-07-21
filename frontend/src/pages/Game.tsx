@@ -134,6 +134,9 @@ export const Game: React.FC = () => {
     const handleGameOver = (message: GameOverMessage) => {
       setWinnerId(message.winner_id);
       setSettlementSummary(message.settlement ?? null);
+      setGameState(prev => prev
+        ? { ...prev, state: GameStateEnum.GAME_OVER, winner: message.winner_id }
+        : prev);
     };
 
     const handleSkillChoiceRequired = (message: SkillChoiceRequiredMessage) => {
