@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { wsService } from '../services/websocket';
 import { WebSocketMessage } from '../types/message';
 import { usePlayerStore } from '../stores/playerStore';
+import { logUnexpectedError } from '../utils/logger';
 
 interface UseWebSocketReturn {
   connect: () => Promise<void>;
@@ -27,7 +28,7 @@ export function useWebSocket(): UseWebSocketReturn {
       setIsConnected(true);
     } catch (err) {
       const error = err as Error;
-      console.error('WebSocket connection error:', error);
+      logUnexpectedError('WebSocket connection failed', error);
       setError(error);
       setIsConnected(false);
       throw error;

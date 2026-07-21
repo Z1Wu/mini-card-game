@@ -1,5 +1,6 @@
 import { WS_URL } from '../utils/constants';
 import { WebSocketMessage } from '../types/message';
+import { logUnexpectedError } from '../utils/logger';
 
 class WebSocketService {
   private ws: WebSocket | null = null;
@@ -34,7 +35,6 @@ class WebSocketService {
 
     this.connectionPromise = new Promise((resolve, reject) => {
       try {
-        console.log('Attempting to connect to:', WS_URL);
         const socket = new WebSocket(WS_URL);
         this.ws = socket;
 
@@ -46,7 +46,6 @@ class WebSocketService {
         }, 5000);
 
         socket.onopen = () => {
-          console.log('WebSocket connected');
           clearTimeout(timeout);
           this.reconnectAttempts = 0;
           this.connectionPromise = null;
@@ -72,19 +71,18 @@ class WebSocketService {
               handlers.forEach(handler => handler(message));
             }
           } catch (error) {
-            console.error('Error parsing message:', error);
+            logUnexpectedError('WebSocket message could not be parsed', error);
           }
         };
 
         socket.onerror = (error) => {
-          console.error('WebSocket error:', error);
+          logUnexpectedError('WebSocket connection error', error);
           clearTimeout(timeout);
           this.connectionPromise = null;
           reject(new Error('WebSocket connection failed'));
         };
 
         socket.onclose = () => {
-          console.log('WebSocket disconnected');
           clearTimeout(timeout);
           if (this.ws === socket) this.ws = null;
           this.connectionPromise = null;
@@ -117,8 +115,6 @@ class WebSocketService {
   send(message: WebSocketMessage): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(message));
-    } else {
-      console.error('WebSocket is not connected');
     }
   }
 
@@ -166,15 +162,10 @@ class WebSocketService {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       const delay = this.reconnectDelay * this.reconnectAttempts;
-      console.log(`Attempting to reconnect in ${delay}ms...`);
       this.reconnectTimer = setTimeout(() => {
         this.reconnectTimer = null;
-        this.connect().catch((error) => {
-          console.error('Reconnection failed:', error);
-        });
+        this.connect().catch((error) => logUnexpectedError('WebSocket reconnection failed', error));
       }, delay);
-    } else {
-      console.error('Max reconnection attempts reached');
     }
   }
 
