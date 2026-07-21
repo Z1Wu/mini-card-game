@@ -108,6 +108,7 @@ class Config:
     ALLOWED_ORIGINS = _parse_allowed_origins(_RAW_ALLOWED_ORIGINS) or None
     MAX_MESSAGES_PER_SECOND = int(os.getenv("MAX_MESSAGES_PER_SECOND", 30))
     ALLOW_LEGACY_JOIN_GAME = os.getenv("ALLOW_LEGACY_JOIN_GAME", "false").lower() in {"1", "true", "yes"}
+    E2E_RANDOM_SEED = int(os.environ["E2E_RANDOM_SEED"]) if os.getenv("E2E_RANDOM_SEED") else None
 
     @classmethod
     def validate_startup_configuration(cls) -> None:

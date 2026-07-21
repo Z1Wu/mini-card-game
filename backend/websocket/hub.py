@@ -6,6 +6,7 @@ import string
 import time
 from collections import deque
 from dataclasses import dataclass
+from random import Random
 from typing import Callable, Optional
 
 import websockets
@@ -41,6 +42,8 @@ class RoomHubWebSocketServer:
         origins: Optional[list[str]] = None,
         max_messages_per_second: int = 30,
         allow_legacy_join_game: bool = True,
+        rng_seed: Optional[int] = None,
+        rng_factory: Optional[Callable[[], Random]] = None,
     ):
         self.host = host
         self.port = port
@@ -49,6 +52,12 @@ class RoomHubWebSocketServer:
         self.origins = origins
         self.max_messages_per_second = max(1, max_messages_per_second)
         self.allow_legacy_join_game = allow_legacy_join_game
+        if rng_factory is not None:
+            self._rng_factory = rng_factory
+        elif rng_seed is not None:
+            self._rng_factory = lambda: Random(rng_seed)
+        else:
+            self._rng_factory = None
         self._rooms: dict[str, RoomEntry] = {}
         self._connection_rooms: dict[object, str] = {}
         self._room_lock = asyncio.Lock()
@@ -59,10 +68,14 @@ class RoomHubWebSocketServer:
         return set(self._rooms)
 
     def _new_room(self, code: str) -> RoomEntry:
+        # A new PRNG per room avoids state leaking between test rooms while keeping
+        # ordinary production rooms random when no seed is supplied.
+        rng = self._rng_factory() if self._rng_factory else None
         return RoomEntry(code=code, server=GameWebSocketServer(
             host=self.host,
             port=self.port,
             allow_legacy_join_game=self.allow_legacy_join_game,
+            rng=rng,
         ))
 
     def _generate_room_code(self) -> str:

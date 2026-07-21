@@ -33,7 +33,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-E2E 自行启动隔离的前端和后端服务，使用端口 3100/8876，不依赖手动启动的开发服务；产物在 `test-results/full-game/`。
+默认情况下测试会选择可用端口，不会干扰本地开发服务；产物位于 `test-results/full-game/`。可用 `E2E_BACKEND_PORT`、`E2E_FRONTEND_PORT`、`E2E_OUTPUT_DIR` 和 `E2E_SEED` 覆盖端口、产物目录和确定性发牌种子。
 
 ## 对局与隐私边界
 
