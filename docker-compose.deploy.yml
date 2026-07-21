@@ -1,12 +1,9 @@
-# 服务器部署：前端 + 后端 + Nginx 单服务，对外 80 端口
-# 使用: docker compose -f docker-compose.deploy.yml up -d
+# 服务器部署：从 Docker Hub 拉取 CI 构建的前端 + 后端 + Nginx 单镜像
+# 使用: IMAGE_TAG=v1.0.8 ./deploy.sh（不指定 IMAGE_TAG 时使用 latest）
 
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile.deploy
-    image: card-game:latest
+    image: "${CARD_GAME_IMAGE:-z1wu97/mini-card-game}:${IMAGE_TAG:-latest}"
     container_name: card-game
     ports:
       - "80:80"

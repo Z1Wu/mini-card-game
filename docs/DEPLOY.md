@@ -4,8 +4,8 @@
 
 ## 一、部署方式概览
 
-- **推荐**：使用 **Docker 单镜像**（前端 + 后端 + Nginx）对外只暴露 **80 端口**，适合单机部署。
-- 使用提供的 `docker-compose.deploy.yml` 可在服务器上一键启动。
+- **推荐**：使用 CI 发布到 Docker Hub 的 **Docker 单镜像**（前端 + 后端 + Nginx），对外只暴露 **80 端口**，适合单机部署。
+- 使用提供的 `deploy.sh` 和 `docker-compose.deploy.yml` 可在服务器上拉取并启动指定版本。
 
 ## 二、部署前注意事项
 
@@ -58,14 +58,20 @@ cp deploy-data/users.json.example deploy-data/users.json
 
 若不挂载 `users.json`，容器将使用镜像内默认的 `backend/auth/users.json`（部署到生产前建议修改默认密码或使用挂载）。
 
-### 2. 构建镜像并启动
+### 2. 拉取 CI 镜像并启动
 
 ```bash
-# 构建部署镜像
-docker compose -f docker-compose.deploy.yml build
+# 推荐固定版本，方便回滚
+IMAGE_TAG=v1.0.8 ./deploy.sh
 
-# 后台启动
-docker compose -f docker-compose.deploy.yml up -d
+# 或拉取 latest
+./deploy.sh
+```
+
+`deploy.sh` 会先从 Docker Hub 拉取镜像，再在后台创建或更新容器。默认镜像是 `z1wu97/mini-card-game`；如果 fork 了仓库并将 CI 镜像发布到其他账号，可以同时覆盖镜像名：
+
+```bash
+CARD_GAME_IMAGE=your-account/mini-card-game IMAGE_TAG=v1.0.8 ./deploy.sh
 ```
 
 ### 3. 常用命令
@@ -88,7 +94,8 @@ docker compose -f docker-compose.deploy.yml restart
 
 ## 四、docker-compose.deploy.yml 说明
 
-- **服务**：单服务 `app`，使用 `Dockerfile.deploy` 构建出的镜像，对外映射 **80:80**。
+- **服务**：单服务 `app`，默认拉取 CI 发布的 `z1wu97/mini-card-game:latest`，对外映射 **80:80**。
+- **版本**：通过 `IMAGE_TAG` 选择版本，通过 `CARD_GAME_IMAGE` 覆盖镜像仓库。
 - **重启策略**：`restart: unless-stopped`，服务器重启后容器会自动起来。
 - **挂载**（可选）：在 compose 中取消 `volumes` 注释，并将宿主机 `./deploy-data/users.json` 挂载到容器内 `/app/backend/auth/users.json`，便于在不重建镜像的情况下修改登录账号与密码。示例配置见 `deploy-data/users.json.example`。
 
@@ -104,34 +111,25 @@ cp deploy-data/users.json.example deploy-data/users.json
 # 编辑 deploy-data/users.json，修改各账号密码
 ```
 
-### 2. 构建并运行
+### 2. 拉取并运行
 
 **挂载 users.json（推荐）**：
 
 ```bash
-docker build -f Dockerfile.deploy -t card-game:latest .
+docker pull z1wu97/mini-card-game:v1.0.8
 docker run -d -p 80:80 --restart unless-stopped --name card-game \
   -v $(pwd)/deploy-data/users.json:/app/backend/auth/users.json:ro \
-  card-game:latest
+  z1wu97/mini-card-game:v1.0.8
 ```
 
 **不挂载**（使用镜像内默认 `backend/auth/users.json`，生产前请改默认密码或改用挂载）：
 
 ```bash
-docker build -f Dockerfile.deploy -t card-game:latest .
-docker run -d -p 80:80 --restart unless-stopped --name card-game card-game:latest
+docker pull z1wu97/mini-card-game:v1.0.8
+docker run -d -p 80:80 --restart unless-stopped --name card-game z1wu97/mini-card-game:v1.0.8
 ```
 
-### 3. 使用 Docker Hub 镜像
-
-若使用 CI 推送的镜像（如 `z1wu97/mini-card-game:v1.0.3`），同样可挂载 volume（挂载前需准备 `deploy-data/users.json`，格式见上文「二、部署前注意事项 → 登录用户配置」；若已克隆仓库可 `cp deploy-data/users.json.example deploy-data/users.json` 后修改）：
-
-```bash
-docker pull z1wu97/mini-card-game:v1.0.3
-docker run -d -p 80:80 --restart unless-stopped --name card-game \
-  -v $(pwd)/deploy-data/users.json:/app/backend/auth/users.json:ro \
-  z1wu97/mini-card-game:v1.0.3
-```
+`Dockerfile.deploy` 仍保留在仓库中，供 CI 构建发布镜像，也可用于本地调试构建。
 
 ## 六、故障排查
 
@@ -141,19 +139,20 @@ docker run -d -p 80:80 --restart unless-stopped --name card-game \
 | 登录提示「Invalid username or password」 | 未挂载或未修改 users.json | 检查挂载路径与 JSON 格式，或进入容器查看 `/app/backend/auth/users.json` |
 | 页面能开但无法连上/断线 | Nginx 未正确反代 /ws | 查看容器日志 `docker compose -f docker-compose.deploy.yml logs`，确认后端与 Nginx 均正常 |
 
-## 七、CI（GitHub Actions）
+## 七、CI/CD（GitHub Actions）
 
-每次向 `main` / `master` 分支 **push** 或发起 **pull request** 时，会自动运行：
+每次向 `main` / `master` 分支 **push** 或发起 **pull request** 时，CI 会自动运行：
 
 - **Backend**：安装依赖（uv）、仅运行带 `@pytest.mark.unit` 的单元测试  
 - **Frontend**：`npm ci`、`npm run lint`、`npm run build`  
 
-配置见 `.github/workflows/ci.yml`。
+配置见 `.github/workflows/ci.yml`。推送 `v*` tag 时，`.github/workflows/build-push.yml` 会在测试通过后构建 `Dockerfile.deploy`，并发布版本 tag 和 `latest` 镜像到 Docker Hub。
 
 ## 八、相关文件
 
-- `Dockerfile.deploy`：部署镜像构建文件  
-- `docker-compose.deploy.yml`：服务器部署用 compose  
+- `Dockerfile.deploy`：CI 发布的部署镜像构建文件
+- `docker-compose.deploy.yml`：服务器拉取并运行发布镜像的 Compose 配置
+- `deploy.sh`：拉取指定版本并更新服务
 - `deploy/nginx.conf`：Nginx 配置（/ 静态，/ws 反代）  
 - `deploy/start.sh`：容器启动脚本（先起后端再起 Nginx）  
 - `.github/workflows/ci.yml`：Push/PR 时的 CI 流程  
