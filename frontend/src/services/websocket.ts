@@ -8,12 +8,64 @@ class WebSocketService {
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
   private connectionPromise: Promise<void> | null = null;
+  private intentionalDisconnect = false;
+  private roomCode: string | null = this.readStoredRoomCode();
+  private sessionCredentials: { username: string; password: string } | null = null;
+  private pendingRoomRestore: {
+    roomCode: string;
+    complete: () => void;
+    fail: (error: Error) => void;
+    timeout: ReturnType<typeof setTimeout>;
+  } | null = null;
+
+  private readStoredRoomCode(): string | null {
+    if (typeof sessionStorage === 'undefined') return null;
+    const stored = sessionStorage.getItem('mini-card-game-room');
+    return stored ? stored.trim().toUpperCase() : null;
+  }
+
+  getRoomCode(): string | null {
+    return this.roomCode;
+  }
+
+  setRoomCode(roomCode: string): string {
+    const normalized = roomCode.trim().toUpperCase();
+    this.roomCode = normalized;
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem('mini-card-game-room', normalized);
+    }
+    return normalized;
+  }
+
+  clearRoomCode(): void {
+    this.roomCode = null;
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem('mini-card-game-room');
+    }
+  }
+
+  setSessionCredentials(username: string, password: string): void {
+    this.sessionCredentials = { username, password };
+  }
+
+  clearSessionCredentials(): void {
+    this.sessionCredentials = null;
+  }
+
+  simulateUnexpectedDisconnect(): void {
+    this.intentionalDisconnect = false;
+    this.ws?.close();
+  }
 
   connect(): Promise<void> {
+    if (this.ws?.readyState === WebSocket.OPEN && !this.pendingRoomRestore) {
+      return Promise.resolve();
+    }
     if (this.connectionPromise) {
       return this.connectionPromise;
     }
 
+    this.intentionalDisconnect = false;
     this.connectionPromise = new Promise((resolve, reject) => {
       try {
         console.log('Attempting to connect to:', WS_URL);
@@ -29,14 +81,59 @@ class WebSocketService {
         this.ws.onopen = () => {
           console.log('WebSocket connected');
           clearTimeout(timeout);
-          this.reconnectAttempts = 0;
-          this.connectionPromise = null;
-          resolve();
+          const shouldRestoreSession = this.reconnectAttempts > 0;
+          const completeConnection = () => {
+            this.pendingRoomRestore = null;
+            this.reconnectAttempts = 0;
+            this.connectionPromise = null;
+            resolve();
+            if (shouldRestoreSession && this.sessionCredentials && this.ws?.readyState === WebSocket.OPEN) {
+              this.send({
+                type: 'reconnect',
+                username: this.sessionCredentials.username,
+                password: this.sessionCredentials.password,
+              });
+            }
+          };
+
+          if (this.roomCode) {
+            const roomCode = this.roomCode;
+            const roomTimeout = setTimeout(() => {
+              this.pendingRoomRestore = null;
+              this.connectionPromise = null;
+              reject(new Error('Room restore timeout'));
+            }, 5000);
+            this.pendingRoomRestore = {
+              roomCode,
+              timeout: roomTimeout,
+              complete: () => {
+                clearTimeout(roomTimeout);
+                completeConnection();
+              },
+              fail: (error) => {
+                clearTimeout(roomTimeout);
+                this.pendingRoomRestore = null;
+                this.connectionPromise = null;
+                reject(error);
+              },
+            };
+            this.ws?.send(JSON.stringify({ type: 'join_room', room_code: roomCode }));
+          } else {
+            completeConnection();
+          }
         };
 
         this.ws.onmessage = (event) => {
           try {
             const message: WebSocketMessage = JSON.parse(event.data);
+            if (this.pendingRoomRestore) {
+              if (message.type === 'room_joined' && message.room_code === this.pendingRoomRestore.roomCode) {
+                this.pendingRoomRestore.complete();
+              } else if (message.type === 'error') {
+                if (message.code === 'room_not_found') this.clearRoomCode();
+                this.pendingRoomRestore.fail(new Error(message.message));
+              }
+            }
             const handler = this.messageHandlers.get(message.type);
             if (handler) {
               handler(message);
@@ -56,8 +153,11 @@ class WebSocketService {
         this.ws.onclose = () => {
           console.log('WebSocket disconnected');
           clearTimeout(timeout);
+          if (this.pendingRoomRestore) clearTimeout(this.pendingRoomRestore.timeout);
+          this.pendingRoomRestore = null;
+          this.ws = null;
           this.connectionPromise = null;
-          this.attemptReconnect();
+          if (!this.intentionalDisconnect) this.attemptReconnect();
         };
       } catch (error) {
         this.connectionPromise = null;
@@ -69,6 +169,7 @@ class WebSocketService {
   }
 
   disconnect(): void {
+    this.intentionalDisconnect = true;
     if (this.ws) {
       this.ws.close();
       this.ws = null;

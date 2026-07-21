@@ -61,3 +61,11 @@ Original prompt: 你修复下把
 - Fixed the game-over handler so the winner from the `game_over` message is also written to the shared game store and exposed by `render_game_to_text`.
 - Added a Browser E2E CI job that installs Chromium, runs the procedure after backend/frontend checks, and uploads artifacts for 14 days even on failure.
 - Verification: the recorded E2E passed twice after startup hardening; latest run completed 15 turns with Player 2 as winner and zero browser errors. Existing 61 backend tests and frontend lint also pass.
+
+## Private-room frontend slice
+
+- Added a room-selection step that creates or joins six-character private room codes before authentication, with stable missing-room feedback and a copyable active-room card.
+- Persisted the selected room for the browser session and restore it before querying status or re-authenticating after an unexpected WebSocket disconnect.
+- Exposed the active room in the lobby, gameplay header, final settlement, and the credential-safe `render_game_to_text` hook.
+- Expanded the recorded browser E2E to four isolated browser contexts. It verifies invalid-room feedback, two-room isolation, automatic room/player recovery after a forced network drop, and a complete 15-turn match.
+- Verification: 61 backend tests, frontend lint, production build, recorded browser E2E, and the local `render_game_to_text` smoke check all pass; the latest recorded run completed in 15 turns with room isolation, reconnect recovery, and zero browser errors.

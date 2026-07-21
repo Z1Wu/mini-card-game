@@ -4,17 +4,23 @@ import { Button } from '../components/common/Button';
 import { usePlayerStore } from '../stores/playerStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { wsService } from '../services/websocket';
-import { LoginMessage, ReconnectMessage, GameStatusMessage } from '../types/message';
+import { LoginMessage, ReconnectMessage, GameStatusMessage, RoomCreatedMessage, RoomJoinedMessage, ErrorMessage } from '../types/message';
+import { useRoomStore } from '../stores/roomStore';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { setPlayer, setConnected, setUsername, setPassword } = usePlayerStore();
+  const { setPlayer, setConnected, setUsername, setPassword, reset: resetPlayer } = usePlayerStore();
+  const { roomCode, setRoomCode, clearRoom } = useRoomStore();
   const { connect, send, error } = useWebSocket();
   const [isConnecting, setIsConnecting] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [username, setUsernameInput] = useState('');
   const [password, setPasswordInput] = useState('');
   const [serverError, setServerError] = useState('');
+  const [roomInput, setRoomInput] = useState('');
+  const [roomError, setRoomError] = useState('');
+  const [isSelectingRoom, setIsSelectingRoom] = useState(false);
+  const [copiedRoomCode, setCopiedRoomCode] = useState(false);
   /** 对局状态（登录前查询）：null=加载中/未请求 */
   const [gameStatus, setGameStatus] = useState<{ has_game: boolean; state: string | null; player_names: string[] } | null>(null);
   const [gameStatusError, setGameStatusError] = useState<string | null>(null);
@@ -30,7 +36,7 @@ export const Login: React.FC = () => {
     (async () => {
       try {
         await connect();
-        if (!cancelled) send({ type: 'query_game_status' });
+        if (!cancelled && roomCode) send({ type: 'query_game_status' });
       } catch (_) {
         if (!cancelled) setGameStatusError('无法获取对局状态');
       }
@@ -39,14 +45,33 @@ export const Login: React.FC = () => {
       cancelled = true;
       wsService.off('game_status');
     };
-  }, [connect, send]);
+  }, [connect, send, roomCode]);
 
   useEffect(() => {
-    const handleError = (message: any) => {
+    const handleError = (message: ErrorMessage) => {
+      if (message.code === 'room_not_found' || message.code === 'room_code_exhausted' || message.code === 'room_switch_requires_disconnect') {
+        console.warn('Room selection error:', message.code, message.message);
+        setRoomError(message.code === 'room_not_found' ? '找不到该房间，请检查房间代码' : message.message);
+        setIsSelectingRoom(false);
+        if (message.code === 'room_not_found') {
+          clearRoom();
+          setGameStatus(null);
+        }
+        return;
+      }
       console.error('Error from server:', message.message);
       setServerError(message.message);
       setIsConnecting(false);
       setIsReconnecting(false);
+    };
+
+    const handleRoomReady = (message: RoomCreatedMessage | RoomJoinedMessage) => {
+      setRoomCode(message.room_code);
+      setRoomInput('');
+      setRoomError('');
+      setIsSelectingRoom(false);
+      setGameStatus(null);
+      send({ type: 'query_game_status' });
     };
 
     const handleLoginSuccess = (message: { player_id?: string; player_name?: string }) => {
@@ -69,21 +94,80 @@ export const Login: React.FC = () => {
     };
 
     wsService.on('error', handleError);
+    wsService.on('room_created', handleRoomReady);
+    wsService.on('room_joined', handleRoomReady);
     wsService.on('login_success', handleLoginSuccess);
     wsService.on('reconnect_success', handleReconnectSuccess);
 
     return () => {
       wsService.off('error');
+      wsService.off('room_created');
+      wsService.off('room_joined');
       wsService.off('login_success');
       wsService.off('reconnect_success');
     };
-  }, [navigate, setPlayer]);
+  }, [navigate, setPlayer, setRoomCode, clearRoom, send]);
+
+  const handleCreateRoom = async () => {
+    setIsSelectingRoom(true);
+    setRoomError('');
+    try {
+      await connect();
+      send({ type: 'create_room' });
+    } catch (_) {
+      setRoomError('无法连接到房间服务');
+      setIsSelectingRoom(false);
+    }
+  };
+
+  const handleJoinRoom = async () => {
+    const code = roomInput.trim().toUpperCase();
+    if (!/^[A-Z0-9]{6}$/.test(code)) {
+      setRoomError('请输入 6 位房间代码');
+      return;
+    }
+    setIsSelectingRoom(true);
+    setRoomError('');
+    try {
+      await connect();
+      send({ type: 'join_room', room_code: code });
+    } catch (_) {
+      setRoomError('无法连接到房间服务');
+      setIsSelectingRoom(false);
+    }
+  };
+
+  const handleChangeRoom = () => {
+    wsService.disconnect();
+    wsService.clearSessionCredentials();
+    resetPlayer();
+    clearRoom();
+    setServerError('');
+    setRoomError('');
+    setGameStatus(null);
+    setCopiedRoomCode(false);
+  };
+
+  const handleCopyRoomCode = async () => {
+    if (!roomCode) return;
+    try {
+      await navigator.clipboard.writeText(roomCode);
+      setCopiedRoomCode(true);
+      window.setTimeout(() => setCopiedRoomCode(false), 1500);
+    } catch (_) {
+      setRoomError('无法自动复制，请手动复制房间代码');
+    }
+  };
 
   const handleLogin = async () => {
     const u = username.trim();
     const p = password;
     if (!u || !p) {
       alert('请输入用户名和密码');
+      return;
+    }
+    if (!roomCode) {
+      setRoomError('请先创建或加入房间');
       return;
     }
 
@@ -94,6 +178,7 @@ export const Login: React.FC = () => {
       setUsername(u);
       setPassword(p);
       setConnected(true);
+      wsService.setSessionCredentials(u, p);
 
       const message: LoginMessage = {
         type: 'login',
@@ -114,6 +199,10 @@ export const Login: React.FC = () => {
       alert('请先使用用户名和密码登录');
       return;
     }
+    if (!roomCode) {
+      setRoomError('请先重新加入房间');
+      return;
+    }
 
     setIsReconnecting(true);
     setServerError('');
@@ -122,6 +211,7 @@ export const Login: React.FC = () => {
         await connect();
       }
       setConnected(true);
+      wsService.setSessionCredentials(u, p);
 
       const message: ReconnectMessage = {
         type: 'reconnect',
@@ -140,6 +230,61 @@ export const Login: React.FC = () => {
       <div className="max-w-md w-full bg-slate-800 rounded-2xl shadow-2xl p-8 border border-slate-700">
         <h1 className="text-4xl font-bold text-center mb-2 text-white">卡牌游戏</h1>
         <p className="text-center text-slate-400 mb-8">多人在线对战</p>
+
+        {!roomCode ? (
+          <div className="space-y-5">
+            <div className="text-center">
+              <h2 className="text-xl font-semibold text-white">选择私人房间</h2>
+              <p className="text-sm text-slate-400 mt-2">创建房间并把代码分享给其他玩家，或输入朋友的房间代码。</p>
+            </div>
+
+            {roomError && (
+              <div className="p-3 bg-red-900/40 border border-red-700 rounded-lg text-red-300 text-sm" role="alert">
+                {roomError}
+              </div>
+            )}
+
+            <Button onClick={handleCreateRoom} disabled={isSelectingRoom} className="w-full" variant="primary">
+              {isSelectingRoom ? '正在连接…' : '创建私人房间'}
+            </Button>
+
+            <div className="flex items-center gap-3 text-slate-500 text-xs">
+              <span className="h-px bg-slate-700 flex-1" />
+              或加入已有房间
+              <span className="h-px bg-slate-700 flex-1" />
+            </div>
+
+            <div>
+              <label htmlFor="room-code" className="block text-sm font-medium text-slate-300 mb-2">房间代码</label>
+              <input
+                id="room-code"
+                value={roomInput}
+                onChange={(event) => setRoomInput(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
+                onKeyDown={(event) => { if (event.key === 'Enter') void handleJoinRoom(); }}
+                placeholder="例如 ABC123"
+                className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white tracking-[0.25em] uppercase placeholder:tracking-normal placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                autoComplete="off"
+                disabled={isSelectingRoom}
+              />
+            </div>
+            <Button onClick={handleJoinRoom} disabled={isSelectingRoom || roomInput.length !== 6} className="w-full" variant="secondary">
+              加入房间
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div className="mb-6 p-4 bg-primary-900/30 border border-primary-700 rounded-xl flex items-center justify-between gap-3">
+              <div>
+                <div className="text-xs text-primary-300 mb-1">当前私人房间</div>
+                <div className="text-xl font-mono font-bold tracking-[0.2em] text-white" data-testid="active-room-code">{roomCode}</div>
+              </div>
+              <div className="flex gap-2">
+                <Button type="button" onClick={handleCopyRoomCode} variant="secondary" size="sm">
+                  {copiedRoomCode ? '已复制' : '复制代码'}
+                </Button>
+                <Button type="button" onClick={handleChangeRoom} variant="danger" size="sm">更换房间</Button>
+              </div>
+            </div>
 
         {error && (
           <div className="mb-6 p-4 bg-red-900/50 border border-red-700 rounded-lg">
@@ -276,6 +421,8 @@ export const Login: React.FC = () => {
             <p>断线后重新登录可回到对局</p>
           </div>
         </div>
+          </>
+        )}
       </div>
     </div>
   );

@@ -7,10 +7,12 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import { wsService } from '../services/websocket';
 import { StartGameMessage, LoginSuccessMessage, ReconnectSuccessMessage } from '../types/message';
 import { MIN_PLAYERS } from '../utils/constants';
+import { useRoomStore } from '../stores/roomStore';
 
 export const Lobby: React.FC = () => {
   const navigate = useNavigate();
-  const { playerId, playerName, isConnected } = usePlayerStore();
+  const { playerId, playerName, isConnected, reset: resetPlayer } = usePlayerStore();
+  const roomCode = useRoomStore((state) => state.roomCode);
   const { setGameState } = useGameStore();
   const { send } = useWebSocket();
   const [players, setPlayers] = useState<Array<{ id: string; name: string; hand_count: number }>>([]);
@@ -101,6 +103,8 @@ export const Lobby: React.FC = () => {
 
   const handleLeave = () => {
     wsService.disconnect();
+    wsService.clearSessionCredentials();
+    resetPlayer();
     navigate('/');
   };
 
@@ -108,7 +112,10 @@ export const Lobby: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
       <div className="max-w-2xl w-full bg-slate-800 rounded-2xl shadow-2xl p-8 border border-slate-700">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-white">游戏大厅</h1>
+          <div>
+            <h1 className="text-3xl font-bold text-white">游戏大厅</h1>
+            {roomCode && <p className="text-primary-300 text-sm mt-1">私人房间 <span className="font-mono font-bold tracking-widest" data-testid="lobby-room-code">{roomCode}</span></p>}
+          </div>
           <div className="text-slate-400">
             {playerName && <span className="mr-4">{playerName}</span>}
             <span>{players.length} / 5</span>

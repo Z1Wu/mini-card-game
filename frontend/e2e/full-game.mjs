@@ -3,6 +3,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import http from 'node:http';
+import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -16,6 +17,8 @@ const appUrl = 'http://127.0.0.1:3100';
 const backendPort = 8876;
 const isolatedWebSocketUrl = `ws://127.0.0.1:${backendPort}`;
 const videoPath = path.join(outputRoot, 'full-game.webm');
+const roomSelectionScreenshotPath = path.join(outputRoot, 'room-selection.png');
+const lobbyScreenshotPath = path.join(outputRoot, 'private-lobby.png');
 const screenshotPath = path.join(outputRoot, 'final-settlement.png');
 const reportPath = path.join(outputRoot, 'report.json');
 
@@ -24,6 +27,7 @@ const accounts = [
   { username: 'player2', password: 'password2' },
   { username: 'player3', password: 'password3' },
 ];
+const isolationAccount = { username: 'player4', password: 'password4' };
 
 const expectedOutputParent = `${path.join(frontendRoot, 'test-results')}${path.sep}`;
 assert.ok(outputRoot.startsWith(expectedOutputParent), 'E2E output must stay inside frontend/test-results');
@@ -96,30 +100,33 @@ async function waitForWebSocket(port, processInfo, timeoutMs = 20_000) {
   throw new Error(`Timed out waiting for port ${port}`);
 }
 
-async function waitForHttp(url, processInfo, timeoutMs = 20_000) {
+async function waitForFrontend(port, processInfo, timeoutMs = 20_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (processInfo.child.exitCode !== null) {
       throw new Error(`Frontend exited before becoming ready:\n${processInfo.logs.join('')}`);
     }
     const ready = await new Promise((resolve) => {
-      const request = http.get(url, (response) => {
-        response.resume();
-        resolve(response.statusCode === 200);
+      const socket = net.createConnection({ host: '127.0.0.1', port });
+      socket.setTimeout(500);
+      socket.once('connect', () => {
+        socket.destroy();
+        resolve(true);
       });
-      request.setTimeout(500, () => {
-        request.destroy();
+      const fail = () => {
+        socket.destroy();
         resolve(false);
-      });
-      request.once('error', () => resolve(false));
+      };
+      socket.once('error', fail);
+      socket.once('timeout', fail);
     });
     if (ready) return;
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
-  throw new Error(`Timed out waiting for ${url}`);
+  throw new Error(`Timed out waiting for frontend port ${port}`);
 }
 
-async function login(page, account, playerNumber, consoleErrors) {
+async function openRoomSelection(page, playerNumber, consoleErrors) {
   page.on('console', (message) => {
     if (message.type() === 'error') {
       consoleErrors.push({ player: playerNumber, message: message.text() });
@@ -129,6 +136,24 @@ async function login(page, account, playerNumber, consoleErrors) {
     consoleErrors.push({ player: playerNumber, message: error.message });
   });
   await page.goto(appUrl, { waitUntil: 'domcontentloaded' });
+  await page.getByRole('heading', { name: '选择私人房间' }).waitFor({ state: 'visible' });
+}
+
+async function createRoom(page) {
+  await page.getByRole('button', { name: '创建私人房间', exact: true }).click();
+  const roomCode = page.getByTestId('active-room-code');
+  await roomCode.waitFor({ state: 'visible' });
+  return (await roomCode.innerText()).trim();
+}
+
+async function joinRoom(page, roomCode) {
+  await page.getByLabel('房间代码').fill(roomCode);
+  await page.getByRole('button', { name: '加入房间', exact: true }).click();
+  await page.getByTestId('active-room-code').waitFor({ state: 'visible' });
+  assert.equal((await page.getByTestId('active-room-code').innerText()).trim(), roomCode);
+}
+
+async function login(page, account) {
   await page.getByLabel('用户名').fill(account.username);
   await page.getByLabel('密码').fill(account.password);
   await Promise.all([
@@ -183,11 +208,14 @@ let testError;
 const turns = [];
 const consoleErrors = [];
 let finalState = null;
+let primaryRoomCode = null;
+let isolatedRoomCode = null;
+let reconnectVerified = false;
 
 try {
   await Promise.all([
     waitForWebSocket(backendPort, backend),
-    waitForHttp(appUrl, frontend),
+    waitForFrontend(3100, frontend),
   ]);
 
   browser = await chromium.launch({ headless: true });
@@ -198,6 +226,7 @@ try {
   helperContexts = [
     await browser.newContext({ viewport: { width: 1280, height: 720 } }),
     await browser.newContext({ viewport: { width: 1280, height: 720 } }),
+    await browser.newContext({ viewport: { width: 1280, height: 720 } }),
   ];
   const contexts = [primaryContext, ...helperContexts];
   const pages = [];
@@ -205,22 +234,59 @@ try {
   for (let index = 0; index < contexts.length; index += 1) {
     const page = await contexts[index].newPage();
     pages.push(page);
-    await login(page, accounts[index], index + 1, consoleErrors);
+    await openRoomSelection(page, index + 1, consoleErrors);
   }
 
-  const primaryPage = pages[0];
+  const matchPages = pages.slice(0, 3);
+  const primaryPage = matchPages[0];
+  const isolatedPage = pages[3];
   primaryVideo = primaryPage.video();
+  await primaryPage.screenshot({ path: roomSelectionScreenshotPath, fullPage: true });
+
+  primaryRoomCode = await createRoom(primaryPage);
+  await Promise.all(matchPages.slice(1).map((page) => joinRoom(page, primaryRoomCode)));
+
+  await isolatedPage.getByLabel('房间代码').fill('ZZZZZZ');
+  await isolatedPage.getByRole('button', { name: '加入房间', exact: true }).click();
+  await isolatedPage.getByRole('alert').getByText('找不到该房间，请检查房间代码').waitFor({ state: 'visible' });
+  isolatedRoomCode = await createRoom(isolatedPage);
+  assert.notEqual(isolatedRoomCode, primaryRoomCode);
+
+  await login(isolatedPage, isolationAccount);
+  await isolatedPage.getByText('1 / 5', { exact: true }).waitFor({ state: 'visible' });
+
+  for (let index = 0; index < matchPages.length; index += 1) {
+    await login(matchPages[index], accounts[index]);
+  }
+
   await primaryPage.getByText('3 / 5', { exact: true }).waitFor({ state: 'visible' });
+  await primaryPage.screenshot({ path: lobbyScreenshotPath, fullPage: true });
+  const roomStates = await Promise.all(matchPages.map((page) => readState(page)));
+  assert.ok(roomStates.every((state) => state.connection.room_code === primaryRoomCode));
   await Promise.all([
-    ...pages.map((page) => page.waitForURL('**/game')),
+    ...matchPages.map((page) => page.waitForURL('**/game')),
     primaryPage.getByRole('button', { name: '开始游戏', exact: true }).click(),
   ]);
 
   const pagesByPlayer = new Map();
-  for (const page of pages) {
+  for (const page of matchPages) {
     const state = await readState(page);
     pagesByPlayer.set(state.connection.player_id, page);
   }
+
+  const reconnectPage = matchPages[2];
+  await reconnectPage.evaluate(() => window.simulate_network_drop());
+  await reconnectPage.waitForFunction(() => {
+    const state = JSON.parse(window.render_game_to_text());
+    return state.connection.websocket_connected === false;
+  });
+  await reconnectPage.waitForFunction((expectedRoom) => {
+    const state = JSON.parse(window.render_game_to_text());
+    return state.connection.websocket_connected === true &&
+      state.connection.authenticated_player_connected === true &&
+      state.connection.room_code === expectedRoom;
+  }, primaryRoomCode, { timeout: 15_000 });
+  reconnectVerified = true;
 
   for (let step = 0; step < 30; step += 1) {
     const before = await readState(primaryPage);
@@ -246,6 +312,7 @@ try {
   assert.ok(finalState.game?.players.every((player) => player.hand_count === 1));
   assert.ok(finalState.game?.winner_id, 'The winner should be exposed through render_game_to_text');
   assert.equal(consoleErrors.length, 0, `Unexpected browser errors: ${JSON.stringify(consoleErrors)}`);
+  await isolatedPage.getByText('1 / 5', { exact: true }).waitFor({ state: 'visible' });
 
   await primaryPage.getByRole('heading', { name: '游戏结束 · 完整结算' }).waitFor({ state: 'visible' });
   await primaryPage.getByText(/获胜！$/).waitFor({ state: 'visible' });
@@ -278,6 +345,9 @@ if (!testError) {
 const report = {
   result: testError ? 'failed' : 'passed',
   players: accounts.map(({ username }) => username),
+  primary_room_code: primaryRoomCode,
+  isolated_room_code: isolatedRoomCode,
+  reconnect_verified: reconnectVerified,
   turns_played: turns.length,
   turns,
   final_state: finalState,
@@ -288,6 +358,8 @@ const report = {
   },
   artifacts: {
     video: path.relative(frontendRoot, videoPath),
+    room_selection_screenshot: path.relative(frontendRoot, roomSelectionScreenshotPath),
+    private_lobby_screenshot: path.relative(frontendRoot, lobbyScreenshotPath),
     screenshot: path.relative(frontendRoot, screenshotPath),
   },
   error: testError instanceof Error ? testError.stack : null,

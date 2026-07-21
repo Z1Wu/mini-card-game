@@ -8,6 +8,7 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import { wsService } from '../services/websocket';
 import { GameStateMessage, GameOverMessage, PlayCardMessage, SkillChoiceRequiredMessage, ViewHandMessage, ViewHarmonyMessage, NewsClubChoiceRequiredMessage, RichGirlChooseGiveMessage, ClassRepChoiceRequiredMessage, HonorStudentChoiceRequiredMessage, HonorStudentResultMessage, HonorStudentPhaseMessage, ClassRepWaitingMessage, ClassRepPhaseMessage, ClassRepResultMessage, NewsClubInProgressMessage, NewsClubYouChoseMessage, SettlementSummary } from '../types/message';
 import { Card as CardType, CardUsageType, GameState as GameStateEnum, CardType as CardTypeEnum } from '../types/game';
+import { useRoomStore } from '../stores/roomStore';
 
 /** 使用特技时需要选择目标玩家的卡牌（班长、保健委员、风纪委员、大小姐等） */
 const SKILL_CARDS_NEED_TARGET: CardTypeEnum[] = [
@@ -23,7 +24,8 @@ function skillNeedsTarget(card: CardType): boolean {
 
 export const Game: React.FC = () => {
   const navigate = useNavigate();
-  const { playerId, playerName } = usePlayerStore();
+  const { playerId, playerName, reset: resetPlayer } = usePlayerStore();
+  const roomCode = useRoomStore((state) => state.roomCode);
   const { gameState, setGameState } = useGameStore();
   const { send } = useWebSocket();
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null);
@@ -376,6 +378,8 @@ export const Game: React.FC = () => {
 
   const handleLeave = () => {
     wsService.disconnect();
+    wsService.clearSessionCredentials();
+    resetPlayer();
     navigate('/');
   };
 
@@ -429,7 +433,10 @@ export const Game: React.FC = () => {
       <div className="min-h-screen bg-slate-900 text-slate-200 overflow-auto">
         <div className="max-w-4xl mx-auto p-6 space-y-8 pb-24">
           <div className="flex justify-between items-center flex-wrap gap-2">
-            <h1 className="text-2xl font-bold text-white">游戏结束 · 完整结算</h1>
+            <div>
+              <h1 className="text-2xl font-bold text-white">游戏结束 · 完整结算</h1>
+              {roomCode && <p className="text-primary-300 text-xs mt-1">房间 <span className="font-mono tracking-widest">{roomCode}</span></p>}
+            </div>
             <div className="flex gap-2">
               <Button onClick={handleResetGame} variant="secondary" size="sm">重新开始一局</Button>
               <Button onClick={handleLeave} variant="primary" size="sm">返回登录</Button>
@@ -578,6 +585,7 @@ export const Game: React.FC = () => {
           <div className="max-w-6xl mx-auto flex justify-between items-center">
             <div className="flex items-center gap-4">
               {playerName && <span className="text-slate-300">{playerName}</span>}
+              {roomCode && <span className="text-primary-300 text-sm">房间 <span className="font-mono tracking-widest" data-testid="game-room-code">{roomCode}</span></span>}
             </div>
             <div className="flex items-center gap-4">
               <span className="text-slate-300">回合: {gameState.turn_count}</span>
