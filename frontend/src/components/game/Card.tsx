@@ -1,11 +1,11 @@
 import React, { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Card as CardType, CardUsageType } from '../../types/game';
+import { Card as CardModel, CardType as RoleType, CardUsageType } from '../../types/game';
 import { cn } from '../../utils/helpers';
 
 interface CardProps {
-  card: CardType;
-  onPlay?: (card: CardType, usageType: CardUsageType, targetPlayerId?: string) => void;
+  card: CardModel;
+  onPlay?: (card: CardModel, usageType: CardUsageType, targetPlayerId?: string) => void;
   isPlayable?: boolean;
   isSelected?: boolean;
   onClick?: () => void;
@@ -17,6 +17,22 @@ interface CardProps {
   /** 结算页等场景不显示胜利优先级，仅显示名称与调和值 */
   showVictoryPriority?: boolean;
 }
+
+const roleVisuals: Record<RoleType, { mark: string; tone: string; accent: string; glow: string }> = {
+  [RoleType.CLASS_REP]: { mark: '班', tone: '#f59e0b', accent: '#fff7ed', glow: 'rgba(245, 158, 11, 0.28)' },
+  [RoleType.LIBRARY_COMMITTEE]: { mark: '书', tone: '#14b8a6', accent: '#ecfeff', glow: 'rgba(20, 184, 166, 0.25)' },
+  [RoleType.ALIEN]: { mark: '外', tone: '#8b5cf6', accent: '#f5f3ff', glow: 'rgba(139, 92, 246, 0.28)' },
+  [RoleType.HOME_CLUB]: { mark: '宅', tone: '#64748b', accent: '#f8fafc', glow: 'rgba(100, 116, 139, 0.24)' },
+  [RoleType.HEALTH_COMMITTEE]: { mark: '健', tone: '#22c55e', accent: '#f0fdf4', glow: 'rgba(34, 197, 94, 0.25)' },
+  [RoleType.DISCIPLINE_COMMITTEE]: { mark: '纪', tone: '#0ea5e9', accent: '#f0f9ff', glow: 'rgba(14, 165, 233, 0.25)' },
+  [RoleType.NEWS_CLUB]: { mark: '闻', tone: '#06b6d4', accent: '#ecfeff', glow: 'rgba(6, 182, 212, 0.24)' },
+  [RoleType.RICH_GIRL]: { mark: '大', tone: '#ec4899', accent: '#fdf2f8', glow: 'rgba(236, 72, 153, 0.24)' },
+  [RoleType.ACCOMPLICE]: { mark: '共', tone: '#a855f7', accent: '#faf5ff', glow: 'rgba(168, 85, 247, 0.24)' },
+  [RoleType.INFECTED]: { mark: '染', tone: '#84cc16', accent: '#f7fee7', glow: 'rgba(132, 204, 22, 0.22)' },
+  [RoleType.CRIMINAL]: { mark: '犯', tone: '#ef4444', accent: '#fef2f2', glow: 'rgba(239, 68, 68, 0.28)' },
+  [RoleType.STUDENT_COUNCIL_PRESIDENT]: { mark: '会', tone: '#eab308', accent: '#fefce8', glow: 'rgba(234, 179, 8, 0.28)' },
+  [RoleType.HONOR_STUDENT]: { mark: '优', tone: '#38bdf8', accent: '#f0f9ff', glow: 'rgba(56, 189, 248, 0.25)' },
+};
 
 export const Card: React.FC<CardProps> = ({
   card,
@@ -31,6 +47,12 @@ export const Card: React.FC<CardProps> = ({
 }) => {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showDescriptionPopover, setShowDescriptionPopover] = useState(false);
+  const visual = roleVisuals[card.name] ?? roleVisuals[RoleType.HOME_CLUB];
+  const cardStyle = {
+    '--card-tone': visual.tone,
+    '--card-accent': visual.accent,
+    '--card-glow': visual.glow,
+  } as React.CSSProperties;
 
   const clearLongPress = () => {
     if (longPressTimer.current) {
@@ -56,11 +78,13 @@ export const Card: React.FC<CardProps> = ({
     return (
       <div
         className={cn(
-          'relative rounded-lg shadow-lg transition-all duration-200 border-2 border-slate-600',
-          'bg-gradient-to-br from-slate-600 to-slate-700 aspect-[2/3] min-h-0 flex items-center justify-center w-full'
+          'game-card game-card-back relative aspect-[2/3] min-h-0 w-full overflow-hidden rounded-xl',
+          'shadow-lg transition-all duration-200'
         )}
+        aria-label="牌背"
       >
-        <span className="text-slate-500 text-[10px]">牌背</span>
+        <div className="game-card-back-mark">秘</div>
+        <span className="game-card-back-label">牌背</span>
       </div>
     );
   }
@@ -69,12 +93,13 @@ export const Card: React.FC<CardProps> = ({
     <>
       <div
         className={cn(
-          'relative bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg p-2 shadow-lg transition-all duration-200',
-          'border-2 border-slate-700 hover:border-primary-500',
+          'game-card group relative aspect-[2/3] w-full overflow-hidden rounded-xl p-1.5 shadow-xl transition-all duration-200',
           { 'ring-2 ring-primary-500': isSelected },
           { 'cursor-pointer': onClick || isPlayable },
-          { 'opacity-50': !isPlayable && !onClick }
+          { 'opacity-75 grayscale-[0.25]': !isPlayable && onClick }
         )}
+        aria-label={`卡牌：${card.name}`}
+        style={cardStyle}
         onClick={onClick}
         onMouseDown={handleLongPressStart}
         onMouseLeave={handleLongPressEnd}
@@ -82,22 +107,35 @@ export const Card: React.FC<CardProps> = ({
         onTouchStart={handleLongPressStart}
         onTouchEnd={handleLongPressEnd}
       >
-        <div className="flex items-center justify-between gap-1.5 min-h-0">
-          <span className={cn("font-bold text-white truncate leading-tight", showVictoryPriority ? "text-[11px]" : "text-xs")} title={card.name}>{card.name}</span>
-          <span className="flex items-center gap-1 flex-shrink-0">
-            <span className={cn("font-semibold text-accent-400", showVictoryPriority ? "text-[11px]" : "text-xs")} title="调和值">{card.harmony_value}</span>
+        <div className="game-card-face">
+          <div className="game-card-corner game-card-corner-left" title="调和值">
+            <span className="game-card-corner-value">{card.harmony_value}</span>
+            <span className="game-card-corner-label">调和</span>
+          </div>
+          {showVictoryPriority && (
+            <div className="game-card-corner game-card-corner-right" title="胜利优先级">
+              <span className="game-card-corner-value">{card.victory_priority}</span>
+              <span className="game-card-corner-label">优先</span>
+            </div>
+          )}
+
+          <div className="game-card-emblem" aria-hidden="true">{visual.mark}</div>
+
+          <div className="game-card-title-wrap">
+            <div className="game-card-ribbon" />
+            <span className="game-card-title" title={card.name}>{card.name}</span>
+          </div>
+
+          <div className="game-card-footer">
+            <span className="game-card-hint">长按查看技能</span>
             {showVictoryPriority && (
-              <>
-                <span className="text-slate-500 text-[10px]">/</span>
-                <span className="text-[11px] font-semibold text-slate-400" title="胜利优先级">{card.victory_priority}</span>
-              </>
+              <span className="game-card-priority">胜利 {card.victory_priority}</span>
             )}
-          </span>
+          </div>
         </div>
-        <p className="text-[9px] text-slate-500 leading-tight mt-0.5">长按查看</p>
 
       {showActions && onPlay && (
-        <div className="absolute bottom-0 left-0 right-0 bg-slate-900/95 rounded-b-lg p-1.5 flex gap-1">
+        <div className="absolute bottom-0 left-0 right-0 z-20 bg-slate-950/95 rounded-b-xl p-1.5 flex gap-1 shadow-[0_-10px_24px_rgba(15,23,42,0.28)]">
           <button
             onClick={(e) => {
               e.stopPropagation();

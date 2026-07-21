@@ -145,15 +145,14 @@ async function playHarmony(page, playerId) {
   const heading = page.getByRole('heading', { name: /我的卡牌/ });
   await heading.waitFor({ state: 'visible' });
   const handSection = heading.locator('..').locator('..');
-  const cardWrappers = handSection.locator('div.w-32');
-  const cardTexts = await cardWrappers.allTextContents();
-  const cardIndex = cardTexts.findIndex((text) => !text.trim().startsWith('犯人'));
-  assert.notEqual(cardIndex, -1, `${playerId} should have a playable non-Criminal card`);
+  const playableCards = handSection.locator('.game-card[aria-label^="卡牌："]:not([aria-label="卡牌：犯人"])');
+  const selectedCard = playableCards.first();
+  const cardLabel = await selectedCard.getAttribute('aria-label');
+  assert.ok(cardLabel, `${playerId} should have a playable non-Criminal card`);
 
-  const selectedCard = cardWrappers.nth(cardIndex);
   await selectedCard.click();
   await selectedCard.getByRole('button', { name: '调和', exact: true }).click();
-  return cardTexts[cardIndex].trim().split(/\s|长按/)[0];
+  return cardLabel.replace(/^卡牌：/, '');
 }
 
 const viteEntry = path.join(frontendRoot, 'node_modules', 'vite', 'bin', 'vite.js');
