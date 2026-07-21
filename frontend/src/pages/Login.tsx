@@ -5,6 +5,7 @@ import { usePlayerStore } from '../stores/playerStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { wsService } from '../services/websocket';
 import { LoginMessage, ReconnectMessage, GameStatusMessage, LoginSuccessMessage, ReconnectSuccessMessage, RoomCreatedMessage, RoomJoinedMessage } from '../types/message';
+import { logUnexpectedError } from '../utils/logger';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ export const Login: React.FC = () => {
   const [roomCodeInput, setRoomCodeInput] = useState('');
   const [roomBusy, setRoomBusy] = useState(false);
   const [roomError, setRoomError] = useState('');
+  const [validationError, setValidationError] = useState('');
 
   const isGameInProgressError = serverError?.includes('游戏正在进行中') ?? false;
 
@@ -46,7 +48,7 @@ export const Login: React.FC = () => {
 
   useEffect(() => {
     const handleError = (message: any) => {
-      console.error('Error from server:', message.message);
+      logUnexpectedError('Server returned an unexpected error');
       if (message.code?.startsWith('room_')) {
         setRoomError(message.message);
         setRoomBusy(false);
@@ -134,10 +136,12 @@ export const Login: React.FC = () => {
     const u = username.trim();
     const p = password;
     if (!u || !p) {
-      alert('请输入用户名和密码');
+      setValidationError(!u && !p ? '请输入用户名和密码。' : !u ? '请输入用户名。' : '请输入密码。');
+      document.getElementById(!u ? 'username' : 'password')?.focus();
       return;
     }
 
+    setValidationError('');
     setIsConnecting(true);
     setServerError('');
     try {
@@ -153,7 +157,7 @@ export const Login: React.FC = () => {
       };
       send(message);
     } catch (err) {
-      console.error('Failed to connect:', err);
+      logUnexpectedError('Login connection failed', err);
       setIsConnecting(false);
     }
   };
@@ -163,7 +167,8 @@ export const Login: React.FC = () => {
     const token = usePlayerStore.getState().reconnectToken;
     const p = usePlayerStore.getState().password;
     if (!u || (!token && !p)) {
-      alert('请先使用用户名和密码登录');
+      setValidationError('请先使用用户名和密码登录。');
+      document.getElementById('username')?.focus();
       return;
     }
 
@@ -182,7 +187,7 @@ export const Login: React.FC = () => {
       };
       send(message);
     } catch (err) {
-      console.error('Reconnect failed:', err);
+      logUnexpectedError('Reconnect failed', err);
       setIsReconnecting(false);
     }
   };
@@ -302,11 +307,16 @@ export const Login: React.FC = () => {
               id="username"
               type="text"
               value={username}
-              onChange={(e) => setUsernameInput(e.target.value)}
+              onChange={(e) => {
+                setUsernameInput(e.target.value);
+                if (validationError) setValidationError('');
+              }}
               placeholder="请输入用户名"
               className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               disabled={isConnecting}
               autoComplete="username"
+              aria-invalid={Boolean(validationError && !username.trim())}
+              aria-describedby={validationError ? 'login-validation-error' : undefined}
             />
           </div>
           <div>
@@ -317,17 +327,23 @@ export const Login: React.FC = () => {
               id="password"
               type="password"
               value={password}
-              onChange={(e) => setPasswordInput(e.target.value)}
+              onChange={(e) => {
+                setPasswordInput(e.target.value);
+                if (validationError) setValidationError('');
+              }}
               placeholder="请输入密码"
               className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               disabled={isConnecting}
               autoComplete="current-password"
+              aria-invalid={Boolean(validationError && !password)}
+              aria-describedby={validationError ? 'login-validation-error' : undefined}
             />
+            {validationError && <p id="login-validation-error" className="mt-2 text-sm text-red-300" role="alert">{validationError}</p>}
           </div>
 
           <Button
             onClick={handleLogin}
-            disabled={!username.trim() || !password || isConnecting}
+            disabled={isConnecting}
             className="w-full"
             variant="primary"
           >

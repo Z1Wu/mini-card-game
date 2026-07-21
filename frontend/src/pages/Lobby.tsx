@@ -5,8 +5,9 @@ import { usePlayerStore } from '../stores/playerStore';
 import { useGameStore } from '../stores/gameStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { wsService } from '../services/websocket';
-import { StartGameMessage, LoginSuccessMessage, ReconnectSuccessMessage } from '../types/message';
+import { StartGameMessage } from '../types/message';
 import { MIN_PLAYERS } from '../utils/constants';
+import { logUnexpectedError } from '../utils/logger';
 
 export const Lobby: React.FC = () => {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ export const Lobby: React.FC = () => {
   const { setGameState, resetGame } = useGameStore();
   const { send } = useWebSocket();
   const [players, setPlayers] = useState<Array<{ id: string; name: string; hand_count: number }>>([]);
+  const [lobbyError, setLobbyError] = useState('');
   const isHost = players[0]?.id === playerId;
 
   useEffect(() => {
@@ -24,12 +26,10 @@ export const Lobby: React.FC = () => {
 
   useEffect(() => {
     const handlePlayerList = (message: any) => {
-      console.log('Received player list:', message.players);
       setPlayers(message.players);
     };
 
     const handleGameState = (message: any) => {
-      console.log('Received game state:', message.game_state);
       if (message.game_state) {
         setGameState(message.game_state);
         // 用 game_state.players 同步大厅玩家列表（避免漏收 player_list 广播）
@@ -46,23 +46,13 @@ export const Lobby: React.FC = () => {
       }
     };
 
-    const handleLoginSuccess = (message: LoginSuccessMessage) => {
-      console.log('Login successful:', message);
-    };
-
-    const handleReconnectSuccess = (message: ReconnectSuccessMessage) => {
-      console.log('Reconnect successful:', message);
-    };
-
     const handleError = (message: any) => {
-      console.error('Error from server:', message.message);
-      alert(message.message);
+      logUnexpectedError('Server returned an unexpected lobby error');
+      setLobbyError(`${message.message} 请检查房间状态后重试。`);
     };
 
     wsService.on('player_list', handlePlayerList);
     wsService.on('game_state', handleGameState);
-    wsService.on('login_success', handleLoginSuccess);
-    wsService.on('reconnect_success', handleReconnectSuccess);
     wsService.on('error', handleError);
 
     // 进入大厅时主动拉取当前状态，避免漏收 login 后发出的 player_list 广播
@@ -73,19 +63,17 @@ export const Lobby: React.FC = () => {
     return () => {
       wsService.off('player_list');
       wsService.off('game_state');
-      wsService.off('login_success');
-      wsService.off('reconnect_success');
       wsService.off('error');
     };
   }, [setGameState, navigate, playerId, send]);
 
   const handleStartGame = () => {
     if (players.length < MIN_PLAYERS) {
-      alert(`需要至少 ${MIN_PLAYERS} 名玩家才能开始游戏`);
+      setLobbyError(`需要至少 ${MIN_PLAYERS} 名玩家才能开始游戏；还需要 ${MIN_PLAYERS - players.length} 名玩家加入。`);
       return;
     }
 
-    console.log('Starting game with players:', players.length);
+    setLobbyError('');
     const message: StartGameMessage = {
       type: 'start_game',
       player_id: playerId!,
@@ -135,6 +123,13 @@ export const Lobby: React.FC = () => {
           </div>
         )}
 
+        {lobbyError && (
+          <div className="mb-6 flex items-start justify-between gap-3 rounded-lg border border-red-700 bg-red-900/50 p-4" role="alert">
+            <p className="text-sm text-red-200">{lobbyError}</p>
+            <button type="button" onClick={() => setLobbyError('')} className="min-h-11 min-w-11 text-red-200 underline focus:outline-none focus:ring-2 focus:ring-red-200" aria-label="关闭提示">关闭</button>
+          </div>
+        )}
+
         <div className="space-y-4 mb-8">
           <h2 className="text-xl font-semibold text-slate-300 mb-4">玩家列表</h2>
           {players.length === 0 ? (
@@ -159,7 +154,7 @@ export const Lobby: React.FC = () => {
         <div className="flex gap-4 flex-wrap">
           <Button
             onClick={handleStartGame}
-            disabled={!isHost || players.length < MIN_PLAYERS}
+            disabled={!isHost}
             className="flex-1 min-w-[120px]"
             variant="primary"
           >

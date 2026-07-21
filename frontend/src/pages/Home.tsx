@@ -4,6 +4,7 @@ import { Button } from '../components/common/Button';
 import { usePlayerStore } from '../stores/playerStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { JoinGameMessage } from '../types/message';
+import { logUnexpectedError } from '../utils/logger';
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -11,13 +12,15 @@ export const Home: React.FC = () => {
   const { connect, send, error } = useWebSocket();
   const [playerName, setPlayerName] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
+  const [nameError, setNameError] = useState('');
 
   const handleJoinGame = async () => {
     if (!playerName.trim()) {
-      alert('请输入玩家名称');
+      setNameError('请输入玩家名称后再加入游戏。');
       return;
     }
 
+    setNameError('');
     setIsConnecting(true);
     try {
       await connect();
@@ -34,7 +37,7 @@ export const Home: React.FC = () => {
 
       navigate('/lobby');
     } catch (err) {
-      console.error('Failed to connect:', err);
+      logUnexpectedError('Joining game failed', err);
       setIsConnecting(false);
     }
   };
@@ -68,18 +71,24 @@ export const Home: React.FC = () => {
               id="playerName"
               type="text"
               value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
+              onChange={(e) => {
+                setPlayerName(e.target.value);
+                if (nameError) setNameError('');
+              }}
               onKeyPress={(e) => e.key === 'Enter' && handleJoinGame()}
               className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               placeholder="输入你的名称"
               maxLength={20}
               disabled={isConnecting}
+              aria-invalid={Boolean(nameError)}
+              aria-describedby={nameError ? 'player-name-error' : undefined}
             />
+            {nameError && <p id="player-name-error" className="mt-2 text-sm text-red-300" role="alert">{nameError}</p>}
           </div>
 
           <Button
             onClick={handleJoinGame}
-            disabled={!playerName.trim() || isConnecting}
+            disabled={isConnecting}
             className="w-full"
             size="lg"
           >
