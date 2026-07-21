@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/common/Button';
 import { Card } from '../components/game/Card';
+import { SettlementView } from '../components/game/SettlementView';
 import { usePlayerStore } from '../stores/playerStore';
 import { useGameStore } from '../stores/gameStore';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -445,8 +446,6 @@ export const Game: React.FC = () => {
   const isHost = gameState.players[0]?.id === playerId;
   const isCurrentPlayer = gameState.current_player_index === gameState.players.findIndex(p => p.id === playerId);
   const isGameOver = gameState.state === GameStateEnum.GAME_OVER || winnerId != null;
-  const resolvedWinnerId = winnerId ?? gameState.winner ?? null;
-  const winner = resolvedWinnerId ? gameState.players.find(p => p.id === resolvedWinnerId) : null;
 
   // 顶层横幅文案：等待他人 / 轮到你，统一在固定顶部显示，无需滚到最上方
   const topBannerMessage = ((): { text: string; type: 'waiting' | 'your-turn' } | null => {
@@ -468,158 +467,14 @@ export const Game: React.FC = () => {
   })();
 
   if (isGameOver) {
-    const harmonyTotal = settlementSummary?.harmony_total ?? gameState.harmony_area.reduce((s, c) => s + c.harmony_value, 0);
-    const requiredHarmony = settlementSummary?.required_harmony_value ?? gameState.required_harmony_value ?? 0;
-    const harmonyReached = settlementSummary?.harmony_reached ?? (harmonyTotal >= requiredHarmony);
-    const doubtTotals = settlementSummary?.player_doubt_totals ?? Object.fromEntries(
-      gameState.players.map(p => [p.id, p.doubt_cards.reduce((s, c) => s + c.harmony_value, 0)])
-    );
-    const imprisonedIds = settlementSummary?.imprisoned_player_ids ?? [];
-
-    return (
-      <div className="min-h-screen bg-slate-900 text-slate-200 overflow-auto">
-        <div className="max-w-4xl mx-auto p-6 space-y-8 pb-24">
-          <div className="flex justify-between items-center flex-wrap gap-2">
-            <h1 className="text-2xl font-bold text-white">游戏结束 · 完整结算</h1>
-            <div className="flex gap-2">
-              <Button onClick={handleResetGame} variant="secondary" size="sm" disabled={!isHost}>{isHost ? '重新开始一局' : '等待房主重新开始'}</Button>
-              <Button onClick={handleLeave} variant="primary" size="sm">返回登录</Button>
-            </div>
-          </div>
-
-          {/* 判定 1：调和值 */}
-          <section className="bg-slate-800 rounded-xl p-4 border border-slate-600">
-            <h2 className="text-lg font-semibold text-amber-200 mb-3">判定 1：调和值</h2>
-            <p className="text-slate-400 text-sm mb-2">调和区卡牌（正面）及数值总和</p>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {gameState.harmony_area.length === 0 ? (
-                <span className="text-slate-500">无</span>
-              ) : (
-                gameState.harmony_area.map((c) => (
-                  <div key={c.id} className="w-16">
-                    <Card card={c} showAsFaceDown={false} />
-                  </div>
-                ))
-              )}
-            </div>
-            <p className="text-slate-300">
-              总和 = <strong className="text-white">{harmonyTotal}</strong>
-              {' '}/ 要求 <strong className="text-white">{requiredHarmony}</strong>
-              {' '}
-              <span className={harmonyReached ? 'text-emerald-400' : 'text-red-400'}>
-                {harmonyReached ? '达成' : '未达成'}
-              </span>
-            </p>
-          </section>
-
-          {/* 已出卡片区（正面出牌） */}
-          <section className="bg-slate-800 rounded-xl p-4 border border-slate-600">
-            <h2 className="text-lg font-semibold text-slate-300 mb-3">已出卡片区 · 正面出牌</h2>
-            <div className="flex flex-wrap gap-3">
-              {gameState.players.flatMap((p) =>
-                (p.field_cards ?? []).map((c) => (
-                  <div key={c.id} className="flex flex-col items-center gap-1">
-                    <span className="text-xs text-slate-500">{p.name}</span>
-                    <div className="w-16">
-                      <Card card={c} showAsFaceDown={false} />
-                    </div>
-                  </div>
-                ))
-              )}
-              {gameState.players.every((p) => !(p.field_cards?.length)) && (
-                <span className="text-slate-500">无</span>
-              )}
-            </div>
-          </section>
-
-          {/* 判定 2：质疑结算 */}
-          <section className="bg-slate-800 rounded-xl p-4 border border-slate-600">
-            <h2 className="text-lg font-semibold text-amber-200 mb-3">判定 2：质疑结算</h2>
-            <p className="text-slate-400 text-sm mb-3">各玩家被质疑的牌（正面）及数值总和，最大值大于 0 的玩家均被监禁（可并列）</p>
-            <div className="space-y-4">
-              {gameState.players.map((p) => {
-                const total = doubtTotals[p.id] ?? 0;
-                const isImprisoned = imprisonedIds.includes(p.id);
-                return (
-                  <div
-                    key={p.id}
-                    className={`rounded-lg p-3 border-2 ${isImprisoned ? 'border-red-500 bg-red-900/20' : 'border-slate-600 bg-slate-700/50'}`}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="font-medium text-white">{p.name}</span>
-                      <span className="text-slate-400 text-sm">质疑区总和 = {total}</span>
-                      {isImprisoned && (
-                        <span className="text-xs font-medium text-red-400 bg-red-900/50 px-2 py-0.5 rounded">被监禁</span>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-3">
-                      {(p.doubt_cards ?? []).length === 0 ? (
-                        <span className="text-slate-500 text-sm">无</span>
-                      ) : (
-                        (p.doubt_cards ?? []).map((c) => (
-                          <div key={c.id} className="w-24 min-w-[5rem]">
-                            <Card card={c} showAsFaceDown={false} showVictoryPriority={false} />
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* 判定 3：最终手牌与胜者 */}
-          <section className="bg-slate-800 rounded-xl p-4 border border-slate-600">
-            <h2 className="text-lg font-semibold text-amber-200 mb-3">判定 3：最终手牌与胜者</h2>
-            <p className="text-slate-400 text-sm mb-3">按胜利优先级依次公开手牌，先满足条件者胜</p>
-            <div className="space-y-4">
-              {gameState.players.map((p) => {
-                const hand = p.hand ?? [];
-                const isWinner = resolvedWinnerId === p.id;
-                return (
-                  <div
-                    key={p.id}
-                    className={`rounded-lg p-3 border-2 ${isWinner ? 'border-primary-500 bg-primary-900/20' : 'border-slate-600 bg-slate-700/50'}`}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="font-medium text-white">{p.name}</span>
-                      {isWinner && (
-                        <span className="text-primary-400 font-bold">获胜</span>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-3">
-                      {hand.length === 0 ? (
-                        <span className="text-slate-500 text-sm">无</span>
-                      ) : (
-                        hand.map((c) => (
-                          <div key={c.id} className="w-24 min-w-[5rem] flex flex-col items-center gap-0.5">
-                            <Card card={c} showAsFaceDown={false} showVictoryPriority={true} />
-                            {typeof c.victory_priority === 'number' && (
-                              <span className="text-[10px] text-slate-500">胜利优先级 {c.victory_priority}</span>
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-
-          <div className="text-center pt-4">
-            <p className="text-primary-400 text-xl font-semibold mb-4">
-              {winner ? `${winner.name} 获胜！` : '本局无人达成胜利条件'}
-            </p>
-            <div className="flex gap-3 justify-center flex-wrap">
-              <Button onClick={handleResetGame} variant="secondary" disabled={!isHost}>{isHost ? '重新开始一局' : '等待房主重新开始'}</Button>
-              <Button onClick={handleLeave} variant="primary">返回登录</Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <SettlementView
+      gameState={gameState}
+      winnerId={winnerId ?? gameState.winner ?? null}
+      settlementSummary={settlementSummary}
+      isHost={isHost}
+      onRematch={handleResetGame}
+      onReturnToLogin={handleLeave}
+    />;
   }
 
   return (
