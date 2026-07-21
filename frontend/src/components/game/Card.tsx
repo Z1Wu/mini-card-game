@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Card as CardModel, CardType as RoleType, CardUsageType } from '../../types/game';
 import { cn } from '../../utils/helpers';
+import { roleArt } from './cardArt';
 
 interface CardProps {
   card: CardModel;
@@ -89,6 +90,8 @@ export const Card: React.FC<CardProps> = ({
     );
   }
 
+  const art = roleArt[card.name];
+
   return (
     <>
       <div
@@ -108,6 +111,12 @@ export const Card: React.FC<CardProps> = ({
         onTouchEnd={handleLongPressEnd}
       >
         <div className="game-card-face">
+          {art && (
+            <>
+              <img className="game-card-art" src={art} alt="" aria-hidden="true" />
+              <div className="game-card-art-scrim" aria-hidden="true" />
+            </>
+          )}
           <div className="game-card-corner game-card-corner-left" title="调和值">
             <span className="game-card-corner-value">{card.harmony_value}</span>
             <span className="game-card-corner-label">调和</span>
