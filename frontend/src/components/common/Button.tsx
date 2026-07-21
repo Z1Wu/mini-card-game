@@ -4,6 +4,7 @@ import { cn } from '../../utils/helpers';
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'accent' | 'danger';
   size?: 'sm' | 'md' | 'lg';
+  loading?: boolean;
   children: React.ReactNode;
 }
 
@@ -12,6 +13,8 @@ export const Button: React.FC<ButtonProps> = ({
   size = 'md',
   children,
   className,
+  loading = false,
+  disabled: isDisabled,
   ...props
 }) => {
   const baseStyles = 'font-semibold rounded-lg transition-colors duration-200';
@@ -32,6 +35,8 @@ export const Button: React.FC<ButtonProps> = ({
   return (
     <button
       className={cn(baseStyles, variantStyles[variant], sizeStyles[size], className)}
+      disabled={isDisabled || loading}
+      aria-busy={loading || undefined}
       {...props}
     >
       {children}
