@@ -61,3 +61,12 @@ Original prompt: 你修复下把
 - Fixed the game-over handler so the winner from the `game_over` message is also written to the shared game store and exposed by `render_game_to_text`.
 - Added a Browser E2E CI job that installs Chromium, runs the procedure after backend/frontend checks, and uploads artifacts for 14 days even on failure.
 - Verification: the recorded E2E passed twice after startup hardening; latest run completed 15 turns with Player 2 as winner and zero browser errors. Existing 61 backend tests and frontend lint also pass.
+
+## 2026-07-21 refined card faces PR
+
+- Rebasing PR #6 exposed a recorded-browser selector that assumed each card's visible text began with its role name.
+- The redesigned card face places the harmony value before the name, so the test could mistake a Criminal card for a playable card and wait forever for actions that are intentionally hidden.
+- Added an accessible card-name label and changed the recorded game to select a non-Criminal card through that stable contract.
+- Verification passed: frontend lint, production build, and the complete 15-turn recorded browser game all succeed with zero console errors.
+- Visually inspected the final settlement and auxiliary Playwright captures; role colors, emblems, values, card names, and winner presentation remain legible.
+- Temporary backend/frontend validation services were stopped after the browser checks.

@@ -98,6 +98,7 @@ export const Card: React.FC<CardProps> = ({
           { 'cursor-pointer': onClick || isPlayable },
           { 'opacity-75 grayscale-[0.25]': !isPlayable && onClick }
         )}
+        aria-label={`卡牌：${card.name}`}
         style={cardStyle}
         onClick={onClick}
         onMouseDown={handleLongPressStart}
