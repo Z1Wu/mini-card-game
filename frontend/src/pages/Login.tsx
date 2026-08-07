@@ -193,10 +193,13 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-slate-800 rounded-2xl shadow-2xl p-8 border border-slate-700">
-        <h1 className="text-4xl font-bold text-center mb-2 text-white">卡牌游戏</h1>
-        <p className="text-center text-slate-400 mb-8">多人在线对战</p>
+    <div className="campus-shell flex items-center justify-center p-4 sm:p-8">
+      <div className="campus-panel max-w-md w-full p-7 sm:p-8">
+        <div className="text-center mb-8 pt-2">
+          <p className="campus-kicker mb-2">Campus Card Club</p>
+          <h1 className="campus-title text-4xl font-bold mb-2">放课后卡牌会</h1>
+          <p className="text-slate-500">集结同伴，开始一局轻松又刺激的对决</p>
+        </div>
 
         {error && (
           <div className="mb-6 p-4 bg-red-900/50 border border-red-700 rounded-lg">
@@ -250,10 +253,10 @@ export const Login: React.FC = () => {
           </div>
         )}
 
-        <div className="mb-6 p-4 bg-slate-700/50 border border-slate-600 rounded-xl">
+        <div className="campus-note mb-6 p-4 rounded-xl">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium text-slate-300">游戏房间</span>
-            <span className="text-xs text-primary-300">{roomCode === 'default' ? '默认大厅' : roomCode}</span>
+            <span className="text-sm font-medium text-slate-700">游戏房间</span>
+            <span className="text-xs font-bold text-[#c66b5d]">{roomCode === 'default' ? '默认大厅' : roomCode}</span>
           </div>
           <div className="flex gap-2">
             <input
@@ -272,8 +275,8 @@ export const Login: React.FC = () => {
         </div>
 
         {/* 对局状态（登录前可见） */}
-        <div className="mb-6 p-4 bg-slate-700/50 border border-slate-600 rounded-xl">
-          <div className="text-sm font-medium text-slate-400 mb-2">当前对局状态</div>
+        <div className="campus-note mb-6 p-4 rounded-xl">
+          <div className="text-sm font-medium text-slate-700 mb-2">当前对局状态</div>
           {gameStatusError && (
             <p className="text-amber-400 text-sm">{gameStatusError}</p>
           )}
