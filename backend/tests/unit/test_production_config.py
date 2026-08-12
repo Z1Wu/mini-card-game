@@ -3,6 +3,7 @@ import json
 import pytest
 
 import main as application
+from auth.passwords import hash_password
 from config import Config, ProductionConfigurationError
 
 
@@ -95,5 +96,19 @@ def test_production_accepts_hashed_users_and_explicit_origins(monkeypatch, tmp_p
     )
     monkeypatch.setenv("AUTH_USERS_FILE", str(users_file))
     monkeypatch.setenv("ALLOWED_ORIGINS", "https://cards.example.com,http://localhost:5173")
+
+    Config.validate_startup_configuration()
+
+
+@pytest.mark.unit
+def test_production_accepts_urlsafe_password_hashes(monkeypatch, tmp_path):
+    Config.APP_ENV = "production"
+    password_hash = hash_password("safe-password", iterations=1_000, salt=b"\xfb\xff\xff\xfb")
+    assert "-" in password_hash or "_" in password_hash
+    users_file = write_users_file(
+        tmp_path, [{"username": "admin", "password_hash": password_hash}]
+    )
+    monkeypatch.setenv("AUTH_USERS_FILE", str(users_file))
+    monkeypatch.setenv("ALLOWED_ORIGINS", "https://cards.example.com")
 
     Config.validate_startup_configuration()
