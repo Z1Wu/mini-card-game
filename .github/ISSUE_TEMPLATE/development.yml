@@ -1,0 +1,53 @@
+name: Development item
+description: Create a scoped, agent-ready development task.
+title: "[Type]: "
+labels: ["agent-ready"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        An Issue is one unit of work. Do not assign it until you are ready to start development.
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type
+      options:
+        - feature
+        - bug
+        - test
+        - docs
+        - infra
+        - security
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What outcome should this work achieve?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: List observable conditions required for completion.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and affected areas
+      description: List likely files/components and explicitly note exclusions.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and risks
+      description: Reference related Issues (for example, Depends on #123) and known risks. Write "None" if there are none.
+    validations:
+      required: true
