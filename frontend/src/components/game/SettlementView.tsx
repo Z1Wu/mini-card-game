@@ -40,6 +40,7 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
     gameState.players.map((player) => [player.id, player.doubt_cards.reduce((sum, card) => sum + card.harmony_value, 0)]),
   );
   const imprisonedIds = settlementSummary?.imprisoned_player_ids ?? [];
+  const roleConditionResults = settlementSummary?.role_condition_results;
   const imprisonedPlayers = gameState.players.filter((player) => imprisonedIds.includes(player.id));
   const winner = winnerId ? gameState.players.find((player) => player.id === winnerId) : undefined;
   const playersByPriority = useMemo(() => [...gameState.players].sort((a, b) => {
@@ -72,10 +73,19 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
       <div className="settlement-role-list">
         {playersByPriority.map((player) => {
           const hand = player.hand ?? [];
-          const isWinner = player.id === winner?.id;
           return <div className="settlement-role" key={player.id}>
-            <div><strong>{player.name}</strong><span>{isWinner ? '胜利条件已由服务器判定达成' : '未被服务器判定为胜者'}</span></div>
-            <div className="settlement-cards">{hand.length ? hand.map((card) => <div className="settlement-card" key={card.id}><Card card={card} showVictoryPriority /></div>) : <span>没有可公开的最终手牌</span>}</div>
+            <strong>{player.name}</strong>
+            <div className="settlement-cards">{hand.length ? hand.map((card) => {
+              const conditionMet = roleConditionResults?.[card.id];
+              const conditionCopy = conditionMet === undefined
+                ? '服务器未提供此角色的条件结果'
+                : conditionMet ? '胜利条件达成' : '胜利条件未达成';
+              return <div className="settlement-card settlement-role-card" key={card.id}>
+                <Card card={card} showVictoryPriority />
+                <p>{card.victory_condition}</p>
+                <p className={conditionMet ? 'settlement-success' : conditionMet === false ? 'settlement-failure' : undefined}>{conditionCopy}</p>
+              </div>;
+            }) : <span>没有可公开的最终手牌</span>}</div>
           </div>;
         })}
       </div>

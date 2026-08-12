@@ -175,6 +175,8 @@ export interface SettlementSummary {
   /** 质疑区数值总和最大且>0 的玩家 id 列表（多人并列则都视为被监禁） */
   imprisoned_player_ids: string[];
   player_doubt_totals: Record<string, number>;
+  /** Server-authoritative victory-condition outcome for each final hand card, keyed by card id. */
+  role_condition_results?: Record<string, boolean>;
 }
 
 export interface GameOverMessage extends BaseMessage {

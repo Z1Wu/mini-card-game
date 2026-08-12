@@ -135,3 +135,18 @@ def test_settlement_summary_reports_harmony_total_and_threshold():
     assert summary["harmony_total"] == 5
     assert summary["required_harmony_value"] == 6
     assert summary["harmony_reached"] is False
+
+
+@pytest.mark.unit
+def test_settlement_summary_reports_each_role_condition_even_when_it_loses_on_priority():
+    alien = make_player("alien", [CardType.ALIEN], [CardType.CLASS_REP])
+    harmony = make_player("harmony", [CardType.CLASS_REP])
+    checker = VictoryChecker(make_game(
+        [alien, harmony],
+        [CardType.STUDENT_COUNCIL_PRESIDENT, CardType.STUDENT_COUNCIL_PRESIDENT],
+    ))
+
+    assert checker.check_victory() == "alien"
+    results = checker.get_settlement_summary()["role_condition_results"]
+    assert results[alien.hand[0].id] is True
+    assert results[harmony.hand[0].id] is True
