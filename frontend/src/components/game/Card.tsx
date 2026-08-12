@@ -102,8 +102,16 @@ export const Card: React.FC<CardProps> = ({
           { 'opacity-75 grayscale-[0.25]': !isPlayable && onClick }
         )}
         aria-label={`卡牌：${card.name}`}
+        role={onClick ? 'button' : undefined}
+        tabIndex={onClick ? 0 : undefined}
         style={cardStyle}
         onClick={onClick}
+        onKeyDown={(event) => {
+          if (onClick && (event.key === 'Enter' || event.key === ' ')) {
+            event.preventDefault();
+            onClick();
+          }
+        }}
         onMouseDown={handleLongPressStart}
         onMouseLeave={handleLongPressEnd}
         onMouseUp={handleLongPressEnd}
