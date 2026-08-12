@@ -9,12 +9,15 @@ class VictoryChecker:
         self.game = game
         self._harmony_reached = False
         self._imprisoned_player_ids: List[str] = []
+        self._role_condition_results: dict[str, bool] = {}
 
     def check_victory(self) -> Optional[str]:
         # 判定 1：调和值是否达到
         self._harmony_reached = self._check_harmony_value_reached()
         # 判定 2：质疑结算，数值总和最大且 >0 的玩家均视为被监禁（多人并列则都视为被监禁）
         self._imprisoned_player_ids = self._check_doubt_settlement()
+        # 将每张最终手牌的条件结果随结算下发；这不参与下面的胜者选择。
+        self._role_condition_results = self._evaluate_role_condition_results()
 
         # 判定 3：按胜利优先级 1→5 依次公开手牌，先满足条件者胜
         for priority in [1, 2, 3, 4, 5]:
@@ -22,6 +25,26 @@ class VictoryChecker:
             if winner:
                 return winner
         return None
+
+    def _evaluate_role_condition_results(self) -> dict[str, bool]:
+        """Return server-authoritative condition outcomes for every final hand card."""
+        results = {}
+        has_priority_one_to_four_condition = False
+        home_cards = []
+
+        for player in self.game.players:
+            for card in player.hand:
+                if card.victory_condition == "5 没有任何人获胜即可获胜":
+                    home_cards.append(card)
+                    continue
+                condition_met = self._check_card_victory_condition(card, player)
+                results[card.id] = condition_met
+                has_priority_one_to_four_condition = has_priority_one_to_four_condition or condition_met
+
+        for card in home_cards:
+            results[card.id] = not has_priority_one_to_four_condition
+
+        return results
 
     def _check_harmony_value_reached(self) -> bool:
         """判定 1：调和区数值总和是否达到游戏人数对应的要求。"""
@@ -116,4 +139,5 @@ class VictoryChecker:
             "harmony_reached": self._harmony_reached,
             "imprisoned_player_ids": self._imprisoned_player_ids,
             "player_doubt_totals": player_doubt_totals,
+            "role_condition_results": self._role_condition_results,
         }

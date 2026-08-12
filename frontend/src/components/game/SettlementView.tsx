@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../common/Button';
 import { Game } from '../../types/game';
 import { SettlementSummary } from '../../types/message';
@@ -13,116 +13,109 @@ interface SettlementViewProps {
   onReturnToLogin: () => void;
 }
 
-/** Renders the completed-game settlement without subscribing to game services or stores. */
+const stageTitles = ['调和揭晓', '质疑揭晓', '最终身份揭晓', '胜者揭晓'];
+
+/** Presents the server-authoritative settlement in small, keyboard-navigable stages. */
 export const SettlementView: React.FC<SettlementViewProps> = ({
-  gameState,
-  winnerId,
-  settlementSummary,
-  isHost,
-  onRematch,
-  onReturnToLogin,
+  gameState, winnerId, settlementSummary, isHost, onRematch, onReturnToLogin,
 }) => {
+  const [stage, setStage] = useState(0);
+  const [showDetails, setShowDetails] = useState(false);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const settlementKey = JSON.stringify({ gameId: gameState.id, winnerId, settlementSummary });
+
+  useEffect(() => {
+    setStage(0);
+    setShowDetails(false);
+  }, [settlementKey]);
+
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, [stage]);
+
   const harmonyTotal = settlementSummary?.harmony_total ?? gameState.harmony_area.reduce((sum, card) => sum + card.harmony_value, 0);
   const requiredHarmony = settlementSummary?.required_harmony_value ?? gameState.required_harmony_value ?? 0;
   const harmonyReached = settlementSummary?.harmony_reached ?? harmonyTotal >= requiredHarmony;
   const doubtTotals = settlementSummary?.player_doubt_totals ?? Object.fromEntries(
-    gameState.players.map((player) => [player.id, player.doubt_cards.reduce((sum, card) => sum + card.harmony_value, 0)])
+    gameState.players.map((player) => [player.id, player.doubt_cards.reduce((sum, card) => sum + card.harmony_value, 0)]),
   );
   const imprisonedIds = settlementSummary?.imprisoned_player_ids ?? [];
-  const winner = winnerId ? gameState.players.find((player) => player.id === winnerId) : null;
+  const roleConditionResults = settlementSummary?.role_condition_results;
+  const imprisonedPlayers = gameState.players.filter((player) => imprisonedIds.includes(player.id));
+  const winner = winnerId ? gameState.players.find((player) => player.id === winnerId) : undefined;
+  const playersByPriority = useMemo(() => [...gameState.players].sort((a, b) => {
+    const aPriority = Math.min(...a.hand.map((card) => card.victory_priority), Infinity);
+    const bPriority = Math.min(...b.hand.map((card) => card.victory_priority), Infinity);
+    return aPriority - bPriority;
+  }), [gameState.players]);
 
-  return (
-    <div className="min-h-screen bg-slate-900 text-slate-200 overflow-auto">
-      <div className="max-w-4xl mx-auto p-6 space-y-8 pb-24">
-        <div className="flex justify-between items-center flex-wrap gap-2">
-          <h1 className="text-2xl font-bold text-white">游戏结束 · 完整结算</h1>
-          <div className="flex gap-2">
-            <Button onClick={onRematch} variant="secondary" size="sm" disabled={!isHost}>{isHost ? '重新开始一局' : '等待房主重新开始'}</Button>
-            <Button onClick={onReturnToLogin} variant="primary" size="sm">返回登录</Button>
-          </div>
-        </div>
+  const changeStage = (next: number) => setStage(Math.max(0, Math.min(stageTitles.length - 1, next)));
 
-        <section className="bg-slate-800 rounded-xl p-4 border border-slate-600">
-          <h2 className="text-lg font-semibold text-amber-200 mb-3">判定 1：调和值</h2>
-          <p className="text-slate-400 text-sm mb-2">调和区卡牌（正面）及数值总和</p>
-          <div className="flex flex-wrap gap-2 mb-3">
-            {gameState.harmony_area.length === 0 ? <span className="text-slate-500">无</span> : gameState.harmony_area.map((card) => (
-              <div key={card.id} className="w-16"><Card card={card} showAsFaceDown={false} /></div>
-            ))}
-          </div>
-          <p className="text-slate-300">
-            总和 = <strong className="text-white">{harmonyTotal}</strong>
-            {' '}/ 要求 <strong className="text-white">{requiredHarmony}</strong>{' '}
-            <span className={harmonyReached ? 'text-emerald-400' : 'text-red-400'}>{harmonyReached ? '达成' : '未达成'}</span>
-          </p>
-        </section>
-
-        <section className="bg-slate-800 rounded-xl p-4 border border-slate-600">
-          <h2 className="text-lg font-semibold text-slate-300 mb-3">已出卡片区 · 正面出牌</h2>
-          <div className="flex flex-wrap gap-3">
-            {gameState.players.flatMap((player) => (player.field_cards ?? []).map((card) => (
-              <div key={card.id} className="flex flex-col items-center gap-1">
-                <span className="text-xs text-slate-500">{player.name}</span>
-                <div className="w-16"><Card card={card} showAsFaceDown={false} /></div>
-              </div>
-            )))}
-            {gameState.players.every((player) => !(player.field_cards?.length)) && <span className="text-slate-500">无</span>}
-          </div>
-        </section>
-
-        <section className="bg-slate-800 rounded-xl p-4 border border-slate-600">
-          <h2 className="text-lg font-semibold text-amber-200 mb-3">判定 2：质疑结算</h2>
-          <p className="text-slate-400 text-sm mb-3">各玩家被质疑的牌（正面）及数值总和，最大值大于 0 的玩家均被监禁（可并列）</p>
-          <div className="space-y-4">
-            {gameState.players.map((player) => {
-              const total = doubtTotals[player.id] ?? 0;
-              const isImprisoned = imprisonedIds.includes(player.id);
-              return <div key={player.id} className={`rounded-lg p-3 border-2 ${isImprisoned ? 'border-red-500 bg-red-900/20' : 'border-slate-600 bg-slate-700/50'}`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="font-medium text-white">{player.name}</span>
-                  <span className="text-slate-400 text-sm">质疑区总和 = {total}</span>
-                  {isImprisoned && <span className="text-xs font-medium text-red-400 bg-red-900/50 px-2 py-0.5 rounded">被监禁</span>}
-                </div>
-                <div className="flex flex-wrap gap-3">
-                  {(player.doubt_cards ?? []).length === 0 ? <span className="text-slate-500 text-sm">无</span> : (player.doubt_cards ?? []).map((card) => (
-                    <div key={card.id} className="w-24 min-w-[5rem]"><Card card={card} showAsFaceDown={false} showVictoryPriority={false} /></div>
-                  ))}
-                </div>
-              </div>;
-            })}
-          </div>
-        </section>
-
-        <section className="bg-slate-800 rounded-xl p-4 border border-slate-600">
-          <h2 className="text-lg font-semibold text-amber-200 mb-3">判定 3：最终手牌与胜者</h2>
-          <p className="text-slate-400 text-sm mb-3">按胜利优先级依次公开手牌，先满足条件者胜</p>
-          <div className="space-y-4">
-            {gameState.players.map((player) => {
-              const hand = player.hand ?? [];
-              const isWinner = winnerId === player.id;
-              return <div key={player.id} className={`rounded-lg p-3 border-2 ${isWinner ? 'border-primary-500 bg-primary-900/20' : 'border-slate-600 bg-slate-700/50'}`}>
-                <div className="flex items-center gap-2 mb-2"><span className="font-medium text-white">{player.name}</span>{isWinner && <span className="text-primary-400 font-bold">获胜</span>}</div>
-                <div className="flex flex-wrap gap-3">
-                  {hand.length === 0 ? <span className="text-slate-500 text-sm">无</span> : hand.map((card) => (
-                    <div key={card.id} className="w-24 min-w-[5rem] flex flex-col items-center gap-0.5">
-                      <Card card={card} showAsFaceDown={false} showVictoryPriority />
-                      {typeof card.victory_priority === 'number' && <span className="text-[10px] text-slate-500">胜利优先级 {card.victory_priority}</span>}
-                    </div>
-                  ))}
-                </div>
-              </div>;
-            })}
-          </div>
-        </section>
-
-        <div className="text-center pt-4">
-          <p className="text-primary-400 text-xl font-semibold mb-4">{winner ? `${winner.name} 获胜！` : '本局无人达成胜利条件'}</p>
-          <div className="flex gap-3 justify-center flex-wrap">
-            <Button onClick={onRematch} variant="secondary" disabled={!isHost}>{isHost ? '重新开始一局' : '等待房主重新开始'}</Button>
-            <Button onClick={onReturnToLogin} variant="primary">返回登录</Button>
-          </div>
-        </div>
+  const stageContent = [
+    <section key="harmony" className="settlement-result" aria-label="调和结算">
+      <p className="settlement-lead">调和区合计 <strong>{harmonyTotal}</strong>，目标值 <strong>{requiredHarmony}</strong></p>
+      <p className={harmonyReached ? 'settlement-success' : 'settlement-failure'}>{harmonyReached ? '调和达成' : '调和未达成'}</p>
+      <div className="settlement-cards" aria-label="调和区卡牌">
+        {gameState.harmony_area.length ? gameState.harmony_area.map((card) => <div className="settlement-card" key={card.id}><Card card={card} /></div>) : <span>调和区没有卡牌</span>}
       </div>
+    </section>,
+    <section key="doubt" className="settlement-result" aria-label="质疑结算">
+      <p className="settlement-lead">每位玩家的质疑总和</p>
+      <div className="settlement-player-list">
+        {gameState.players.map((player) => <div key={player.id} className={imprisonedIds.includes(player.id) ? 'settlement-player imprisoned' : 'settlement-player'}>
+          <span>{player.name}</span><strong>{doubtTotals[player.id] ?? 0}</strong>{imprisonedIds.includes(player.id) && <span>被监禁</span>}
+        </div>)}
+      </div>
+      <p className="settlement-summary">{imprisonedPlayers.length ? `被监禁：${imprisonedPlayers.map((player) => player.name).join('、')}${imprisonedPlayers.length > 1 ? '（并列）' : ''}` : '无人被监禁'}</p>
+    </section>,
+    <section key="roles" className="settlement-result" aria-label="最终身份结算">
+      <p className="settlement-lead">按胜利优先级公开最终手牌</p>
+      <div className="settlement-role-list">
+        {playersByPriority.map((player) => {
+          const hand = player.hand ?? [];
+          return <div className="settlement-role" key={player.id}>
+            <strong>{player.name}</strong>
+            <div className="settlement-cards">{hand.length ? hand.map((card) => {
+              const conditionMet = roleConditionResults?.[card.id];
+              const conditionCopy = conditionMet === undefined
+                ? '服务器未提供此角色的条件结果'
+                : conditionMet ? '胜利条件达成' : '胜利条件未达成';
+              return <div className="settlement-card settlement-role-card" key={card.id}>
+                <Card card={card} showVictoryPriority />
+                <p>{card.victory_condition}</p>
+                <p className={conditionMet ? 'settlement-success' : conditionMet === false ? 'settlement-failure' : undefined}>{conditionCopy}</p>
+              </div>;
+            }) : <span>没有可公开的最终手牌</span>}</div>
+          </div>;
+        })}
+      </div>
+    </section>,
+    <section key="winner" className="settlement-result settlement-winner" aria-label="胜者结算">
+      <p className="settlement-lead">{winner ? `${winner.name} 获胜！` : '本局没有可确认的胜者'}</p>
+      {winner?.hand[0] && <p>获胜角色：<strong>{winner.hand[0].name}</strong></p>}
+      {!winner && <p>结算资料未提供可匹配的胜者，未显示推测结果。</p>}
+      <Button onClick={() => setShowDetails((visible) => !visible)} variant="secondary">{showDetails ? '收起完整结算' : '查看完整结算'}</Button>
+      {showDetails && <div className="settlement-details" aria-label="完整结算">
+        <p>调和：{harmonyTotal} / {requiredHarmony}（{harmonyReached ? '达成' : '未达成'}）</p>
+        <p>监禁：{imprisonedPlayers.length ? imprisonedPlayers.map((player) => player.name).join('、') : '无人'}</p>
+        <p>胜者：{winner ? winner.name : '无'}</p>
+      </div>}
+      <div className="settlement-actions">
+        <Button onClick={onRematch} variant="secondary" disabled={!isHost}>{isHost ? '重新开始一局' : '等待房主重新开始'}</Button>
+        <Button onClick={onReturnToLogin} variant="primary">返回登录</Button>
+      </div>
+    </section>,
+  ];
+
+  return <main className="settlement-view">
+    <div className="settlement-shell">
+      <p className="settlement-progress" aria-live="polite">第 {stage + 1} / {stageTitles.length} 阶段：{stageTitles[stage]}</p>
+      <h1 className="settlement-heading" tabIndex={-1} ref={headingRef}>{stageTitles[stage]}</h1>
+      {stageContent[stage]}
+      <nav className="settlement-navigation" aria-label="结算阶段导航">
+        <Button onClick={() => changeStage(stage - 1)} variant="secondary" disabled={stage === 0}>上一步</Button>
+        {stage < stageTitles.length - 1 && <Button onClick={() => changeStage(stage + 1)} variant="primary">下一步</Button>}
+      </nav>
     </div>
-  );
+  </main>;
 };
