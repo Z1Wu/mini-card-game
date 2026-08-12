@@ -246,7 +246,11 @@ try {
   assert.ok(finalState.game?.winner_id, 'The winner should be exposed through render_game_to_text');
   assert.equal(consoleErrors.length, 0, `Unexpected browser errors: ${JSON.stringify(consoleErrors)}`);
 
-  await primaryPage.getByRole('heading', { name: '游戏结束 · 完整结算' }).waitFor({ state: 'visible' });
+  await primaryPage.getByRole('heading', { name: '调和揭晓' }).waitFor({ state: 'visible' });
+  for (let stage = 0; stage < 3; stage += 1) {
+    await primaryPage.getByRole('button', { name: '下一步' }).click();
+  }
+  await primaryPage.getByRole('heading', { name: '胜者揭晓' }).waitFor({ state: 'visible' });
   await primaryPage.getByText(/获胜！$/).waitFor({ state: 'visible' });
   await primaryPage.screenshot({ path: screenshotPath, fullPage: true });
 } catch (error) {
