@@ -41,6 +41,11 @@
 
 ## 三、使用 docker-compose 在服务器部署
 
+> 日常发布不需要在服务器保存仓库代码。推荐从开发机运行
+> `./scripts/deploy-remote.sh v1.0.8 [deploy-host]`：它经 SSH 让服务器拉取已经由
+> GitHub Actions 发布的版本镜像。SSH 私钥只保留在执行该脚本的本地机器上。
+> 不传 `deploy-host` 时默认使用 SSH 配置中的 `tc_cloud_2026_vm`。
+
 ### 1. 准备目录与配置
 
 在服务器上克隆或上传项目后，进入项目根目录：
