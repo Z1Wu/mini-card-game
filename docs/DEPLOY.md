@@ -17,24 +17,31 @@
 
 **阿里云 / 腾讯云**：在控制台找到该实例的「安全组」，添加入方向规则：协议 TCP，端口 80，来源 0.0.0.0/0（或按需限制）。
 
-### 2. 登录用户配置（重要）
+### 2. 登录用户配置（必需）
 
-- 登录用的用户名与密码由**配置文件**指定，默认路径：容器内 `/app/backend/auth/users.json`。
+- **生产部署不会使用镜像内的演示账号。** 启动时必须挂载自己的用户配置文件，并由 `AUTH_USERS_FILE` 显式指向该文件。
+- 所有生产账号都必须使用 `password_hash`；包含明文 `password` 字段的文件会让后端在启动前失败。
 - 格式为 JSON 数组，例如：
   ```json
   [
-    { "username": "player1", "password": "你的密码", "name": "玩家1" },
-    { "username": "player2", "password": "另一密码", "name": "玩家2" }
+    { "username": "player1", "password_hash": "pbkdf2_sha256$...", "name": "玩家1" },
+    { "username": "player2", "password_hash": "pbkdf2_sha256$...", "name": "玩家2" }
   ]
   ```
-- 部署时请**务必**修改默认密码，或挂载自己的 `users.json`（见下节），避免使用仓库中的示例密码。
+- 用 `cd backend && python -m auth.passwords "你的强密码"` 生成 hash。不要将真实用户文件或密码提交到 Git。
 
-### 3. 使用 IP 访问、无需备案
+### 3. 浏览器来源策略（必需）
+
+- 生产环境必须显式设置 `ALLOWED_ORIGINS` 为允许访问 WebSocket 的、逗号分隔的 HTTP(S) 来源，例如 `https://cards.example.com`。
+- 不允许 `*`、路径（如 `https://cards.example.com/app`）或其他协议；缺失或不安全的值会让服务在启动前失败。
+- 若通过同一个公开域名提供此镜像，请将该域名设为唯一来源。可以临时添加本地调试来源，例如 `https://cards.example.com,http://localhost:5173`。
+
+### 4. 使用 IP 访问、无需备案
 
 - 直接使用服务器公网 IP 访问（如 `http://1.2.3.4`）时，**不需要域名备案**。
 - 若日后使用域名并解析到国内服务器，再考虑备案；仅 IP 访问无需备案。
 
-### 4. HTTP 与 WebSocket
+### 5. HTTP 与 WebSocket
 
 - 当前为 **HTTP + ws**（非 HTTPS），浏览器会显示「不安全」提示，但不影响使用。
 - 手机浏览器可正常访问；只要页面是 HTTP，`ws://` 不会被拦截。
@@ -54,14 +61,18 @@
 cd /path/to/card_game_dev
 ```
 
-（可选）若要通过挂载自定义登录用户，可复制示例并修改密码后，再在 `docker-compose.deploy.yml` 中取消 `volumes` 的注释：
+复制示例、生成各账号的密码 hash，并设置公开站点的允许来源：
 
 ```bash
 cp deploy-data/users.json.example deploy-data/users.json
-# 编辑 deploy-data/users.json，修改各账号密码
+# 编辑 deploy-data/users.json，替换每个占位 password_hash
+cd backend && python -m auth.passwords "为每个账号使用不同的强密码"
+cd ..
+# 创建 .env（不要提交），设置实际公开来源
+printf 'ALLOWED_ORIGINS=https://cards.example.com\n' > .env
 ```
 
-若不挂载 `users.json`，容器将使用镜像内默认的 `backend/auth/users.json`（部署到生产前建议修改默认密码或使用挂载）。
+`docker-compose.deploy.yml` 已经挂载 `deploy-data/users.json`。该文件缺失、仍含占位值、含明文密码，或 `.env` 中缺少 `ALLOWED_ORIGINS` 时，后端会拒绝启动。
 
 ### 2. 拉取 CI 镜像并启动
 
@@ -102,36 +113,32 @@ docker compose -f docker-compose.deploy.yml restart
 - **服务**：单服务 `app`，默认拉取 CI 发布的 `z1wu97/mini-card-game:latest`，对外映射 **80:80**。
 - **版本**：通过 `IMAGE_TAG` 选择版本，通过 `CARD_GAME_IMAGE` 覆盖镜像仓库。
 - **重启策略**：`restart: unless-stopped`，服务器重启后容器会自动起来。
-- **挂载**（可选）：在 compose 中取消 `volumes` 注释，并将宿主机 `./deploy-data/users.json` 挂载到容器内 `/app/backend/auth/users.json`，便于在不重建镜像的情况下修改登录账号与密码。示例配置见 `deploy-data/users.json.example`。
+- **生产安全配置**：Compose 设置 `APP_ENV=production`，挂载 `./deploy-data/users.json` 到容器，并要求从 `.env` 读取 `ALLOWED_ORIGINS`。示例配置见 `deploy-data/users.json.example`；绝不能提交实际文件。
 
 ## 五、仅用 Docker 命令（不用 compose）
 
-与 docker-compose 一致，建议挂载登录用户配置 `deploy-data/users.json`，便于修改账号密码而不重建镜像。
+与 docker-compose 一致，Docker 直接运行时也必须提供 hash-only 用户配置与明确来源策略。
 
-### 1. 准备挂载文件（可选）
+### 1. 准备挂载文件
 
 ```bash
 mkdir -p deploy-data
 cp deploy-data/users.json.example deploy-data/users.json
-# 编辑 deploy-data/users.json，修改各账号密码
+# 编辑 deploy-data/users.json，填入 password_hash，不要填入明文 password
 ```
 
 ### 2. 拉取并运行
 
-**挂载 users.json（推荐）**：
+**安全的生产启动**：
 
 ```bash
 docker pull z1wu97/mini-card-game:v1.0.8
 docker run -d -p 80:80 --restart unless-stopped --name card-game \
-  -v $(pwd)/deploy-data/users.json:/app/backend/auth/users.json:ro \
+  -e APP_ENV=production \
+  -e AUTH_USERS_FILE=/app/config/users.json \
+  -e ALLOWED_ORIGINS=https://cards.example.com \
+  -v $(pwd)/deploy-data/users.json:/app/config/users.json:ro \
   z1wu97/mini-card-game:v1.0.8
-```
-
-**不挂载**（使用镜像内默认 `backend/auth/users.json`，生产前请改默认密码或改用挂载）：
-
-```bash
-docker pull z1wu97/mini-card-game:v1.0.8
-docker run -d -p 80:80 --restart unless-stopped --name card-game z1wu97/mini-card-game:v1.0.8
 ```
 
 `Dockerfile.deploy` 仍保留在仓库中，供 CI 构建发布镜像，也可用于本地调试构建。
@@ -141,7 +148,8 @@ docker run -d -p 80:80 --restart unless-stopped --name card-game z1wu97/mini-car
 | 现象 | 可能原因 | 处理 |
 |------|----------|------|
 | 外网无法打开页面 | 安全组/防火墙未放行 80 | 在云控制台开放 80 端口 |
-| 登录提示「Invalid username or password」 | 未挂载或未修改 users.json | 检查挂载路径与 JSON 格式，或进入容器查看 `/app/backend/auth/users.json` |
+| 后端启动即退出 | 缺少安全生产配置 | 配置 `APP_ENV=production`、`AUTH_USERS_FILE`、非空的 `ALLOWED_ORIGINS`，并挂载 hash-only users.json |
+| 登录提示「Invalid username or password」 | users.json 不正确 | 检查挂载路径、JSON 格式和 password_hash |
 | 页面能开但无法连上/断线 | Nginx 未正确反代 /ws | 查看容器日志 `docker compose -f docker-compose.deploy.yml logs`，确认后端与 Nginx 均正常 |
 
 ## 七、CI/CD（GitHub Actions）

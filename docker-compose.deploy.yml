@@ -8,6 +8,9 @@ services:
     ports:
       - "80:80"
     restart: unless-stopped
-    # 挂载自定义登录用户配置时取消下面注释，并创建 deploy-data/users.json（可复制 deploy-data/users.json.example 后修改）
-    # volumes:
-    #   - ./deploy-data/users.json:/app/backend/auth/users.json:ro
+    environment:
+      APP_ENV: production
+      AUTH_USERS_FILE: /app/config/users.json
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?Set ALLOWED_ORIGINS to the public HTTP(S) origin before deploying}
+    volumes:
+      - ./deploy-data/users.json:/app/config/users.json:ro
