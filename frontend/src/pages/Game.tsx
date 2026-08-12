@@ -436,8 +436,8 @@ export const Game: React.FC = () => {
 
   if (!gameState) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="text-white text-xl">加载中...</div>
+      <div className="campus-shell flex items-center justify-center">
+        <div className="campus-panel px-8 py-6 text-xl text-slate-700">正在布置牌桌…</div>
       </div>
     );
   }
@@ -478,15 +478,18 @@ export const Game: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
-      <div className="fixed top-0 left-0 right-0 z-50 bg-slate-800 border-b border-slate-700">
+    <div className="campus-shell flex min-h-screen flex-col">
+      <div className="fixed top-0 left-0 right-0 z-50 border-b border-[#cbb99e]/60 bg-[#fffaf1]/95 shadow-sm backdrop-blur">
         <div className="p-4">
-          <div className="max-w-6xl mx-auto flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              {playerName && <span className="text-slate-300">{playerName}</span>}
+          <div className="max-w-6xl mx-auto flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:gap-4">
+              <div>
+                <p className="campus-kicker">Campus Table</p>
+                {playerName && <span className="font-semibold text-slate-700">{playerName}</span>}
+              </div>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-slate-300">回合: {gameState.turn_count}</span>
+              <span className="rounded-full bg-[#f3e5d0] px-3 py-1 text-sm font-semibold text-slate-600">第 {gameState.turn_count} 回合</span>
               <Button onClick={handleResetGame} variant="secondary" size="sm" disabled={!isHost}>{isHost ? '重新开始' : '等待房主'}</Button>
               <Button onClick={handleLeave} variant="danger" size="sm">离开</Button>
             </div>
@@ -494,16 +497,18 @@ export const Game: React.FC = () => {
         </div>
         {topBannerMessage && (
           <div
+            role="status"
+            aria-live={topBannerMessage.type === 'your-turn' ? 'assertive' : 'polite'}
             className={`px-4 py-2.5 text-center text-sm font-medium ${
               topBannerMessage.type === 'your-turn'
-                ? 'bg-primary-600/90 text-white border-t border-primary-500'
-                : 'bg-slate-700/95 text-slate-200 border-t border-slate-600'
+                ? 'border-t border-[#dc6255] bg-[#ef7667]/95 text-white'
+                : 'border-t border-[#d9c8ae] bg-[#f3e5d0]/95 text-slate-700'
             }`}
           >
             {topBannerMessage.type === 'your-turn' && <span className="mr-1">▶</span>}
             {topBannerMessage.text}
             {topBannerMessage.type === 'your-turn' && topBannerMessage.text === '轮到你出牌！' && (
-              <span className="block text-xs text-primary-100 mt-0.5 font-normal">请选择一张手牌并选择出牌方式（调和 / 质疑 / 特技）</span>
+              <span className="mt-0.5 block text-xs font-normal text-white/85">请选择一张手牌并选择出牌方式（调和 / 质疑 / 特技）</span>
             )}
           </div>
         )}
@@ -511,8 +516,8 @@ export const Game: React.FC = () => {
 
       <div className={`flex-1 max-w-6xl mx-auto w-full p-4 space-y-6 ${topBannerMessage ? 'pt-28' : 'pt-24'}`}>
         {gameError && (
-          <div className="bg-red-900/50 border border-red-600 rounded-xl p-3 flex items-center justify-between">
-            <span className="text-red-200">{gameError}</span>
+          <div role="alert" className="flex items-center justify-between rounded-xl border border-red-300 bg-red-50 p-3">
+            <span className="text-red-700">{gameError}</span>
             <Button variant="danger" size="sm" onClick={() => setGameError(null)}>关闭</Button>
           </div>
         )}
@@ -788,8 +793,8 @@ export const Game: React.FC = () => {
           </div>
         )}
 
-        <div className="bg-slate-800 rounded-xl p-3 border border-slate-700">
-          <h2 className="text-base font-semibold text-slate-300 mb-2">其他玩家</h2>
+        <div className="campus-panel p-4">
+          <h2 className="mb-3 text-base font-semibold text-slate-700">围桌同学</h2>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
             {gameState.players
               .filter(p => p.id !== playerId)
@@ -799,32 +804,32 @@ export const Game: React.FC = () => {
                 return (
                   <div
                     key={player.id}
-                    className={`bg-slate-700 rounded-lg p-2 border-2 transition-all ${
+                    className={`rounded-xl border-2 p-3 transition-all ${
                       isWaitingSettlement
-                        ? 'border-red-500 ring-2 ring-red-400 ring-offset-2 ring-offset-slate-800 shadow-lg shadow-red-900/20'
+                        ? 'border-red-400 bg-red-50 ring-2 ring-red-200 shadow-lg shadow-red-100/70'
                         : isTheirTurn
-                          ? 'border-primary-500'
-                          : 'border-slate-600'
+                          ? 'border-[#ef7667] bg-[#fff4e8] shadow-md shadow-[#ef7667]/15'
+                          : 'border-[#dfcfb9] bg-white/70'
                     }`}
                   >
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-white font-medium text-sm">{player.name}</span>
+                      <span className="text-sm font-semibold text-slate-700">{player.name}</span>
                       {isWaitingSettlement && (
-                        <span className="text-[10px] font-medium text-red-300 bg-red-900/50 px-1.5 py-0.5 rounded">等待结算</span>
+                        <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-600">等待结算</span>
                       )}
                     </div>
-                    <div className="text-slate-400 text-xs mt-0.5">手牌: {player.current_hand_count} 质疑: {(player.doubt_cards?.length ?? 0)}</div>
+                    <div className="mt-0.5 text-xs text-slate-500">手牌: {player.current_hand_count} · 质疑: {(player.doubt_cards?.length ?? 0)}</div>
                   </div>
                 );
               })}
           </div>
         </div>
 
-        <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-          <h2 className="text-lg font-semibold text-slate-300 mb-3">已出卡片区</h2>
+        <div className="campus-panel p-5">
+          <h2 className="mb-3 text-lg font-semibold text-slate-700">桌面牌区</h2>
           <div className="space-y-3">
             <div>
-              <div className="text-slate-400 text-sm mb-2">正面出牌</div>
+              <div className="mb-2 text-sm font-medium text-[#9b654e]">正面出牌</div>
               <div className="flex flex-wrap gap-2 items-end">
                 {gameState.players.flatMap((p) =>
                   (p.field_cards ?? []).map((c) => (
@@ -865,8 +870,8 @@ export const Game: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-slate-800 rounded-xl p-3 border border-slate-700">
-          <h2 className="text-base font-semibold text-slate-300 mb-2">调和区（背面朝上，有顺序）</h2>
+        <div className="campus-panel p-4">
+          <h2 className="mb-2 text-base font-semibold text-slate-700">调和区（背面朝上，有顺序）</h2>
           <div className="flex flex-wrap gap-2">
             {gameState.harmony_area.length === 0 ? (
               <p className="text-slate-500 text-sm">调和区为空</p>

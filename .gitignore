@@ -38,3 +38,7 @@ venv.bak/
 frontend/node_modules/
 frontend/dist/
 frontend/test-results/
+
+# Local LoopX goal state
+.loopx/
+.codex/goals/

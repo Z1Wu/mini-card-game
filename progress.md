@@ -15,6 +15,16 @@ Original prompt: 你修复下把
 - Add dedicated frontend component tests when the UI begins changing frequently.
 - Clarify whether the Infected card's "next turn" ability is optional and one-shot before implementing its missing interactive flow.
 
+## 2026-08-06 multiplayer table visual pass
+
+- Reworked the game table shell, status header, turn banner, opponent states, face-up area, and harmony area to match the existing light campus visual language without changing game messages or rules.
+- Validation blocker: the WSL environment has no Node.js/pnpm; a Windows-side pnpm build against the WSL share fails while relinking `node_modules` with `EPERM`. Re-run the frontend build from a single native runtime after restoring the dependency environment.
+
+## 2026-08-06 interaction feedback
+
+- Added accessible live announcements for turn banners and error feedback in the game table without changing game rules or protocol messages.
+- Made the game header controls wrap cleanly on narrow screens while retaining the desktop layout.
+
 ## Rules-engine hardening
 
 - Added injectable seeded randomness for reproducible deals and first-player selection.
