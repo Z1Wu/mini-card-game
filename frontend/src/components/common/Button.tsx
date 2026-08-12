@@ -17,13 +17,13 @@ export const Button: React.FC<ButtonProps> = ({
   disabled: isDisabled,
   ...props
 }) => {
-  const baseStyles = 'font-semibold rounded-lg transition-colors duration-200';
+  const baseStyles = 'font-semibold rounded-xl transition-all duration-200 shadow-sm hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0';
   
   const variantStyles = {
-    primary: 'bg-primary-600 hover:bg-primary-700 text-white',
-    secondary: 'bg-slate-600 hover:bg-slate-700 text-white',
-    accent: 'bg-accent-600 hover:bg-accent-700 text-white',
-    danger: 'bg-red-600 hover:bg-red-700 text-white',
+    primary: 'bg-[#ef7667] hover:bg-[#dc6255] text-white shadow-[#ef7667]/25',
+    secondary: 'bg-[#e9dfcf] hover:bg-[#ded0bd] text-[#46516b]',
+    accent: 'bg-[#55b9a7] hover:bg-[#439b8c] text-white',
+    danger: 'bg-[#c95c60] hover:bg-[#b64c52] text-white',
   };
   
   const sizeStyles = {

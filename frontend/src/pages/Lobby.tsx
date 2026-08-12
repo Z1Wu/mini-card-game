@@ -96,14 +96,15 @@ export const Lobby: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-      <div className="max-w-2xl w-full bg-slate-800 rounded-2xl shadow-2xl p-8 border border-slate-700">
+    <div className="campus-shell flex items-center justify-center p-4 sm:p-8">
+      <div className="campus-panel max-w-2xl w-full p-7 sm:p-8">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-white">游戏大厅</h1>
+            <p className="campus-kicker mb-1">Waiting Room</p>
+            <h1 className="campus-title text-3xl font-bold">集合大厅</h1>
             <p className="text-slate-500 text-xs mt-1">房间：{roomCode === 'default' ? '默认大厅' : roomCode}</p>
           </div>
-          <div className="text-slate-400">
+          <div className="text-slate-600">
             {playerName && <span className="mr-4">{playerName}</span>}
             <span>{players.length} / 5</span>
           </div>
@@ -131,7 +132,7 @@ export const Lobby: React.FC = () => {
         )}
 
         <div className="space-y-4 mb-8">
-          <h2 className="text-xl font-semibold text-slate-300 mb-4">玩家列表</h2>
+          <h2 className="text-xl font-semibold text-slate-700 mb-4">到场同学</h2>
           {players.length === 0 ? (
             <p className="text-slate-500 text-center py-8">等待玩家加入...</p>
           ) : (
@@ -139,11 +140,11 @@ export const Lobby: React.FC = () => {
               {players.map((player) => (
                 <div
                   key={player.id}
-                  className="bg-slate-700 rounded-lg p-4 border border-slate-600"
+                  className="campus-player rounded-xl p-4 border"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-white font-medium">{player.name}{players[0]?.id === player.id ? '（房主）' : ''}</span>
-                    <span className="text-slate-400 text-sm">手牌: {player.hand_count}</span>
+                    <span className="text-slate-700 font-medium">{player.name}{players[0]?.id === player.id ? '（房主）' : ''}</span>
+                    <span className="text-slate-500 text-sm">手牌: {player.hand_count}</span>
                   </div>
                 </div>
               ))}
