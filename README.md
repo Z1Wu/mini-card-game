@@ -1,502 +1,66 @@
-# 卡牌游戏后端
+# 少女尸体卡牌游戏
 
-多人在线卡牌游戏后端服务，使用 Python + WebSocket 实现。
+一个使用 React、WebSocket 与 Python 构建的 3–5 人在线卡牌游戏。前端通过同一个 WebSocket 服务与后端通信；部署镜像同时包含前端静态文件、Nginx 和后端。
 
-## 项目结构
+## 当前功能
 
-```
-card_game_dev/
-├── backend/                    # 后端代码
-│   ├── game/                  # 游戏逻辑
-│   │   ├── models.py         # 数据模型
-│   │   ├── state.py          # 游戏状态管理
-│   │   ├── cards.py          # 卡牌系统
-│   │   ├── rules.py          # 游戏规则
-│   │   └── victory.py        # 胜利条件判定
-│   ├── websocket/            # WebSocket 服务
-│   │   └── server.py         # WebSocket 服务器
-│   ├── utils/                # 工具函数
-│   ├── tests/                # 测试代码
-│   │   ├── test_client.py    # 测试客户端
-│   │   ├── test_game_flow.py # 游戏流程测试
-│   │   ├── test_game_state.py # 游戏状态测试
-│   │   ├── test_cards.py     # 卡牌测试
-│   │   └── test_basic.py     # 基础测试
-│   ├── main.py               # 主程序入口
-│   ├── config.py             # 配置文件
-│   └── pyproject.toml       # 项目配置和依赖管理（uv）
-├── docs/                     # 文档
-│   ├── overview.md           # 游戏规则概述
-│   ├── backend_implementation.md  # 后端实现方案
-│   ├── backend_testing.md    # 后端测试方案
-│   └── DOCKER.md            # Docker 部署指南
-├── Dockerfile               # Docker 镜像配置
-├── docker-compose.yml       # Docker Compose 配置
-└── docker.sh               # Docker 部署脚本
-```
+- 支持 3、4 或 5 名玩家；3–4 人每人 6 张牌，5 人每人 5 张。
+- 房间码隔离的对局：可创建房间或加入已有房间；第一位进入房间的玩家为房主。
+- 登录认证、同房间重连令牌与浏览器自动重连。
+- 服务端按玩家过滤游戏状态：仅本人能看到自己的手牌，调和区和质疑区在结算前保持隐藏。
+- 三种出牌方式（特技、调和、质疑）、特殊阶段和服务器权威的结算。
 
-## 功能特性
+游戏规则、卡牌数据和结算顺序以 [游戏概览](docs/overview.md) 为准。
 
-- ✅ 支持 3-5 人游戏
-- ✅ 13 种卡牌类型
-- ✅ 三种出卡方式（特技、调和、质疑）
-- ✅ 特殊交互机制（优等生闭眼、外星人响应）
-- ✅ 完整的胜利条件判定
-- ✅ 实时 WebSocket 通信
-- ✅ 异步高并发处理
-- ✅ Docker 容器化部署
-- ✅ 使用 uv 管理依赖
+## 本地开发
 
-## 快速开始
+需要 Python 3.10+、[uv](https://docs.astral.sh/uv/) 与 Node.js 20。
 
-### 使用 Docker（推荐）
+在两个终端中运行：
 
-1. 构建镜像：
-
-```bash
-./docker.sh build
-```
-
-2. 启动服务：
-
-```bash
-./docker.sh start
-```
-
-3. 查看日志：
-
-```bash
-./docker.sh logs
-```
-
-4. 运行测试：
-
-```bash
-./docker.sh test
-```
-
-### 使用 uv（本地开发）
-
-1. 安装 uv：
-
-```bash
-# macOS/Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Windows
-powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-
-# 使用 pip
-pip install uv
-```
-
-2. 进入 backend 目录：
-
-```bash
+```powershell
 cd backend
-```
-
-3. 同步依赖：
-
-```bash
-uv sync
-```
-
-4. 启动服务：
-
-```bash
+uv sync --frozen
 uv run python main.py
 ```
 
-5. 运行测试：
-
-```bash
-uv run pytest tests/
+```powershell
+cd frontend
+npm ci
+npm run dev
 ```
 
-## 房间、重连与安全配置
+Vite 会显示本地地址（默认通常为 `http://localhost:5173`）；后端默认监听 `ws://localhost:8765`。详见 [快速启动](docs/QUICK_START.md)。
 
-- 登录页可创建 6 位房间码或输入房间码加入；每个房间拥有独立的对局状态。
-- 第一位加入的玩家是房主，只有房主可以开始或重置对局。
-- 登录成功后服务端签发仅用于当前房间的重连令牌；浏览器会在短暂断线后自动回到原房间并恢复身份。
-- 对局中只向每名玩家下发自己的手牌；调和区、质疑区与其他玩家手牌在结算前保持隐藏。
-- 对外部署时请配置 `ALLOWED_ORIGINS`，并使用 `password_hash` 代替明文密码：
-- 旧版无认证 `join_game` 协议在应用入口默认关闭；仅在兼容旧客户端时显式设置 `ALLOW_LEGACY_JOIN_GAME=true`。
+## 验证命令
 
-```bash
+```powershell
 cd backend
-python -m auth.passwords "你的强密码"
+uv sync --frozen
+uv run pytest tests/ -v --tb=short
 ```
 
-将输出写入用户配置的 `password_hash` 字段。仓库内的明文账号仅用于本地演示和自动化测试。
-
-## uv 使用指南
-
-### 常用命令
-
-```bash
-# 进入 backend 目录
-cd backend
-
-# 同步依赖
-uv sync
-
-# 安装新包
-uv add package_name
-
-# 安装开发依赖
-uv add --dev package_name
-
-# 运行脚本
-uv run python script.py
-
-# 运行测试
-uv run pytest tests/
-
-# 更新依赖
-uv lock --upgrade
-
-# 查看已安装的包
-uv pip list
+```powershell
+cd frontend
+npm ci
+npm test
+npm run lint
+npm run build
+npm run test:e2e
 ```
 
-### 项目配置
+浏览器 E2E 首次运行需执行 `npx playwright install chromium`。它使用隔离端口，并将录像、截图和报告写入 `frontend/test-results/full-game/`。
 
-依赖配置在 `backend/pyproject.toml` 中：
+## 部署与安全
 
-```toml
-[project]
-name = "card-game-backend"
-version = "0.1.0"
-dependencies = [
-    "websockets>=12.0",
-    "pydantic>=2.0.0",
-    "python-dotenv>=1.0.0",
-]
-
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0.0",
-    "pytest-asyncio>=0.21.0",
-    "pytest-cov>=4.0.0",
-]
-```
-
-### 虚拟环境
-
-uv 自动创建和管理虚拟环境：
-
-```bash
-# 进入 backend 目录
-cd backend
-
-# 激活虚拟环境
-source .venv/bin/activate  # Linux/macOS
-.venv\Scripts\activate     # Windows
-
-# 退出虚拟环境
-deactivate
-```
-
-## WebSocket 消息协议
-
-### 客户端 -> 服务器
-
-#### 加入游戏
-```json
-{
-  "type": "join_game",
-  "player_id": "player_1",
-  "player_name": "玩家1"
-}
-```
-
-#### 开始游戏
-```json
-{
-  "type": "start_game",
-  "player_id": "player_1"
-}
-```
-
-#### 出卡
-```json
-{
-  "type": "play_card",
-  "player_id": "player_1",
-  "card_id": "班长_0",
-  "usage_type": "skill",
-  "target_player_id": "player_2"
-}
-```
-
-#### 获取游戏状态
-```json
-{
-  "type": "get_game_state",
-  "player_id": "player_1"
-}
-```
-
-#### 响应优等生特技
-```json
-{
-  "type": "honor_student_response",
-  "player_id": "player_1",
-  "response": "raise_hand"
-}
-```
-
-### 服务器 -> 客户端
-
-#### 加入成功
-```json
-{
-  "type": "join_success",
-  "player_id": "player_1",
-  "player_name": "玩家1"
-}
-```
-
-#### 玩家列表
-```json
-{
-  "type": "player_list",
-  "players": [
-    {
-      "id": "player_1",
-      "name": "玩家1",
-      "hand_count": 6
-    }
-  ]
-}
-```
-
-#### 游戏状态
-```json
-{
-  "type": "game_state",
-  "game_state": {
-    "game_id": "game_1",
-    "state": "playing",
-    "players": [...],
-    "current_player_index": 0,
-    "turn_count": 1,
-    "harmony_area_count": 1,
-    "required_harmony_value": 4
-  }
-}
-```
-
-#### 错误消息
-```json
-{
-  "type": "error",
-  "message": "错误信息"
-}
-```
-
-## 卡牌类型
-
-| 卡牌名称 | 调和值 | 胜利优先级 | 胜利条件 | 张数 |
-|---------|--------|-----------|---------|------|
-| 班长 | 2 | 4 | 调和成功 | 2 |
-| 图书委员 | 1 | 4 | 调和成功 | 2 |
-| 外星人 | -1 | 1 | 被监禁 | 1 |
-| 归宅部 | 0 | 5 | 无任何人获胜 | 3 |
-| 保健委员 | 1 | 4 | 调和成功 | 2 |
-| 风纪委员 | 2 | 4 | 调和成功 | 2 |
-| 新闻部 | 1 | 4 | 调和成功 | 3 |
-| 大小姐 | 1 | 4 | 调和成功 | 3 |
-| 共犯 | 0 | 3 | 犯人获胜 | 1 |
-| 感染者 | 0 | 2 | 调和失败 | 1 |
-| 犯人 | 0 | 3 | 不被监禁 | 1 |
-| 学生会长 | 3 | 4 | 调和成功 | 1 |
-| 优等生 | 2 | 4 | 不被监禁 | 2 |
-
-## 出卡方式
-
-- **特技 (SKILL)** - 将卡牌正面朝上放置在自己面前，并执行能力栏中的效果
-- **调和 (HARMONY)** - 将卡牌背面朝上放置在调和区
-- **质疑 (DOUBT)** - 将卡牌背面朝上放置在其他玩家面前
-
-## 游戏状态
-
-- **WAITING** - 等待玩家加入
-- **PLAYING** - 游戏进行中
-- **SPECIAL_PHASE** - 特殊阶段（如优等生特技）
-- **GAME_OVER** - 游戏结束
-
-## 测试
-
-### 使用 uv 运行测试
-
-```bash
-# 进入 backend 目录
-cd backend
-
-# 运行所有测试
-uv run pytest tests/
-
-# 运行特定测试文件
-uv run pytest tests/test_game_state.py
-
-# 运行测试并显示详细输出
-uv run pytest tests/ -v
-
-# 运行测试并生成覆盖率报告
-uv run pytest tests/ --cov=. --cov-report=html
-```
-
-### 运行集成测试
-
-```bash
-cd backend
-uv run python tests/test_game_flow.py
-```
-
-### 运行基础测试
-
-```bash
-cd backend
-uv run python tests/test_basic.py
-```
+发布镜像、Docker Compose 部署、配置及回滚操作见 [部署指南](docs/DEPLOY.md)。公网部署至少应设置 `ALLOWED_ORIGINS`，并用 `password_hash` 替换演示账号的明文密码；不要开启旧客户端兼容开关，除非确有迁移需要。
 
 ## 文档
 
-- [游戏规则概述](docs/overview.md) - 游戏规则和卡牌详情
-- [后端实现方案](docs/backend_implementation.md) - 后端架构和实现细节
-- [后端测试方案](docs/backend_testing.md) - 测试方法和工具
-- [Docker 部署指南](docs/DOCKER.md) - Docker 部署和运维
-
-## 技术栈
-
-- **Python 3.10+**
-- **uv** - 快速的 Python 包管理器
-- **websockets** - WebSocket 服务器
-- **pydantic** - 数据验证
-- **asyncio** - 异步编程
-- **Docker** - 容器化部署
-
-## 开发
-
-### 添加新依赖
-
-```bash
-# 进入 backend 目录
-cd backend
-
-# 添加生产依赖
-uv add package_name
-
-# 添加开发依赖
-uv add --dev package_name
-```
-
-### 添加新卡牌
-
-1. 在 `backend/game/cards.py` 的 `CARD_DATABASE` 中添加卡牌定义
-2. 在 `backend/game/rules.py` 中实现卡牌效果
-3. 运行测试验证功能
-
-### 添加新功能
-
-1. 在相应的模块中添加代码
-2. 编写测试用例
-3. 更新文档
-
-## 部署
-
-### Docker 部署
-
-详见 [Docker 部署指南](docs/DOCKER.md)
-
-### 使用 uv 部署
-
-1. 进入 backend 目录：
-
-```bash
-cd backend
-```
-
-2. 同步依赖：
-
-```bash
-uv sync
-```
-
-3. 启动服务：
-
-```bash
-uv run python main.py
-```
-
-4. 使用进程管理器（如 systemd、supervisor）管理服务
-
-## 故障排查
-
-### uv 相关问题
-
-#### uv 命令未找到
-
-```bash
-# 重新安装 uv
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-#### 依赖安装失败
-
-```bash
-# 进入 backend 目录
-cd backend
-
-# 清理缓存并重新同步
-uv cache clean
-uv sync
-```
-
-#### 虚拟环境问题
-
-```bash
-# 进入 backend 目录
-cd backend
-
-# 删除虚拟环境并重新创建
-rm -rf .venv
-uv sync
-```
-
-### 服务无法启动
-
-1. 检查端口是否被占用：`netstat -an | grep 8765`
-2. 查看日志：`docker logs card_game_backend`
-3. 检查依赖是否安装：`cd backend && uv pip list`
-
-### WebSocket 连接失败
-
-1. 检查服务是否运行：`docker ps`
-2. 检查防火墙设置
-3. 查看服务日志
-
-## 性能优化
-
-### uv 性能优势
-
-- **快速安装**：比 pip 快 10-100 倍
-- **并行下载**：充分利用网络带宽
-- **智能缓存**：避免重复下载
-- **依赖解析**：快速解析依赖关系
-
-### 其他优化
-
-- 使用异步编程提高并发性能
-- 优化 WebSocket 消息处理
-- 使用连接池管理数据库连接
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-## 许可证
-
-MIT License
+- [快速启动](docs/QUICK_START.md)
+- [游戏概览与规则](docs/overview.md)
+- [开发协作与 CI](docs/DEVELOPMENT_WORKFLOW.md)
+- [部署指南](docs/DEPLOY.md)
+- [本地 Docker 指南](docs/DOCKER.md)
+- [前端说明](frontend/README.md)
+- [后端说明](backend/README.md)

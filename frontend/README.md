@@ -1,236 +1,44 @@
-# 卡牌游戏前端
+# 前端
 
-多人在线卡牌游戏前端实现，使用 React + TypeScript + Vite。
+React + TypeScript + Vite 的游戏客户端。它通过 WebSocket 连接后端，并在浏览器 `sessionStorage` 中保存当前房间、登录用户和重连令牌，以便短暂断线后自动回到同一房间。
 
-## 技术栈
+## 前置条件与启动
 
-- **React 18+**: UI 框架
-- **TypeScript**: 类型安全
-- **Vite**: 构建工具
-- **Tailwind CSS**: 样式框架
-- **Zustand**: 状态管理
-- **React Router**: 路由管理
-- **WebSocket**: 实时通信
+需要 Node.js 20。先按根目录 [快速启动](../docs/QUICK_START.md) 启动后端，再运行：
 
-## 项目结构
-
-```
-frontend/
-├── src/
-│   ├── components/      # 组件
-│   │   ├── common/     # 通用组件
-│   │   ├── game/       # 游戏组件
-│   │   └── layout/     # 布局组件
-│   ├── pages/          # 页面
-│   ├── hooks/          # 自定义 Hooks
-│   ├── stores/         # 状态管理
-│   ├── services/       # 服务层
-│   ├── types/          # 类型定义
-│   ├── utils/          # 工具函数
-│   └── assets/        # 静态资源
-├── public/            # 公共资源
-├── package.json
-└── vite.config.ts
-```
-
-## 快速开始
-
-### 1. 安装依赖
-
-```bash
+```powershell
 cd frontend
-npm install
-```
-
-### 2. 配置环境变量
-
-复制 `.env.example` 为 `.env` 并配置：
-
-```bash
-cp .env.example .env
-```
-
-`.env` 文件内容：
-
-```env
-VITE_WS_URL=ws://localhost:8765
-```
-
-### 3. 启动开发服务器
-
-```bash
+npm ci
 npm run dev
 ```
 
-访问 http://localhost:3000
+Vite 输出实际访问地址（默认通常为 `http://localhost:5173`）。开发服务器的 WebSocket 地址由 `VITE_WS_URL` 覆盖；未设置时使用客户端默认地址。生产部署应让该地址指向可访问的后端 WebSocket 端点。
 
-### 4. 构建生产版本
+## 可用脚本
 
-```bash
-npm run build
-```
+| 命令 | 用途 |
+| --- | --- |
+| `npm run dev` | 启动 Vite 开发服务器 |
+| `npm run build` | TypeScript 检查并构建生产文件 |
+| `npm run preview` | 本地预览构建产物 |
+| `npm run lint` | 运行 ESLint |
+| `npm test` | 运行 Vitest 组件测试（一次性） |
+| `npm run test:watch` | 以 watch 模式运行组件测试 |
+| `npm run test:e2e` | 运行记录式三人浏览器完整对局 |
 
-### 5. 预览生产版本
+首次运行浏览器 E2E：
 
-```bash
-npm run preview
-```
-
-## 功能特性
-
-### 已实现
-
-- ✅ WebSocket 连接管理
-- ✅ 玩家加入游戏
-- ✅ 游戏大厅
-- ✅ 游戏主界面
-- ✅ 卡牌显示
-- ✅ 出卡功能
-- ✅ 游戏状态同步
-- ✅ 游戏结算与重新开始
-- ✅ 响应式设计
-
-### 待实现
-
-- ⏳ 卡牌动画效果
-- ⏳ 音效和背景音乐
-- ⏳ 游戏规则说明
-- ⏳ 设置页面
-- ⏳ 好友系统
-- ⏳ 排行榜
-
-## 页面说明
-
-### 首页 (/)
-- 输入玩家名称
-- 加入游戏
-- 连接到 WebSocket 服务器
-
-### 大厅 (/lobby)
-- 查看玩家列表
-- 等待其他玩家
-- 开始游戏（需要至少 3 名玩家）
-
-### 游戏页面 (/game)
-- 查看其他玩家
-- 查看调和区
-- 查看自己的手牌
-- 出卡操作
-- 游戏状态同步
-
-## 开发指南
-
-### 添加新组件
-
-1. 在 `src/components/` 下创建组件文件
-2. 导出组件
-3. 在页面中使用
-
-### 添加新页面
-
-1. 在 `src/pages/` 下创建页面文件
-2. 在 `src/App.tsx` 中添加路由
-
-### 添加新的 WebSocket 消息类型
-
-1. 在 `src/types/message.ts` 中定义消息类型
-2. 在 `src/services/websocket.ts` 中添加处理逻辑
-3. 在组件中使用 `wsService.on()` 监听消息
-
-### 状态管理
-
-使用 Zustand 进行状态管理：
-
-```typescript
-import { useGameStore } from '../stores/gameStore';
-
-function MyComponent() {
-  const { gameState, setGameState } = useGameStore();
-  
-  // 使用状态
-  console.log(gameState);
-  
-  // 更新状态
-  setGameState(newState);
-}
-```
-
-## 测试
-
-### 完整三人浏览器 E2E
-
-该流程会在隔离端口启动后端和前端，使用 `player1` 至 `player3` 完成一局三人游戏，验证回合推进、调和区、结算页、获胜者状态和浏览器错误，并保存 WebM 录像、最终截图及 JSON 报告。
-
-```bash
+```powershell
 npx playwright install chromium
 npm run test:e2e
 ```
 
-测试服务使用前端端口 `3100` 和 WebSocket 端口 `8876`，不会干扰默认的本地开发服务。产物位于 `test-results/full-game/`。
+E2E 自行启动隔离的前端和后端服务，使用端口 3100/8876，不依赖手动启动的开发服务；产物在 `test-results/full-game/`。
 
-### 手动测试
+## 对局与隐私边界
 
-1. 启动后端服务器
-2. 启动前端开发服务器
-3. 打开多个浏览器窗口
-4. 以不同玩家身份加入游戏
-5. 测试游戏流程
-
-### 自动化测试
-
-待实现...
+登录页可创建六位房间码或加入已有房间。房主才能开始或重置对局；游戏只接受 3–5 名玩家。客户端仅渲染服务端发给该玩家的私有手牌，不能将隐藏区或其他玩家的手牌当作可用数据。有关房间、重连、出牌和结算规则，见 [游戏概览](../docs/overview.md)。
 
 ## 部署
 
-### Vercel
-
-1. 推送代码到 GitHub
-2. 在 Vercel 中导入项目
-3. 配置环境变量
-4. 部署
-
-### Docker
-
-```bash
-docker build -t card-game-frontend .
-docker run -p 3000:80 card-game-frontend
-```
-
-### 静态托管
-
-```bash
-npm run build
-# 将 dist 目录部署到任何静态托管服务
-```
-
-## 常见问题
-
-### WebSocket 连接失败
-
-1. 确保后端服务器正在运行
-2. 检查 `.env` 文件中的 `VITE_WS_URL` 是否正确
-3. 检查防火墙设置
-
-### 样式不生效
-
-1. 确保已安装 Tailwind CSS
-2. 检查 `tailwind.config.js` 配置
-3. 清除缓存并重新构建
-
-### 类型错误
-
-1. 确保 TypeScript 版本正确
-2. 运行 `npm run build` 检查类型错误
-3. 检查 `tsconfig.json` 配置
-
-## 贡献指南
-
-1. Fork 项目
-2. 创建功能分支
-3. 提交更改
-4. 推送到分支
-5. 创建 Pull Request
-
-## 许可证
-
-MIT License
+项目的正式部署构建位于仓库根目录的 `Dockerfile.deploy`，而不是单独的前端 Dockerfile。它构建 `frontend/dist`，由 Nginx 提供静态资源并将 `/ws` 代理给后端。完整配置见 [部署指南](../docs/DEPLOY.md)。
