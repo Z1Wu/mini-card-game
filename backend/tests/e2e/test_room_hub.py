@@ -130,9 +130,14 @@ async def test_empty_rooms_expire_after_ttl(room_hub):
     created = await client.create_room()
     code = created["room_code"]
     await client.close()
-    await asyncio.sleep(0)
 
     entry = hub._rooms[code]
+    # The client's close call can complete before the server task has run its
+    # disconnect cleanup, so wait for the server-side state transition.
+    for _ in range(20):
+        if entry.empty_since is not None:
+            break
+        await asyncio.sleep(0.01)
     assert entry.empty_since is not None
     expired = hub.cleanup_expired_rooms(now=entry.empty_since + hub.room_ttl_seconds)
     assert expired == [code]
