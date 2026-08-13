@@ -3,6 +3,7 @@ import json
 import logging
 import secrets
 import websockets
+from random import Random
 from typing import Set, Dict, Optional
 from game.state import GameManager
 from game.rules import GameRules
@@ -13,13 +14,19 @@ logger = logging.getLogger(__name__)
 
 
 class GameWebSocketServer:
-    def __init__(self, host: str = "localhost", port: int = 8765, allow_legacy_join_game: bool = True):
+    def __init__(
+        self,
+        host: str = "localhost",
+        port: int = 8765,
+        allow_legacy_join_game: bool = True,
+        rng: Optional[Random] = None,
+    ):
         self.host = host
         self.port = port
         self.allow_legacy_join_game = allow_legacy_join_game
         self.clients: Set[websockets.WebSocketServerProtocol] = set()
         self.player_connections: Dict[str, websockets.WebSocketServerProtocol] = {}
-        self.game_manager = GameManager()
+        self.game_manager = GameManager(rng=rng)
         self.game_manager.create_game("default_game")
         self.game_rules = GameRules(self.game_manager)
         self.honor_student_responses: Dict[str, str] = {}

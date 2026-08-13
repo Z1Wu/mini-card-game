@@ -142,3 +142,22 @@ async def test_empty_rooms_expire_after_ttl(room_hub):
     expired = hub.cleanup_expired_rooms(now=entry.empty_since + hub.room_ttl_seconds)
     assert expired == [code]
     assert code not in hub.room_codes
+
+
+@pytest.mark.e2e
+def test_seeded_rooms_receive_reproducible_fresh_deals():
+    def deal(seed):
+        hub = RoomHubWebSocketServer(rng_seed=seed)
+        room = hub._new_room("TEST01").server.game_manager
+        room.create_game("seeded")
+        for index in range(3):
+            assert room.add_player(f"player-{index}", f"玩家{index}")
+        assert room.start_game()
+        return (
+            [[card.id for card in player.hand] for player in room.game.players],
+            room.game.current_player_index,
+        )
+
+    assert deal(75) == deal(75)
+    assert deal(75) != deal(76)
+    assert RoomHubWebSocketServer()._rooms[DEFAULT_ROOM_CODE].server.game_manager is not None
