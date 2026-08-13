@@ -10,6 +10,7 @@ logging.basicConfig(
 )
 
 async def main():
+    Config.validate_startup_configuration()
     server = RoomHubWebSocketServer(
         host=Config.HOST,
         port=Config.PORT,
