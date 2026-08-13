@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/common/Button';
 import { Card } from '../components/game/Card';
 import { SettlementView } from '../components/game/SettlementView';
+import { GameTable } from '../components/game/GameTable';
 import { usePlayerStore } from '../stores/playerStore';
 import { useGameStore } from '../stores/gameStore';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -793,97 +794,7 @@ export const Game: React.FC = () => {
           </div>
         )}
 
-        <div className="campus-panel p-4">
-          <h2 className="mb-3 text-base font-semibold text-slate-700">围桌同学</h2>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-            {gameState.players
-              .filter(p => p.id !== playerId)
-              .map((player) => {
-                const isWaitingSettlement = player.current_hand_count === 1;
-                const isTheirTurn = gameState.current_player_index === gameState.players.findIndex(p => p.id === player.id);
-                return (
-                  <div
-                    key={player.id}
-                    className={`rounded-xl border-2 p-3 transition-all ${
-                      isWaitingSettlement
-                        ? 'border-red-400 bg-red-50 ring-2 ring-red-200 shadow-lg shadow-red-100/70'
-                        : isTheirTurn
-                          ? 'border-[#ef7667] bg-[#fff4e8] shadow-md shadow-[#ef7667]/15'
-                          : 'border-[#dfcfb9] bg-white/70'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-sm font-semibold text-slate-700">{player.name}</span>
-                      {isWaitingSettlement && (
-                        <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-600">等待结算</span>
-                      )}
-                    </div>
-                    <div className="mt-0.5 text-xs text-slate-500">手牌: {player.current_hand_count} · 质疑: {(player.doubt_cards?.length ?? 0)}</div>
-                  </div>
-                );
-              })}
-          </div>
-        </div>
-
-        <div className="campus-panel p-5">
-          <h2 className="mb-3 text-lg font-semibold text-slate-700">桌面牌区</h2>
-          <div className="space-y-3">
-            <div>
-              <div className="mb-2 text-sm font-medium text-[#9b654e]">正面出牌</div>
-              <div className="flex flex-wrap gap-2 items-end">
-                {gameState.players.flatMap((p) =>
-                  (p.field_cards ?? []).map((c) => (
-                    <div key={c.id} className="flex flex-col items-center gap-0.5">
-                      <span className="text-xs text-slate-500">{p.name}</span>
-                      <div className="w-16">
-                        <Card card={c} showAsFaceDown={false} />
-                      </div>
-                    </div>
-                  ))
-                )}
-                {gameState.players.every((p) => !p.field_cards?.length) && (
-                  <span className="text-slate-500 text-sm">暂无</span>
-                )}
-              </div>
-            </div>
-            <div>
-              <div className="text-slate-400 text-sm mb-2">质疑牌（背面，结算时揭晓）</div>
-              <div className="flex flex-wrap gap-2 items-end">
-                {gameState.players.flatMap((p) =>
-                  (p.doubt_cards ?? []).map((c) => (
-                    <div key={`${p.id}-${c.id}`} className="flex flex-col items-center gap-0.5">
-                      <span className="text-xs text-slate-500">→ {p.name}</span>
-                      <div className="w-12">
-                        <Card
-                          card={c}
-                          showAsFaceDown={gameState.state !== GameStateEnum.GAME_OVER}
-                        />
-                      </div>
-                    </div>
-                  ))
-                )}
-                {gameState.players.every((p) => !p.doubt_cards?.length) && (
-                  <span className="text-slate-500 text-sm">暂无</span>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="campus-panel p-4">
-          <h2 className="mb-2 text-base font-semibold text-slate-700">调和区（背面朝上，有顺序）</h2>
-          <div className="flex flex-wrap gap-2">
-            {gameState.harmony_area.length === 0 ? (
-              <p className="text-slate-500 text-sm">调和区为空</p>
-            ) : (
-              gameState.harmony_area.map((card) => (
-                <div key={card.id} className="w-14">
-                  <Card card={card} showAsFaceDown />
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+        {currentPlayer && <GameTable players={gameState.players} localPlayer={currentPlayer} localPlayerId={playerId ?? ''} currentPlayerIndex={gameState.current_player_index} harmonyArea={gameState.harmony_area} isGameOver={isGameOver} selectedCard={selectedCard} onSelectCard={setSelectedCard} onPlayCard={handlePlayCard} newsClubMyChosenCard={newsClubMyChosenCard} />}
 
         {viewHandResult && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setViewHandResult(null)}>
@@ -965,52 +876,6 @@ export const Game: React.FC = () => {
           </div>
         )}
 
-        {currentPlayer && (
-          <div
-            className={`rounded-xl p-4 border-2 transition-all ${
-              currentPlayer.current_hand_count === 1
-                ? 'bg-slate-800 ring-2 ring-red-400 ring-offset-2 ring-offset-slate-900 border-red-500 shadow-lg shadow-red-900/20'
-                : isCurrentPlayer
-                  ? 'bg-slate-800 ring-2 ring-primary-400 ring-offset-2 ring-offset-slate-900 border-primary-500 shadow-lg shadow-primary-900/20'
-                  : 'bg-slate-800 border border-slate-700'
-            }`}
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-slate-300">
-                我的卡牌
-                {currentPlayer.current_hand_count === 1 && <span className="ml-2 text-red-400 font-bold">(等待结算)</span>}
-                {isCurrentPlayer && currentPlayer.current_hand_count > 1 && <span className="ml-2 text-primary-400 font-bold">(当前回合)</span>}
-              </h2>
-              <div className="text-slate-400 flex gap-4">
-                <span>手牌: {currentPlayer.hand.length}</span>
-                <span>质疑: {currentPlayer.doubt_cards?.length ?? 0}</span>
-              </div>
-            </div>
-            {newsClubMyChosenCard && (
-              <div className="mb-4">
-                <div className="text-sky-400 text-sm mb-2">新闻部：我选的牌（递给下家）</div>
-                <div className="w-20">
-                  <Card card={newsClubMyChosenCard} showAsFaceDown={false} />
-                </div>
-              </div>
-            )}
-            <div className="flex flex-wrap gap-4">
-              {currentPlayer.hand.map((card) => (
-                <div key={card.id} className="w-32">
-                  <Card
-                    card={card}
-                    isPlayable={isCurrentPlayer && card.name !== CardTypeEnum.CRIMINAL && currentPlayer.hand.length > 1}
-                    isSelected={selectedCard?.id === card.id}
-                    onClick={() => setSelectedCard(card)}
-                    showActions={selectedCard?.id === card.id && isCurrentPlayer && card.name !== CardTypeEnum.CRIMINAL}
-                    onPlay={handlePlayCard}
-                    disabledSkill={card.name === CardTypeEnum.HOME_CLUB && (!gameState.harmony_area || gameState.harmony_area.length === 0)}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
