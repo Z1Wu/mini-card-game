@@ -1,8 +1,9 @@
 [
-  { "username": "player1", "password_hash": "运行 python -m auth.passwords 生成", "name": "玩家1" },
-  { "username": "player2", "password_hash": "运行 python -m auth.passwords 生成", "name": "玩家2" },
-  { "username": "player3", "password_hash": "运行 python -m auth.passwords 生成", "name": "玩家3" },
-  { "username": "player4", "password_hash": "运行 python -m auth.passwords 生成", "name": "玩家4" },
-  { "username": "player5", "password_hash": "运行 python -m auth.passwords 生成", "name": "玩家5" },
-  { "username": "player6", "password_hash": "运行 python -m auth.passwords 生成", "name": "玩家6" }
+  { "username": "player1", "password_hash": "运行 python -m auth.passwords 生成", "name": "玩家1", "role": "player" },
+  { "username": "player2", "password_hash": "运行 python -m auth.passwords 生成", "name": "玩家2", "role": "player" },
+  { "username": "player3", "password_hash": "运行 python -m auth.passwords 生成", "name": "玩家3", "role": "player" },
+  { "username": "player4", "password_hash": "运行 python -m auth.passwords 生成", "name": "玩家4", "role": "player" },
+  { "username": "player5", "password_hash": "运行 python -m auth.passwords 生成", "name": "玩家5", "role": "player" },
+  { "username": "player6", "password_hash": "运行 python -m auth.passwords 生成", "name": "玩家6", "role": "player" },
+  { "username": "admin1", "password_hash": "运行 python -m auth.passwords 生成", "name": "管理员1", "role": "admin" }
 ]
