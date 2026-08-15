@@ -20,12 +20,14 @@ class GameWebSocketServer:
         port: int = 8765,
         allow_legacy_join_game: bool = True,
         rng: Optional[Random] = None,
+        hub=None,
     ):
         self.host = host
         self.port = port
         self.allow_legacy_join_game = allow_legacy_join_game
+        self.hub = hub
         self.clients: Set[websockets.WebSocketServerProtocol] = set()
-        self.player_connections: Dict[str, websockets.WebSocketServerProtocol] = {}
+        self.player_connections: Dict[str, websockets.WebSocketServerProtocol] = dict()
         self.game_manager = GameManager(rng=rng)
         self.game_manager.create_game("default_game")
         self.game_rules = GameRules(self.game_manager)
@@ -203,8 +205,19 @@ class GameWebSocketServer:
             return
         
         player_id = username
+
+        # Hub-level cross-room collision check.
+        if self.hub and not self.hub.claim_username(player_id):
+            await self.send_to_client(websocket, {
+                "type": "error",
+                "message": "该玩家已在其他房间中登录"
+            })
+            return
         
         if player_id in self.player_connections:
+            # Release the hub claim since we're rejecting this login.
+            if self.hub:
+                self.hub.release_username(player_id)
             await self.send_to_client(websocket, {
                 "type": "error",
                 "message": "该玩家已经在线"
@@ -233,6 +246,8 @@ class GameWebSocketServer:
             await self._broadcast_game_state()
         else:
             if self.game_manager.game and self.game_manager.game.state != GameState.WAITING:
+                if self.hub:
+                    self.hub.release_username(player_id)
                 await self.send_to_client(websocket, {
                     "type": "error",
                     "message": "游戏正在进行中，无法加入新玩家"
@@ -250,6 +265,8 @@ class GameWebSocketServer:
                 })
                 await self._broadcast_player_list()
             else:
+                if self.hub:
+                    self.hub.release_username(player_id)
                 await self.send_to_client(websocket, {
                     "type": "error",
                     "message": "Failed to join game"
@@ -257,18 +274,18 @@ class GameWebSocketServer:
 
     async def _handle_reconnect(self, websocket: websockets.WebSocketServerProtocol, data: dict):
         from auth.users import authenticate_user
-        
+            
         username = data.get("username")
         password = data.get("password")
         reconnect_token = data.get("reconnect_token")
-        
+            
         if not username or (not password and not reconnect_token):
             await self.send_to_client(websocket, {
                 "type": "error",
                 "message": "Missing reconnect credentials"
             })
             return
-
+            
         token_is_valid = bool(
             reconnect_token
             and self.reconnect_tokens.get(username)
@@ -280,23 +297,33 @@ class GameWebSocketServer:
                 "message": "Invalid reconnect credentials"
             })
             return
-        
+            
         player_id = username
-        
+            
         existing_player = None
         if self.game_manager.game:
             for player in self.game_manager.game.players:
                 if player.id == player_id:
                     existing_player = player
                     break
-        
+            
         if not existing_player:
             await self.send_to_client(websocket, {
                 "type": "error",
                 "message": "Player not found in game"
             })
             return
-        
+            
+        # Re-claim username in hub (idempotent if already claimed by this room).
+        if self.hub:
+            self.hub.release_username(player_id)
+            if not self.hub.claim_username(player_id):
+                await self.send_to_client(websocket, {
+                    "type": "error",
+                    "message": "该玩家已在其他房间中登录"
+                })
+                return
+            
         self.player_connections[player_id] = websocket
         await self.send_to_client(websocket, {
             "type": "reconnect_success",

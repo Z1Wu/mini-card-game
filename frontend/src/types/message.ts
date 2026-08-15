@@ -42,7 +42,9 @@ export type MessageType =
   | 'create_room'
   | 'room_created'
   | 'join_room'
-  | 'room_joined';
+  | 'room_joined'
+  | 'list_rooms'
+  | 'room_list';
 
 export interface BaseMessage {
   type: MessageType;
@@ -65,6 +67,22 @@ export interface JoinRoomMessage extends BaseMessage {
 export interface RoomJoinedMessage extends BaseMessage {
   type: 'room_joined';
   room_code: string;
+}
+
+export interface ListRoomsMessage extends BaseMessage {
+  type: 'list_rooms';
+}
+
+export interface RoomInfo {
+  code: string;
+  player_count: number;
+  state: 'waiting' | 'playing' | 'special_phase' | 'game_over' | null;
+  player_names: string[];
+}
+
+export interface RoomListMessage extends BaseMessage {
+  type: 'room_list';
+  rooms: RoomInfo[];
 }
 
 export interface LoginMessage extends BaseMessage {
@@ -341,6 +359,8 @@ export type WebSocketMessage =
   | RoomCreatedMessage
   | JoinRoomMessage
   | RoomJoinedMessage
+  | ListRoomsMessage
+  | RoomListMessage
   | LoginMessage
   | LoginSuccessMessage
   | ReconnectMessage

@@ -61,6 +61,8 @@ class RoomHubWebSocketServer:
         self._rooms: dict[str, RoomEntry] = {}
         self._connection_rooms: dict[object, str] = {}
         self._room_lock = asyncio.Lock()
+        # Hub-level username registry to prevent cross-room collisions.
+        self._active_usernames: set[str] = set()
         self._rooms[DEFAULT_ROOM_CODE] = self._new_room(DEFAULT_ROOM_CODE)
 
     @property
@@ -76,6 +78,7 @@ class RoomHubWebSocketServer:
             port=self.port,
             allow_legacy_join_game=self.allow_legacy_join_game,
             rng=rng,
+            hub=self,
         ))
 
     def _generate_room_code(self) -> str:
@@ -91,7 +94,18 @@ class RoomHubWebSocketServer:
     async def _send(self, websocket, payload: dict) -> None:
         await websocket.send(json.dumps(payload))
 
+    def claim_username(self, username: str) -> bool:
+        """Register *username* as active across the hub. Returns False if taken."""
+        if username in self._active_usernames:
+            return False
+        self._active_usernames.add(username)
+        return True
+
+    def release_username(self, username: str) -> None:
+        self._active_usernames.discard(username)
+
     async def _switch_room(self, websocket, room_code: str) -> None:
+        """Move *websocket* to *room_code*. Caller must hold ``_room_lock``."""
         current_code = self._connection_rooms.get(websocket)
         if current_code == room_code:
             return
@@ -124,8 +138,7 @@ class RoomHubWebSocketServer:
                 })
                 return
             self._rooms[code] = self._new_room(code)
-
-        await self._switch_room(websocket, code)
+            await self._switch_room(websocket, code)
         logger.info("Created room %s", code)
         await self._send(websocket, {"type": "room_created", "room_code": code})
 
@@ -133,16 +146,17 @@ class RoomHubWebSocketServer:
         if not await self._ensure_room_switch_allowed(websocket):
             return
         code = self._normalize_room_code(data.get("room_code"))
-        self.cleanup_expired_rooms()
-        if not code or code not in self._rooms:
-            await self._send(websocket, {
-                "type": "error",
-                "code": "room_not_found",
-                "message": "Room not found",
-            })
-            return
+        async with self._room_lock:
+            self.cleanup_expired_rooms()
+            if not code or code not in self._rooms:
+                await self._send(websocket, {
+                    "type": "error",
+                    "code": "room_not_found",
+                    "message": "Room not found",
+                })
+                return
 
-        await self._switch_room(websocket, code)
+            await self._switch_room(websocket, code)
         logger.info("Connection joined room %s", code)
         await self._send(websocket, {"type": "room_joined", "room_code": code})
 
@@ -157,6 +171,26 @@ class RoomHubWebSocketServer:
             })
             return False
         return True
+
+    async def _list_rooms(self, websocket) -> None:
+        """Return non-default rooms with basic info (no auth required)."""
+        self.cleanup_expired_rooms()
+        rooms = []
+        for code, entry in self._rooms.items():
+            if code == DEFAULT_ROOM_CODE:
+                continue
+            server = entry.server
+            game = server.game_manager.game
+            state = game.state.value if game and game.state else None
+            player_count = len(game.players) if game else 0
+            player_names = [p.name for p in game.players] if game else []
+            rooms.append({
+                "code": code,
+                "player_count": player_count,
+                "state": state,
+                "player_names": player_names,
+            })
+        await self._send(websocket, {"type": "room_list", "rooms": rooms})
 
     def cleanup_expired_rooms(self, now: Optional[float] = None) -> list[str]:
         current_time = time.monotonic() if now is None else now
@@ -202,18 +236,25 @@ class RoomHubWebSocketServer:
                     await self._create_room(websocket)
                 elif message_type == "join_room":
                     await self._join_room(websocket, data)
+                elif message_type == "list_rooms":
+                    await self._list_rooms(websocket)
                 else:
                     room_code = self._connection_rooms.get(websocket, DEFAULT_ROOM_CODE)
                     await self._rooms[room_code].server.handle_message(websocket, message)
         except websockets.exceptions.ConnectionClosed:
             pass
         finally:
-            room_code = self._connection_rooms.pop(websocket, DEFAULT_ROOM_CODE)
-            entry = self._rooms.get(room_code)
-            if entry:
-                await entry.server.unregister_client(websocket)
-                if room_code != DEFAULT_ROOM_CODE and not entry.server.clients:
-                    entry.empty_since = time.monotonic()
+            async with self._room_lock:
+                room_code = self._connection_rooms.pop(websocket, DEFAULT_ROOM_CODE)
+                entry = self._rooms.get(room_code)
+                if entry:
+                    # Release any username claimed by this connection's player.
+                    player_id = entry.server._get_player_id_by_websocket(websocket)
+                    if player_id:
+                        self.release_username(player_id)
+                    await entry.server.unregister_client(websocket)
+                    if room_code != DEFAULT_ROOM_CODE and not entry.server.clients:
+                        entry.empty_since = time.monotonic()
 
     async def start(self) -> None:
         async with websockets.serve(
