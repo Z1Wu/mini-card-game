@@ -9,11 +9,28 @@ const commentPath = path.join(frontendRoot, 'test-results', 'full-game', 'pr-com
 const MAX_ERROR_CHARS = 4000;
 const MAX_LOG_CHARS = 3000;
 const MAX_LINE_CHARS = 500;
+const MAX_TURNS = 25;
 
 function truncate(value, limit) {
   const text = String(value ?? '').trimEnd();
   if (text.length <= limit) return text;
   return `${text.slice(0, limit)}\n…(truncated)`;
+}
+
+function runUrl() {
+  const { GITHUB_SERVER_URL, GITHUB_REPOSITORY, GITHUB_RUN_ID } = process.env;
+  if (GITHUB_SERVER_URL && GITHUB_REPOSITORY && GITHUB_RUN_ID) {
+    return `${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}`;
+  }
+  return null;
+}
+
+function playerNames(report) {
+  const map = new Map();
+  for (const player of report.final_state?.game?.players ?? []) {
+    if (player.id && player.name) map.set(player.id, player.name);
+  }
+  return map;
 }
 
 function winnerName(report) {
@@ -32,6 +49,19 @@ function formatBrowserErrors(players) {
     for (const error of errors) lines.push(`- ${truncate(error, MAX_LINE_CHARS)}`);
   }
   return lines.length ? lines.join('\n') : '_No console or page errors._';
+}
+
+function turnsTable(report) {
+  const turns = report.turns ?? [];
+  if (turns.length === 0) return '_No turns were recorded before the run ended._';
+  const names = playerNames(report);
+  const lines = ['| # | Player | Action | Card |', '| --- | --- | --- | --- |'];
+  for (const turn of turns.slice(0, MAX_TURNS)) {
+    const player = names.get(turn.player_id) ?? turn.player_id ?? '—';
+    lines.push(`| ${turn.turn ?? '?'} | ${player} | ${turn.action ?? '—'} | ${turn.card ?? '—'} |`);
+  }
+  if (turns.length > MAX_TURNS) lines.push(`| … | _${turns.length - MAX_TURNS} more turns omitted_ | | |`);
+  return lines.join('\n');
 }
 
 function fence(content, language = '') {
@@ -59,6 +89,13 @@ async function main() {
 
   const passed = report.result === 'passed';
   const badge = passed ? '✅ Passed' : '❌ Failed';
+  const url = runUrl();
+
+  const context = [`Recorded 3-player deterministic E2E (seed ${report.seed ?? '—'}).`];
+  if (url) {
+    context.push(`[Workflow run](${url}) — the \`browser-e2e-artifacts\` artifact has the \`full-game.webm\` video, \`report.json\`, and per-player screenshots.`);
+  }
+
   const rows = [
     `| Result | ${badge} |`,
     `| Turns played | ${report.turns_played ?? 0} |`,
@@ -70,9 +107,15 @@ async function main() {
   const sections = [
     `## 🎮 Browser E2E — ${badge}`,
     '',
+    ...context,
+    '',
     '| Field | Value |',
     '| --- | --- |',
     ...rows,
+    '',
+    '### Turns',
+    '',
+    turnsTable(report),
     '',
     '### Browser errors',
     '',
