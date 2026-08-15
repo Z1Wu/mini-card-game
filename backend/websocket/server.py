@@ -40,6 +40,8 @@ class GameWebSocketServer:
         self.pending_infected: dict | None = None  # { player_id, card_id }
         self.resolved_infected_card_ids: set[str] = set()
         self.reconnect_tokens: Dict[str, str] = {}
+        # Optional async callback the hub sets to push live updates to admin subscribers.
+        self.on_admin_push = None
 
     async def register_client(self, websocket: websockets.WebSocketServerProtocol):
         self.clients.add(websocket)
@@ -185,7 +187,7 @@ class GameWebSocketServer:
             })
 
     async def _handle_login(self, websocket: websockets.WebSocketServerProtocol, data: dict):
-        from auth.users import authenticate_user, get_user_name
+        from auth.users import authenticate_user, get_user_name, get_user_role
         
         username = data.get("username")
         password = data.get("password")
@@ -241,6 +243,7 @@ class GameWebSocketServer:
                 "type": "login_success",
                 "player_id": player_id,
                 "player_name": existing_player.name,
+                "role": get_user_role(username),
                 "reconnect_token": reconnect_token,
             })
             await self._broadcast_game_state()
@@ -261,6 +264,7 @@ class GameWebSocketServer:
                     "type": "login_success",
                     "player_id": player_id,
                     "player_name": player_name,
+                    "role": get_user_role(username),
                     "reconnect_token": reconnect_token,
                 })
                 await self._broadcast_player_list()
@@ -1058,6 +1062,8 @@ class GameWebSocketServer:
                 "type": "player_list",
                 "players": players
             })
+        if self.on_admin_push:
+            await self.on_admin_push("player_list")
 
     async def _broadcast_game_state(self):
         if self.game_manager.game and self.clients:
@@ -1071,6 +1077,8 @@ class GameWebSocketServer:
                 })
                 for client in list(self.clients)
             ])
+        if self.on_admin_push:
+            await self.on_admin_push("game_state")
 
     async def _broadcast_game_over(self, winner_id: str, settlement: Optional[dict] = None):
         if self.game_manager.game:
