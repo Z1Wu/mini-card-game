@@ -95,6 +95,7 @@ export interface LoginSuccessMessage extends BaseMessage {
   type: 'login_success';
   player_id: string;
   player_name: string;
+  role?: string;
   reconnect_token: string;
 }
 
