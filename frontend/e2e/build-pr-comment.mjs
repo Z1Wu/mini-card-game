@@ -91,10 +91,8 @@ async function main() {
   const badge = passed ? '✅ Passed' : '❌ Failed';
   const url = runUrl();
 
+  const videoUrl = process.env.WEBM_URL || '';
   const context = [`Recorded 3-player deterministic E2E (seed ${report.seed ?? '—'}).`];
-  if (url) {
-    context.push(`[Workflow run](${url}) — the \`browser-e2e-artifacts\` artifact has the \`full-game.webm\` video, \`report.json\`, and per-player screenshots.`);
-  }
 
   const rows = [
     `| Result | ${badge} |`,
@@ -104,10 +102,22 @@ async function main() {
     `| Winner | ${winnerName(report)} |`,
   ];
 
-  const sections = [
-    `## 🎮 Browser E2E — ${badge}`,
-    '',
-    ...context,
+  const sections = [];
+  sections.push(`## 🎮 Browser E2E — ${badge}`, '', ...context);
+
+  if (videoUrl) {
+    sections.push('');
+    sections.push(`<video src="${videoUrl}" controls preload="metadata"></video>`);
+    if (url) {
+      sections.push('');
+      sections.push(`_[Workflow run](${url}) — also available as the \`browser-e2e-artifacts\` artifact._`);
+    }
+  } else if (url) {
+    sections.push('');
+    sections.push(`[Workflow run](${url}) — the \`browser-e2e-artifacts\` artifact has the \`full-game.webm\` video, \`report.json\`, and per-player screenshots.`);
+  }
+
+  sections.push(
     '',
     '| Field | Value |',
     '| --- | --- |',
@@ -120,7 +130,7 @@ async function main() {
     '### Browser errors',
     '',
     formatBrowserErrors(report.players),
-  ];
+  );
 
   if (!passed) {
     sections.push('', '### Failure detail');
