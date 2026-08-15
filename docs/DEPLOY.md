@@ -48,14 +48,19 @@ docker compose -f docker-compose.deploy.yml down
 
 ### 创建初始管理员
 
-首次部署后，使用 `deploy/init-admin.sh` 在运行中的容器内创建管理员账号。密码自动以 PBKDF2 hash 写入 `deploy-data/users.json`，不会出现在进程列表中：
+部署时直接加 `init-admin` 子命令，一条命令完成部署 + 创建管理员：
 
 ```bash
-# 启动容器后执行
-./deploy/init-admin.sh admin 'strong-password' '超级管理员'
+./deploy.sh init-admin admin 'strong-password' '超级管理员'
 ```
 
-创建后即可用该账号登录管理界面 `https://<your-domain>/`。后续的用户管理可以直接在管理界面中完成。
+如果容器已在运行，也可以单独执行管理员创建：
+
+```bash
+./deploy.sh init-admin admin 'strong-password' '超级管理员'
+```
+
+密码自动以 PBKDF2 hash 写入 `deploy-data/users.json`，不会出现在进程列表中。创建后即可用该账号登录管理界面 `https://<your-domain>/`。后续的用户管理可以直接在管理界面中完成。
 
 也可以通过 CLI 在容器外直接创建（需要本地 Python 环境）：
 
