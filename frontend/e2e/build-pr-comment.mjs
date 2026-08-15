@@ -107,7 +107,7 @@ async function main() {
 
   if (videoUrl) {
     sections.push('');
-    sections.push(`<video src="${videoUrl}" controls preload="metadata"></video>`);
+    sections.push(`**E2E recording:** [watch full-game.webm](${videoUrl})`);
     if (url) {
       sections.push('');
       sections.push(`_[Workflow run](${url}) — also available as the \`browser-e2e-artifacts\` artifact._`);
