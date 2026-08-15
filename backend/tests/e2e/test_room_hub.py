@@ -161,3 +161,83 @@ def test_seeded_rooms_receive_reproducible_fresh_deals():
     assert deal(75) == deal(75)
     assert deal(75) != deal(76)
     assert RoomHubWebSocketServer()._rooms[DEFAULT_ROOM_CODE].server.game_manager is not None
+
+
+@pytest.mark.e2e
+async def test_cross_room_username_collision_is_rejected(room_hub):
+    """The same username must not be able to log in to two rooms at once."""
+    _, uri = room_hub
+    client_a = GameTestClient(uri)
+    client_b = GameTestClient(uri)
+    try:
+        # Create two separate rooms and log into room A first.
+        await client_a.create_room()
+        await client_a.send_message({"type": "login", "username": "player1", "password": "password1"})
+        login_a = await client_a.receive_message({"login_success", "error"})
+        assert login_a["type"] == "login_success"
+
+        # Attempt the same login in room B — should be rejected.
+        await client_b.create_room()
+        await client_b.send_message({"type": "login", "username": "player1", "password": "password1"})
+        login_b = await client_b.receive_message({"login_success", "error"})
+        assert login_b["type"] == "error"
+        assert "其他房间" in login_b["message"]
+    finally:
+        await client_b.close()
+        await client_a.close()
+
+
+@pytest.mark.e2e
+async def test_username_released_after_disconnect_allows_relogin(room_hub):
+    """After disconnect, the same username should be usable again."""
+    _, uri = room_hub
+    original = GameTestClient(uri)
+    replacement = GameTestClient(uri)
+    try:
+        await original.create_room()
+        await original.send_message({"type": "login", "username": "player1", "password": "password1"})
+        login = await original.receive_message({"login_success", "error"})
+        assert login["type"] == "login_success"
+
+        # Disconnect original — username should be released.
+        await original.close()
+        await asyncio.sleep(0.05)
+
+        # Re-login as same user in a new room.
+        await replacement.create_room()
+        await replacement.send_message({"type": "login", "username": "player1", "password": "password1"})
+        login2 = await replacement.receive_message({"login_success", "error"})
+        assert login2["type"] == "login_success"
+    finally:
+        await replacement.close()
+        await original.close()
+
+
+@pytest.mark.e2e
+async def test_list_rooms_returns_active_rooms(room_hub):
+    """list_rooms should return non-default rooms with player info."""
+    _, uri = room_hub
+    creator = GameTestClient(uri)
+    lister = GameTestClient(uri)
+    try:
+        created = await creator.create_room()
+        code = created["room_code"]
+        await creator.send_message({"type": "login", "username": "player1", "password": "password1"})
+        await creator.receive_message({"login_success", "error"})
+
+        # List rooms from a different connection still in default room.
+        await lister.open()
+        await lister.send_message({"type": "list_rooms"})
+        response = await lister.receive_message({"room_list", "error"})
+        assert response["type"] == "room_list"
+        rooms = response["rooms"]
+        codes = [r["code"] for r in rooms]
+        assert code in codes
+        # Default room should not appear.
+        assert DEFAULT_ROOM_CODE not in codes
+        room_entry = next(r for r in rooms if r["code"] == code)
+        assert room_entry["player_count"] == 1
+        assert "玩家1" in room_entry["player_names"]
+    finally:
+        await lister.close()
+        await creator.close()

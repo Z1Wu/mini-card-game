@@ -4,7 +4,7 @@ import { Button } from '../components/common/Button';
 import { usePlayerStore } from '../stores/playerStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { wsService } from '../services/websocket';
-import { LoginMessage, ReconnectMessage, GameStatusMessage, LoginSuccessMessage, ReconnectSuccessMessage, RoomCreatedMessage, RoomJoinedMessage } from '../types/message';
+import { LoginMessage, ReconnectMessage, GameStatusMessage, LoginSuccessMessage, ReconnectSuccessMessage, RoomCreatedMessage, RoomJoinedMessage, RoomListMessage, RoomInfo } from '../types/message';
 import { logUnexpectedError } from '../utils/logger';
 
 export const Login: React.FC = () => {
@@ -23,6 +23,8 @@ export const Login: React.FC = () => {
   const [roomBusy, setRoomBusy] = useState(false);
   const [roomError, setRoomError] = useState('');
   const [validationError, setValidationError] = useState('');
+  const [roomList, setRoomList] = useState<RoomInfo[]>([]);
+  const [sessionExpiredMsg, setSessionExpiredMsg] = useState('');
 
   const isGameInProgressError = serverError?.includes('游戏正在进行中') ?? false;
 
@@ -35,7 +37,10 @@ export const Login: React.FC = () => {
     (async () => {
       try {
         await connect();
-        if (!cancelled) send({ type: 'query_game_status' });
+        if (!cancelled) {
+          send({ type: 'query_game_status' });
+          send({ type: 'list_rooms' });
+        }
       } catch (_) {
         if (!cancelled) setGameStatusError('无法获取对局状态');
       }
@@ -91,11 +96,25 @@ export const Login: React.FC = () => {
       send({ type: 'query_game_status' });
     };
 
+    const handleRoomList = (message: RoomListMessage) => {
+      setRoomList(message.rooms);
+    };
+
     wsService.on('error', handleError);
     wsService.on('login_success', handleLoginSuccess);
     wsService.on('reconnect_success', handleReconnectSuccess);
     wsService.on('room_created', handleRoomReady);
     wsService.on('room_joined', handleRoomReady);
+    wsService.on('room_list', handleRoomList);
+
+    // Listen for session expired (room was TTL-expired during reconnect).
+    const unsubSessionExpired = wsService.onSessionExpired(() => {
+      setRoomCode('default');
+      setRoomCodeInput('');
+      setSessionExpiredMsg('你之前的房间已过期，请重新创建或加入房间。');
+      // Auto-dismiss after 5s.
+      setTimeout(() => setSessionExpiredMsg(''), 5000);
+    });
 
     return () => {
       wsService.off('error');
@@ -103,6 +122,8 @@ export const Login: React.FC = () => {
       wsService.off('reconnect_success');
       wsService.off('room_created');
       wsService.off('room_joined');
+      wsService.off('room_list');
+      unsubSessionExpired();
     };
   }, [navigate, roomCode, send, setPassword, setPlayer, setReconnectToken, setRoomCode, username]);
 
@@ -123,6 +144,21 @@ export const Login: React.FC = () => {
     if (!code) return;
     setRoomBusy(true);
     setRoomError('');
+    setSessionExpiredMsg('');
+    try {
+      await connect();
+      send({ type: 'join_room', room_code: code });
+    } catch {
+      setRoomBusy(false);
+      setRoomError('无法连接服务器');
+    }
+  };
+
+  const handleJoinRoomFromList = async (code: string) => {
+    setRoomCodeInput(code);
+    setRoomBusy(true);
+    setRoomError('');
+    setSessionExpiredMsg('');
     try {
       await connect();
       send({ type: 'join_room', room_code: code });
@@ -253,6 +289,12 @@ export const Login: React.FC = () => {
           </div>
         )}
 
+        {sessionExpiredMsg && (
+          <div className="mb-4 p-3 bg-amber-900/50 border border-amber-700 rounded-lg">
+            <p className="text-amber-300 text-sm">{sessionExpiredMsg}</p>
+          </div>
+        )}
+
         <div className="campus-note mb-6 p-4 rounded-xl">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-medium text-slate-700">游戏房间</span>
@@ -272,6 +314,33 @@ export const Login: React.FC = () => {
           </div>
           {roomError && <p className="text-red-300 text-xs mt-2">{roomError}</p>}
           <p className="text-slate-500 text-xs mt-2">登录前选择房间；创建后可把房间码发给其他玩家。</p>
+
+          {roomList.length > 0 && (
+            <div className="mt-3 border-t border-slate-700 pt-3">
+              <p className="text-slate-400 text-xs mb-2">活跃房间：</p>
+              <div className="space-y-1">
+                {roomList.map(room => (
+                  <button
+                    key={room.code}
+                    type="button"
+                    onClick={() => handleJoinRoomFromList(room.code)}
+                    disabled={roomBusy}
+                    className="w-full flex items-center justify-between px-3 py-2 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700 rounded-lg text-left transition-colors disabled:opacity-50"
+                  >
+                    <div>
+                      <span className="text-sm font-mono text-[#c66b5d]">{room.code}</span>
+                      <span className="text-slate-400 text-xs ml-2">
+                        {room.state === 'waiting' ? '等待中' : room.state === 'playing' ? '对局中' : room.state === 'special_phase' ? '特技阶段' : room.state === 'game_over' ? '已结束' : ''}
+                      </span>
+                    </div>
+                    <span className="text-xs text-slate-400">
+                      {room.player_count}人{room.player_names.length > 0 ? ` · ${room.player_names.join('、')}` : ''}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 对局状态（登录前可见） */}

@@ -6,6 +6,7 @@ class WebSocketService {
   private ws: WebSocket | null = null;
   private messageHandlers: Map<string, Set<(message: any) => void>> = new Map();
   private connectionHandlers = new Set<(connected: boolean) => void>();
+  private sessionExpiredHandlers = new Set<() => void>();
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
@@ -51,6 +52,27 @@ class WebSocketService {
           this.connectionPromise = null;
           this.emitConnection(true);
           if (this.session) {
+            // Detect room-not-found during session replay so we can clear stale state.
+            let sessionReplayDone = false;
+            const errorCheck = (event: MessageEvent) => {
+              if (sessionReplayDone) return;
+              try {
+                const msg = JSON.parse(event.data);
+                if (msg.type === 'error' && msg.code === 'room_not_found') {
+                  sessionReplayDone = true;
+                  socket.removeEventListener('message', errorCheck);
+                  this.clearSession();
+                  this.emitSessionExpired();
+                }
+              } catch { /* ignore parse errors */ }
+            };
+            socket.addEventListener('message', errorCheck);
+            // Stop listening after the initial replay window.
+            setTimeout(() => {
+              sessionReplayDone = true;
+              socket.removeEventListener('message', errorCheck);
+            }, 2000);
+
             if (this.session.roomCode !== 'default') {
               socket.send(JSON.stringify({ type: 'join_room', room_code: this.session.roomCode }));
             }
@@ -156,6 +178,15 @@ class WebSocketService {
 
   private emitConnection(connected: boolean): void {
     this.connectionHandlers.forEach(handler => handler(connected));
+  }
+
+  onSessionExpired(handler: () => void): () => void {
+    this.sessionExpiredHandlers.add(handler);
+    return () => this.sessionExpiredHandlers.delete(handler);
+  }
+
+  private emitSessionExpired(): void {
+    this.sessionExpiredHandlers.forEach(handler => handler());
   }
 
   private attemptReconnect(): void {
