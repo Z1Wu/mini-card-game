@@ -78,7 +78,9 @@ export async function chooseVisibleCard(page, cardName, action) {
   await card.waitFor({ state: 'visible' });
   await card.scrollIntoViewIfNeeded();
   await card.click();
-  await card.getByRole('button', { name: action, exact: true }).click();
+  // Action buttons live in a dedicated action bar (sibling of the card),
+  // not inside the card element — scope to the hand container.
+  await hand.getByRole('button', { name: action, exact: true }).click();
 }
 
 export async function chooseFirstVisibleCard(page, action, excludedNames = []) {
@@ -133,7 +135,7 @@ export async function playMixedTurn(page, state, step) {
         try {
           await locator.first().scrollIntoViewIfNeeded();
           await locator.first().click();
-          await locator.first().getByRole('button', { name: '特技', exact: true }).click();
+          await hand.getByRole('button', { name: '特技', exact: true }).click();
           // Dismiss any result modal (e.g. 图书委员 shows harmony area)
           await page.waitForTimeout(500);
           const closeBtn = page.getByRole('button', { name: '关闭', exact: true });
