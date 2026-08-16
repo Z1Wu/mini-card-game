@@ -118,15 +118,18 @@ export async function playMixedTurn(page, state, step) {
       action = 'harmony';
     }
   } else if (actionRoll === 3) {
-    // ── Skill (simple): try 图书委员 / 外星人 first, fallback to harmony ──
+    // ── Skill (simple): try 图书委员 / 外星人 from HAND only, fallback to harmony ──
     const simpleSkills = ['图书委员', '外星人'];
     let found = false;
     for (const name of simpleSkills) {
-      const locator = page.getByLabel(`卡牌：${name}`, { exact: true });
-      if (await locator.isVisible().catch(() => false)) {
+      // Scope to hand area to avoid matching field/doubt cards
+      const hand = page.locator('.table-hand');
+      const locator = hand.getByLabel(`卡牌：${name}`, { exact: true });
+      if (await locator.first().isVisible().catch(() => false)) {
         try {
-          await locator.click();
-          await locator.getByRole('button', { name: '特技', exact: true }).click();
+          await locator.first().scrollIntoViewIfNeeded();
+          await locator.first().click();
+          await locator.first().getByRole('button', { name: '特技', exact: true }).click();
           // Dismiss any result modal (e.g. 图书委员 shows harmony area)
           await page.waitForTimeout(500);
           const closeBtn = page.getByRole('button', { name: '关闭', exact: true });
