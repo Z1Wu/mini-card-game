@@ -101,11 +101,13 @@ export async function chooseFirstVisibleCard(page, action, excludedNames = []) {
 }
 
 /**
- * First-turn showcase: demonstrates card selection, cancel/deselect, and
- * reselect+play so the new UI features (action bar, cancel button, hint
- * text, play-feedback toast) are clearly visible in the E2E video.
+ * Showcase turn: demonstrates card selection, long-press description popover,
+ * cancel/deselect, and reselect+play so the new UI features (action bar,
+ * cancel button, hint text, play-feedback toast, long-press popover) are
+ * clearly visible in the E2E video.
+ * Must be called on the video-recorded page (player 0).
  */
-async function showcaseFirstTurn(page, excludedNames) {
+async function showcaseTurn(page, excludedNames) {
   // Enumerate visible non-criminal cards in the hand
   const labels = await page.locator('.table-hand [aria-label^="卡牌："]')
     .evaluateAll((cards, names) => cards
@@ -121,21 +123,38 @@ async function showcaseFirstTurn(page, excludedNames) {
   await card.waitFor({ state: 'visible' });
   await card.scrollIntoViewIfNeeded();
 
-  // 1. Select card — shows lift animation + action bar (调和/质疑/特技/✕)
+  // 1. Long-press card → description popover appears after 500ms timer.
+  //    Use evaluate to dispatch mousedown directly (no click event generated,
+  //    so the popover overlay's onClick won't fire and close it prematurely).
+  await card.evaluate(el => el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
+  // Wait for the 500ms long-press timer + extra for video visibility
+  await page.waitForTimeout(1200);
+
+  // 2. Close description popover via 关闭 button
+  const closePopover = page.getByRole('button', { name: '关闭', exact: true });
+  if (await closePopover.isVisible().catch(() => false)) {
+    await closePopover.click();
+    await page.waitForTimeout(400);
+  }
+  // Clean up mouse state (dispatch mouseup to clear the long-press timer)
+  await card.evaluate(el => el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true })));
+  await page.waitForTimeout(200);
+
+  // 3. Select card — shows lift animation + action bar (调和/质疑/特技/✕)
   await card.click();
   await page.waitForTimeout(800);
 
-  // 2. Cancel via ✕ button — shows card returning down + hint text reappearing
+  // 4. Cancel via ✕ button — shows card returning down + hint text reappearing
   const cancelBtn = hand.getByRole('button', { name: '取消选择', exact: true });
   if (await cancelBtn.isVisible().catch(() => false)) {
     await cancelBtn.click();
     await page.waitForTimeout(600);
-    // 3. Reselect the same card
+    // 5. Reselect the same card
     await card.click();
     await page.waitForTimeout(500);
   }
 
-  // 4. Play harmony — shows play-feedback toast
+  // 6. Play harmony — shows play-feedback toast
   await hand.getByRole('button', { name: '调和', exact: true }).click();
   await page.waitForTimeout(600);
 
@@ -145,14 +164,15 @@ async function showcaseFirstTurn(page, excludedNames) {
 /**
  * Play a mixed-action turn: mostly harmony, but occasionally doubt or skill
  * for broader UI coverage. Criminal (犯人) is always excluded.
- * The first turn (step 0) is a showcase that demonstrates cancel/deselect.
+ * Pass showcase=true on the video-recorded player's first turn to
+ * demonstrate card selection, long-press popover, and cancel/deselect.
  */
-export async function playMixedTurn(page, state, step) {
+export async function playMixedTurn(page, state, step, showcase = false) {
   const excludedNames = ['犯人'];
 
-  // ── First turn: showcase card selection + cancel/deselect ──
-  if (step === 0) {
-    return showcaseFirstTurn(page, excludedNames);
+  // ── Showcase turn: only on the recorded player's first turn ──
+  if (showcase) {
+    return showcaseTurn(page, excludedNames);
   }
 
   const actionRoll = step % 5;

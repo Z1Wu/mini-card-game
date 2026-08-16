@@ -38,13 +38,17 @@ try {
   await primary.waitForTimeout(800);
   const pagesByPlayer = new Map();
   for (const player of players) pagesByPlayer.set((await readState(player.page)).connection.player_id, player.page);
+  let showcaseDone = false;
   for (let step = 0; step < 30; step += 1) {
     const before = await readState(primary);
     if (before.game?.state === 'game_over') break;
     const playerId = before.game?.current_player_id;
     const page = pagesByPlayer.get(playerId);
     assert.ok(page, `A browser page should exist for ${playerId}`);
-    const { action, card } = await playMixedTurn(page, before, step);
+    // Run showcase only on the video-recorded player's first turn
+    const showcase = page === players[0].page && !showcaseDone;
+    const { action, card } = await playMixedTurn(page, before, step, showcase);
+    if (showcase) showcaseDone = true;
     turns.push({ turn: before.game.turn_count, player_id: playerId, action, card });
     await waitForState(primary, (turn) => { const state = JSON.parse(window.render_game_to_text()); return state.game?.state === 'game_over' || state.game?.turn_count > turn; }, `turn ${before.game.turn_count} to finish`, before.game.turn_count);
     // Pause so the turn-change toast is visible in the video.

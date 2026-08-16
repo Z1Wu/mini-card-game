@@ -67,6 +67,7 @@ try {
   assert.equal(gameOverflow, false, 'Game table should have no horizontal overflow on mobile');
 
   // ── Play full game on mobile ──
+  let showcaseDone = false;
   for (let step = 0; step < 30; step += 1) {
     const before = await readState(primary);
     if (before.game?.state === 'game_over') break;
@@ -78,7 +79,10 @@ try {
     const firstCard = page.locator('[aria-label^="卡牌："]').first();
     await firstCard.scrollIntoViewIfNeeded();
 
-    const { action, card } = await playMixedTurn(page, before, step);
+    // Run showcase only on the video-recorded player's first turn
+    const showcase = page === players[0].page && !showcaseDone;
+    const { action, card } = await playMixedTurn(page, before, step, showcase);
+    if (showcase) showcaseDone = true;
     turns.push({ turn: before.game.turn_count, player_id: playerId, action, card });
     await waitForState(primary, (turn) => {
       const state = JSON.parse(window.render_game_to_text());
