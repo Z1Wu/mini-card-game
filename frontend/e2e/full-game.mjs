@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { findFreePort, prepareOutput, startServices, stopProcess } from './lib/services.mjs';
-import { chooseFirstVisibleCard, closePlayers, createRoomAndLogin, findHost, openPlayers, readState, waitForState } from './lib/players.mjs';
+import { chooseFirstVisibleCard, closePlayers, createRoomAndLogin, findHost, openPlayers, playMixedTurn, readState, waitForState } from './lib/players.mjs';
 import { savePlayerArtifacts, writeReport } from './lib/reporting.mjs';
 
 const frontendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -42,15 +42,14 @@ try {
     const playerId = before.game?.current_player_id;
     const page = pagesByPlayer.get(playerId);
     assert.ok(page, `A browser page should exist for ${playerId}`);
-    const card = await chooseFirstVisibleCard(page, '调和', ['犯人']);
-    turns.push({ turn: before.game.turn_count, player_id: playerId, action: 'harmony', card });
+    const { action, card } = await playMixedTurn(page, before, step);
+    turns.push({ turn: before.game.turn_count, player_id: playerId, action, card });
     await waitForState(primary, (turn) => { const state = JSON.parse(window.render_game_to_text()); return state.game?.state === 'game_over' || state.game?.turn_count > turn; }, `turn ${before.game.turn_count} to finish`, before.game.turn_count);
   }
   finalState = await readState(primary);
   assert.equal(finalState.game?.state, 'game_over');
-  assert.equal(turns.length, 15);
-  assert.equal(finalState.game?.harmony_card_count, 15);
-  assert.ok(finalState.game?.players.every((player) => player.hand_count === 1));
+  assert.ok(turns.length >= 15, `Expected at least 15 turns, got ${turns.length}`);
+  assert.ok(finalState.game?.players.every((player) => player.hand_count === 1), 'Every player should have exactly 1 card in hand');
   assert.ok(finalState.game?.winner_id, 'The winner should be exposed through render_game_to_text');
   assert.equal(players.flatMap((player) => [...player.consoleErrors, ...player.pageErrors]).length, 0, 'Unexpected browser errors');
   await primary.getByRole('heading', { name: '调和揭晓' }).waitFor({ state: 'visible' });

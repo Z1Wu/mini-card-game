@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { findFreePort, prepareOutput, startServices, stopProcess } from './lib/services.mjs';
-import { chooseFirstVisibleCard, closePlayers, createRoomAndLogin, findHost, openPlayers, readState, waitForState } from './lib/players.mjs';
+import { chooseFirstVisibleCard, closePlayers, createRoomAndLogin, findHost, openPlayers, playMixedTurn, readState, waitForState } from './lib/players.mjs';
 import { savePlayerArtifacts, writeReport } from './lib/reporting.mjs';
 
 const frontendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -75,8 +75,8 @@ try {
     const firstCard = page.locator('[aria-label^="卡牌："]').first();
     await firstCard.scrollIntoViewIfNeeded();
 
-    const card = await chooseFirstVisibleCard(page, '调和', ['犯人']);
-    turns.push({ turn: before.game.turn_count, player_id: playerId, action: 'harmony', card });
+    const { action, card } = await playMixedTurn(page, before, step);
+    turns.push({ turn: before.game.turn_count, player_id: playerId, action, card });
     await waitForState(primary, (turn) => {
       const state = JSON.parse(window.render_game_to_text());
       return state.game?.state === 'game_over' || state.game?.turn_count > turn;
@@ -85,9 +85,8 @@ try {
 
   finalState = await readState(primary);
   assert.equal(finalState.game?.state, 'game_over');
-  assert.equal(turns.length, 15);
-  assert.equal(finalState.game?.harmony_card_count, 15);
-  assert.ok(finalState.game?.players.every((player) => player.hand_count === 1));
+  assert.ok(turns.length >= 15, `Expected at least 15 turns, got ${turns.length}`);
+  assert.ok(finalState.game?.players.every((player) => player.hand_count === 1), 'Every player should have exactly 1 card in hand');
   assert.ok(finalState.game?.winner_id, 'The winner should be exposed through render_game_to_text');
   assert.equal(
     players.flatMap((player) => [...player.consoleErrors, ...player.pageErrors]).length,

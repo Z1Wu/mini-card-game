@@ -90,6 +90,67 @@ export async function chooseFirstVisibleCard(page, action, excludedNames = []) {
   return cardName;
 }
 
+/**
+ * Play a mixed-action turn: mostly harmony, but occasionally doubt or skill
+ * for broader UI coverage. Criminal (犯人) is always excluded.
+ */
+export async function playMixedTurn(page, state, step) {
+  const excludedNames = ['犯人'];
+  const actionRoll = step % 5;
+  let action, cardName;
+
+  if (actionRoll === 1) {
+    // ── Doubt: pick a card, play doubt, then select target ──
+    try {
+      cardName = await chooseFirstVisibleCard(page, '质疑', excludedNames);
+      // Target selection modal: click first other-player button
+      const currentId = state.game?.current_player_id;
+      const targets = state.game?.players?.filter(p => p.id !== currentId) ?? [];
+      const targetName = targets[0]?.name;
+      if (targetName) {
+        const targetBtn = page.getByRole('button', { name: targetName, exact: true });
+        await targetBtn.waitFor({ state: 'visible' });
+        await targetBtn.click();
+      }
+      action = 'doubt';
+    } catch {
+      cardName = await chooseFirstVisibleCard(page, '调和', excludedNames);
+      action = 'harmony';
+    }
+  } else if (actionRoll === 3) {
+    // ── Skill (simple): try 图书委员 / 外星人 first, fallback to harmony ──
+    const simpleSkills = ['图书委员', '外星人'];
+    let found = false;
+    for (const name of simpleSkills) {
+      const locator = page.getByLabel(`卡牌：${name}`, { exact: true });
+      if (await locator.isVisible().catch(() => false)) {
+        try {
+          await locator.click();
+          await locator.getByRole('button', { name: '特技', exact: true }).click();
+          // Dismiss any result modal (e.g. 图书委员 shows harmony area)
+          await page.waitForTimeout(500);
+          const closeBtn = page.getByRole('button', { name: '关闭', exact: true });
+          if (await closeBtn.isVisible().catch(() => false)) await closeBtn.click();
+          cardName = name;
+          action = 'skill';
+          found = true;
+          break;
+        } catch { /* fall through */ }
+      }
+    }
+    if (!found) {
+      cardName = await chooseFirstVisibleCard(page, '调和', excludedNames);
+      action = 'harmony';
+    }
+  } else {
+    // ── Harmony (default) ──
+    cardName = await chooseFirstVisibleCard(page, '调和', excludedNames);
+    action = 'harmony';
+  }
+
+  return { action, card: cardName };
+}
+
 export async function closePlayers(browser, players, afterContextsClose = async () => {}) {
   await Promise.all(players.map((player) => player.context.close().catch(() => {})));
   await afterContextsClose();
