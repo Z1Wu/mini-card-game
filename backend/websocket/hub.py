@@ -64,6 +64,8 @@ class RoomHubWebSocketServer:
         # Hub-level username registry to prevent cross-room collisions.
         self._active_usernames: set[str] = set()
         self._rooms[DEFAULT_ROOM_CODE] = self._new_room(DEFAULT_ROOM_CODE)
+        self.admin_subscribers: set = set()
+        self.admin_sessions: dict[object, str] = {}  # websocket -> username
 
     @property
     def room_codes(self) -> set[str]:
@@ -73,13 +75,19 @@ class RoomHubWebSocketServer:
         # A new PRNG per room avoids state leaking between test rooms while keeping
         # ordinary production rooms random when no seed is supplied.
         rng = self._rng_factory() if self._rng_factory else None
-        return RoomEntry(code=code, server=GameWebSocketServer(
+        server = GameWebSocketServer(
             host=self.host,
             port=self.port,
             allow_legacy_join_game=self.allow_legacy_join_game,
             rng=rng,
             hub=self,
-        ))
+        )
+
+        async def admin_push(kind: str) -> None:
+            await self._push_admin_update(code, server, kind)
+
+        server.on_admin_push = admin_push
+        return RoomEntry(code=code, server=server)
 
     def _generate_room_code(self) -> str:
         return "".join(secrets.choice(ROOM_CODE_ALPHABET) for _ in range(6))
@@ -141,6 +149,7 @@ class RoomHubWebSocketServer:
             await self._switch_room(websocket, code)
         logger.info("Created room %s", code)
         await self._send(websocket, {"type": "room_created", "room_code": code})
+        await self._push_admin_room_list()
 
     async def _join_room(self, websocket, data: dict) -> None:
         if not await self._ensure_room_switch_allowed(websocket):
@@ -159,6 +168,7 @@ class RoomHubWebSocketServer:
             await self._switch_room(websocket, code)
         logger.info("Connection joined room %s", code)
         await self._send(websocket, {"type": "room_joined", "room_code": code})
+        await self._push_admin_room_list()
 
     async def _ensure_room_switch_allowed(self, websocket) -> bool:
         current_code = self._connection_rooms.get(websocket, DEFAULT_ROOM_CODE)
@@ -232,7 +242,12 @@ class RoomHubWebSocketServer:
                     continue
 
                 message_type = data.get("type") if isinstance(data, dict) else None
-                if message_type == "create_room":
+                if message_type == "admin_login":
+                    await self._handle_admin_login(websocket, data)
+                elif message_type == "admin_unsubscribe":
+                    self.admin_subscribers.discard(websocket)
+                    await self._send(websocket, {"type": "admin_unsubscribed"})
+                elif message_type == "create_room":
                     await self._create_room(websocket)
                 elif message_type == "join_room":
                     await self._join_room(websocket, data)
@@ -244,6 +259,8 @@ class RoomHubWebSocketServer:
         except websockets.exceptions.ConnectionClosed:
             pass
         finally:
+            self.admin_subscribers.discard(websocket)
+            self.admin_sessions.pop(websocket, None)
             async with self._room_lock:
                 room_code = self._connection_rooms.pop(websocket, DEFAULT_ROOM_CODE)
                 entry = self._rooms.get(room_code)
@@ -255,6 +272,91 @@ class RoomHubWebSocketServer:
                     await entry.server.unregister_client(websocket)
                     if room_code != DEFAULT_ROOM_CODE and not entry.server.clients:
                         entry.empty_since = time.monotonic()
+
+    async def _handle_admin_login(self, websocket, data: dict) -> None:
+        """Authenticate an admin observer and start pushing live updates."""
+        from auth.users import authenticate_user, get_user_name, is_admin
+
+        username = data.get("username", "")
+        password = data.get("password", "")
+        if not authenticate_user(username, password):
+            await self._send(websocket, {"type": "error", "message": "Invalid credentials"})
+            return
+        if not is_admin(username):
+            await self._send(websocket, {"type": "error", "message": "Admin access required"})
+            return
+
+        self.admin_sessions[websocket] = username
+        self.admin_subscribers.add(websocket)
+        await self._send(websocket, {
+            "type": "admin_login_success",
+            "username": username,
+            "name": get_user_name(username),
+        })
+        # Push current room list immediately
+        await self._push_admin_room_list()
+        logger.info("Admin %s subscribed to live updates", username)
+
+    def _serialize_rooms_for_admin(self) -> list:
+        """Build a list of room summaries for admin display."""
+        rooms = []
+        for code, entry in self._rooms.items():
+            server = entry.server
+            game = server.game_manager.game
+            players = []
+            if game:
+                for p in game.players:
+                    players.append({
+                        "id": p.id,
+                        "name": p.name,
+                        "hand_count": len(p.hand),
+                        "is_online": p.id in server.player_connections,
+                    })
+            rooms.append({
+                "code": code,
+                "state": game.state.value if game else None,
+                "players": players,
+                "player_count": len(players),
+                "client_count": len(server.clients),
+            })
+        return rooms
+
+    async def _push_admin_room_list(self) -> None:
+        """Push the current room list to all admin subscribers."""
+        if not self.admin_subscribers:
+            return
+        payload = {
+            "type": "admin_room_list",
+            "rooms": self._serialize_rooms_for_admin(),
+        }
+        await asyncio.gather(
+            *[ws.send(json.dumps(payload)) for ws in list(self.admin_subscribers)],
+            return_exceptions=True,
+        )
+
+    async def _push_admin_update(self, code: str, server, kind: str) -> None:
+        """Push a live update to admin subscribers (called via on_admin_push)."""
+        if not self.admin_subscribers:
+            return
+        if kind == "game_state":
+            game = server.game_manager.game
+            if not game:
+                return
+            payload = {
+                "type": "admin_game_state",
+                "room_code": code,
+                "game_state": game.model_dump(),
+            }
+        else:
+            # player_list or other change → push full room list
+            payload = {
+                "type": "admin_room_list",
+                "rooms": self._serialize_rooms_for_admin(),
+            }
+        await asyncio.gather(
+            *[ws.send(json.dumps(payload)) for ws in list(self.admin_subscribers)],
+            return_exceptions=True,
+        )
 
     async def start(self) -> None:
         async with websockets.serve(

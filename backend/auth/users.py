@@ -1,17 +1,18 @@
 """
 从配置文件加载用户列表，用于登录校验。
 配置文件路径由 config.Config.AUTH_USERS_FILE 指定，默认为 auth/users.json。
-格式：[ {"username": "xxx", "password": "xxx", "name": "显示名"}, ... ]
+格式：[ {"username": "xxx", "password": "xxx", "name": "显示名", "role": "player"}, ... ]
+role 字段可选，默认为 "player"；设为 "admin" 则该用户可访问管理界面。
 """
 import json
 import hmac
 import logging
 
-from auth.passwords import verify_password
+from auth.passwords import verify_password, hash_password
 
 logger = logging.getLogger(__name__)
 
-_USERS = {}  # username -> {"password": str, "name": str}
+_USERS = {}  # username -> {"password": str, "password_hash": str, "name": str, "role": str}
 
 
 def _load_users():
@@ -31,6 +32,7 @@ def _load_users():
                     "password": item.get("password", ""),
                     "password_hash": item.get("password_hash", ""),
                     "name": item.get("name") or u,
+                    "role": item.get("role", "player"),
                 }
         logger.info("Loaded %s users from %s", len(_USERS), path)
     except FileNotFoundError:
@@ -61,6 +63,103 @@ def get_user_name(username: str) -> str:
     return user["name"]
 
 
+def _save_users():
+    """Serialize the in-memory user dict back to the JSON file."""
+    from config import Config
+    path = Config.AUTH_USERS_FILE
+    items = []
+    for username, user in _USERS.items():
+        entry = {"username": username, "name": user.get("name", username)}
+        if user.get("password_hash"):
+            entry["password_hash"] = user["password_hash"]
+        elif user.get("password"):
+            entry["password"] = user["password"]
+        entry["role"] = user.get("role", "player")
+        items.append(entry)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(items, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+
+
+def get_user_role(username: str) -> str:
+    """Return the role for *username* (``"admin"``, ``"player"``) or ``""`` if unknown."""
+    _load_users()
+    user = _USERS.get(username)
+    if not user:
+        return ""
+    return user.get("role", "player")
+
+
+def is_admin(username: str) -> bool:
+    """Convenience wrapper: True when *username* has the admin role."""
+    return get_user_role(username) == "admin"
+
+
+def get_all_users() -> list:
+    """Return a list of user dicts (username, name, role) without password fields."""
+    _load_users()
+    return [
+        {"username": u, "name": data.get("name", u), "role": data.get("role", "player")}
+        for u, data in _USERS.items()
+    ]
+
+
 def get_all_usernames() -> list:
     _load_users()
     return list(_USERS.keys())
+
+
+def create_user(username: str, name: str, password: str, role: str = "player") -> bool:
+    """Create a new user with a hashed password. Returns False if username already exists."""
+    _load_users()
+    if username in _USERS:
+        return False
+    _USERS[username] = {
+        "password": "",
+        "password_hash": hash_password(password),
+        "name": name or username,
+        "role": role if role in ("admin", "player") else "player",
+    }
+    _save_users()
+    logger.info("Created user %s (role=%s)", username, role)
+    return True
+
+
+def update_user(
+    username: str,
+    name: str | None = None,
+    role: str | None = None,
+    password: str | None = None,
+) -> bool:
+    """Update an existing user's fields. Returns False if the user does not exist."""
+    _load_users()
+    user = _USERS.get(username)
+    if not user:
+        return False
+    if name is not None:
+        user["name"] = name
+    if role is not None and role in ("admin", "player"):
+        user["role"] = role
+    if password is not None:
+        user["password_hash"] = hash_password(password)
+        user["password"] = ""
+    _save_users()
+    logger.info("Updated user %s", username)
+    return True
+
+
+def delete_user(username: str) -> bool:
+    """Delete a user from the store and file. Returns False if the user does not exist."""
+    _load_users()
+    if username not in _USERS:
+        return False
+    del _USERS[username]
+    _save_users()
+    logger.info("Deleted user %s", username)
+    return True
+
+
+def admin_count() -> int:
+    """Return the number of admin users (used to prevent deleting the last admin)."""
+    _load_users()
+    return sum(1 for u in _USERS.values() if u.get("role") == "admin")

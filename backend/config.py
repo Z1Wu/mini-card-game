@@ -53,6 +53,11 @@ def _validate_production_users_file(path: str) -> None:
             raise ProductionConfigurationError(
                 "Production users must not include plaintext password fields; use password_hash."
             )
+        role = user.get("role", "player")
+        if role not in ("admin", "player"):
+            raise ProductionConfigurationError(
+                "Production user role must be 'admin' or 'player'."
+            )
         hash_parts = user["password_hash"].split("$")
         if (
             len(hash_parts) != 4
@@ -109,6 +114,11 @@ class Config:
     MAX_MESSAGES_PER_SECOND = int(os.getenv("MAX_MESSAGES_PER_SECOND", 30))
     ALLOW_LEGACY_JOIN_GAME = os.getenv("ALLOW_LEGACY_JOIN_GAME", "false").lower() in {"1", "true", "yes"}
     E2E_RANDOM_SEED = int(os.environ["E2E_RANDOM_SEED"]) if os.getenv("E2E_RANDOM_SEED") else None
+
+    # Admin API configuration
+    ADMIN_HTTP_PORT = int(os.getenv("ADMIN_HTTP_PORT", 8766))
+    ADMIN_API_PREFIX = os.getenv("ADMIN_API_PREFIX", "/api/admin")
+    ADMIN_SESSION_TTL = int(os.getenv("ADMIN_SESSION_TTL", 3600))
 
     @classmethod
     def validate_startup_configuration(cls) -> None:

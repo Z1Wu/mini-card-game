@@ -4,6 +4,8 @@ import { Button } from '../components/common/Button';
 import { usePlayerStore } from '../stores/playerStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { wsService } from '../services/websocket';
+import { adminApi } from '../services/adminApi';
+import { useAdminStore } from '../stores/adminStore';
 import { LoginMessage, ReconnectMessage, GameStatusMessage, LoginSuccessMessage, ReconnectSuccessMessage, RoomCreatedMessage, RoomJoinedMessage, RoomListMessage, RoomInfo } from '../types/message';
 import { logUnexpectedError } from '../utils/logger';
 
@@ -64,7 +66,7 @@ export const Login: React.FC = () => {
       setIsReconnecting(false);
     };
 
-    const handleLoginSuccess = (message: LoginSuccessMessage) => {
+    const handleLoginSuccess = async (message: LoginSuccessMessage) => {
       setServerError('');
       setIsConnecting(false);
       setIsReconnecting(false);
@@ -73,6 +75,20 @@ export const Login: React.FC = () => {
       }
       setReconnectToken(message.reconnect_token);
       wsService.setSession(roomCode, username.trim(), message.reconnect_token);
+
+      if (message.role === 'admin') {
+        const pwd = usePlayerStore.getState().password;
+        setPassword('');
+        try {
+          const result = await adminApi.login(username.trim(), pwd!);
+          useAdminStore.getState().setSession(result.token, result.username, result.name);
+          navigate('/admin');
+        } catch (err) {
+          setServerError('管理员 HTTP 登录失败：' + (err instanceof Error ? err.message : '未知错误'));
+        }
+        return;
+      }
+
       setPassword('');
       navigate('/lobby');
     };

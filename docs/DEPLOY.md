@@ -46,6 +46,33 @@ docker compose -f docker-compose.deploy.yml down
 
 生产部署**不会使用镜像内的演示账号**。`docker-compose.deploy.yml` 设置 `APP_ENV=production`、挂载 `./deploy-data/users.json`，并要求从 `.env` 读取 `ALLOWED_ORIGINS`；缺少任一必需配置时后端会在启动前失败，避免以不安全默认值对外提供服务。
 
+### 创建初始管理员
+
+部署时直接加 `init-admin` 子命令，一条命令完成部署 + 创建管理员：
+
+```bash
+./deploy.sh init-admin admin 'strong-password' '超级管理员'
+```
+
+如果容器已在运行，也可以单独执行管理员创建：
+
+```bash
+./deploy.sh init-admin admin 'strong-password' '超级管理员'
+```
+
+密码自动以 PBKDF2 hash 写入 `deploy-data/users.json`，不会出现在进程列表中。创建后即可用该账号登录管理界面 `https://<your-domain>/`。后续的用户管理可以直接在管理界面中完成。
+
+也可以通过 CLI 在容器外直接创建（需要本地 Python 环境）：
+
+```bash
+cd backend
+uv run python -m auth.bootstrap admin 'strong-password' --name '超级管理员' --users-file ../deploy-data/users.json
+```
+
+### 手动配置用户文件
+
+如果需要批量预置用户，可以手动编辑 `deploy-data/users.json`：
+
 1. 复制示例并替换占位哈希：
 
 ```bash
@@ -74,6 +101,8 @@ printf 'ALLOWED_ORIGINS=https://cards.example.com\n' > .env
 | `ROOM_TTL_SECONDS` | 非默认空房间的保留秒数；默认 `300` |
 | `MAX_MESSAGES_PER_SECOND` | 单连接消息速率上限；默认 `30` |
 | `ALLOW_LEGACY_JOIN_GAME` | 仅为旧客户端迁移设置为 `true`；默认关闭 |
+| `ADMIN_HTTP_PORT` | 管理员 HTTP API 端口；默认 `8766` |
+| `ADMIN_SESSION_TTL` | 管理员 session 过期秒数；默认 `3600` |
 
 部署平台必须把这些变量传入后端进程；当前 Compose 文件已定义镜像、端口、用户文件挂载与必需环境变量，可按平台的环境变量机制扩展它。不要为了生产兼容性开启 `ALLOW_LEGACY_JOIN_GAME`。
 
