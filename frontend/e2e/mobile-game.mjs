@@ -8,15 +8,23 @@ import { savePlayerArtifacts, writeReport } from './lib/reporting.mjs';
 
 const frontendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const backendRoot = path.resolve(frontendRoot, '..', 'backend');
-const outputRoot = await prepareOutput(frontendRoot, process.env.E2E_OUTPUT_DIR);
+const outputRoot = await prepareOutput(frontendRoot, process.env.E2E_OUTPUT_DIR ?? 'test-results/mobile-game');
 const rawVideoRoot = path.join(outputRoot, 'raw-video');
 await fs.mkdir(rawVideoRoot, { recursive: true });
 const backendPort = Number(process.env.E2E_BACKEND_PORT) || await findFreePort();
 const frontendPort = Number(process.env.E2E_FRONTEND_PORT) || await findFreePort();
 const seed = Number(process.env.E2E_SEED ?? 75);
-const accounts = [{ username: 'player1', password: 'password1' }, { username: 'player2', password: 'password2' }, { username: 'player3', password: 'password3' }];
+const accounts = [
+  { username: 'player1', password: 'password1' },
+  { username: 'player2', password: 'password2' },
+  { username: 'player3', password: 'password3' },
+];
 const reportPath = path.join(outputRoot, 'report.json');
-const videoPath = path.join(outputRoot, 'full-game.webm');
+const videoPath = path.join(outputRoot, 'mobile-game.webm');
+
+// iPhone 14 Pro landscape — primary mobile target
+const mobileViewport = { width: 844, height: 390 };
+
 let services;
 let browser;
 let players = [];
@@ -28,30 +36,65 @@ let screenshots = {};
 
 try {
   services = await startServices({ frontendRoot, backendRoot, backendPort, frontendPort, seed });
-  ({ browser, players } = await openPlayers(accounts, { appUrl: services.appUrl, rawVideoRoot }));
+  ({ browser, players } = await openPlayers(accounts, { appUrl: services.appUrl, rawVideoRoot, viewport: mobileViewport }));
   roomCode = await createRoomAndLogin(players);
   const host = await findHost(players);
   const primary = host.page;
+
+  // ── Mobile layout: verify no horizontal overflow on lobby ──
+  const lobbyOverflow = await primary.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+  assert.equal(lobbyOverflow, false, 'Lobby should have no horizontal overflow on mobile');
+
+  // Wait for lobby player count, then start
   await primary.getByText('3 / 5', { exact: true }).waitFor({ state: 'visible' });
-  await Promise.all([...players.map((player) => player.page.waitForURL('**/game')), primary.getByRole('button', { name: '开始游戏', exact: true }).click()]);
+  await Promise.all([
+    ...players.map((player) => player.page.waitForURL('**/game')),
+    primary.getByRole('button', { name: '开始游戏', exact: true }).click(),
+  ]);
+
   const pagesByPlayer = new Map();
   for (const player of players) pagesByPlayer.set((await readState(player.page)).connection.player_id, player.page);
+
+  // ── Mobile layout assertions on game page ──
+  const gameTable = primary.locator('.game-table');
+  await gameTable.waitFor({ state: 'visible' });
+  const hand = primary.locator('.table-hand');
+  await hand.waitFor({ state: 'visible' });
+  const gameOverflow = await primary.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+  assert.equal(gameOverflow, false, 'Game table should have no horizontal overflow on mobile');
+
+  // ── Play full game on mobile ──
   for (let step = 0; step < 30; step += 1) {
     const before = await readState(primary);
     if (before.game?.state === 'game_over') break;
     const playerId = before.game?.current_player_id;
     const page = pagesByPlayer.get(playerId);
     assert.ok(page, `A browser page should exist for ${playerId}`);
+
+    // Ensure a hand card is scrolled into view before tapping
+    const firstCard = page.locator('[aria-label^="卡牌："]').first();
+    await firstCard.scrollIntoViewIfNeeded();
+
     const { action, card } = await playMixedTurn(page, before, step);
     turns.push({ turn: before.game.turn_count, player_id: playerId, action, card });
-    await waitForState(primary, (turn) => { const state = JSON.parse(window.render_game_to_text()); return state.game?.state === 'game_over' || state.game?.turn_count > turn; }, `turn ${before.game.turn_count} to finish`, before.game.turn_count);
+    await waitForState(primary, (turn) => {
+      const state = JSON.parse(window.render_game_to_text());
+      return state.game?.state === 'game_over' || state.game?.turn_count > turn;
+    }, `turn ${before.game.turn_count} to finish`, before.game.turn_count);
   }
+
   finalState = await readState(primary);
   assert.equal(finalState.game?.state, 'game_over');
   assert.ok(turns.length >= 15, `Expected at least 15 turns, got ${turns.length}`);
   assert.ok(finalState.game?.players.every((player) => player.hand_count === 1), 'Every player should have exactly 1 card in hand');
   assert.ok(finalState.game?.winner_id, 'The winner should be exposed through render_game_to_text');
-  assert.equal(players.flatMap((player) => [...player.consoleErrors, ...player.pageErrors]).length, 0, 'Unexpected browser errors');
+  assert.equal(
+    players.flatMap((player) => [...player.consoleErrors, ...player.pageErrors]).length,
+    0,
+    'Unexpected browser errors',
+  );
+
+  // ── Settlement flow on mobile ──
   await primary.getByRole('heading', { name: '调和揭晓' }).waitFor({ state: 'visible' });
   for (let stage = 0; stage < 3; stage += 1) {
     await primary.getByRole('button', { name: '下一步' }).click();
@@ -74,8 +117,35 @@ try {
 if (!testError) {
   try { assert.ok((await fs.stat(videoPath)).size > 10_000, 'Recorded video is unexpectedly small'); } catch (error) { testError = error; }
 }
+
 await writeReport(reportPath, {
-  result: testError ? 'failed' : 'passed', seed, room_code: roomCode, ports: { backend: backendPort, frontend: frontendPort }, players: players.map((player) => ({ name: player.name, username: player.username, console_errors: player.consoleErrors, page_errors: player.pageErrors })), turns_played: turns.length, turns, final_state: finalState, winner_parity: !testError, service_logs: { backend: services?.backend.logs ?? [], frontend: services?.frontend.logs ?? [] }, artifacts: { video: path.relative(frontendRoot, videoPath), screenshots: Object.fromEntries(Object.entries(screenshots).map(([name, file]) => [name, path.relative(frontendRoot, file)])) }, error: testError instanceof Error ? testError.stack : null,
+  result: testError ? 'failed' : 'passed',
+  viewport: mobileViewport,
+  seed,
+  room_code: roomCode,
+  ports: { backend: backendPort, frontend: frontendPort },
+  players: players.map((player) => ({
+    name: player.name,
+    username: player.username,
+    console_errors: player.consoleErrors,
+    page_errors: player.pageErrors,
+  })),
+  turns_played: turns.length,
+  turns,
+  final_state: finalState,
+  winner_parity: !testError,
+  service_logs: {
+    backend: services?.backend.logs ?? [],
+    frontend: services?.frontend.logs ?? [],
+  },
+  artifacts: {
+    video: path.relative(frontendRoot, videoPath),
+    screenshots: Object.fromEntries(
+      Object.entries(screenshots).map(([name, file]) => [name, path.relative(frontendRoot, file)]),
+    ),
+  },
+  error: testError instanceof Error ? testError.stack : null,
 });
+
 if (testError) throw testError;
-console.log(`Recorded E2E passed: ${turns.length} turns, winner ${finalState.game.winner_id}; report: ${reportPath}`);
+console.log(`Mobile E2E passed (${mobileViewport.width}×${mobileViewport.height}): ${turns.length} turns, winner ${finalState.game.winner_id}; report: ${reportPath}`);

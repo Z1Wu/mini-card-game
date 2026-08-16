@@ -3,8 +3,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const frontendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const reportPath = path.join(frontendRoot, 'test-results', 'full-game', 'report.json');
-const commentPath = path.join(frontendRoot, 'test-results', 'full-game', 'pr-comment.md');
+const reportPath = path.join(frontendRoot, process.env.E2E_REPORT_PATH ?? 'test-results/full-game/report.json');
+const commentPath = path.join(frontendRoot, process.env.E2E_COMMENT_PATH ?? 'test-results/full-game/pr-comment.md');
+const titlePrefix = process.env.E2E_TITLE_PREFIX ?? '🎮 Browser E2E';
+const videoLabel = process.env.E2E_VIDEO_LABEL ?? 'full-game.webm';
+const artifactName = process.env.E2E_ARTIFACT_NAME ?? 'browser-e2e-artifacts';
 
 const MAX_ERROR_CHARS = 4000;
 const MAX_LOG_CHARS = 3000;
@@ -80,7 +83,7 @@ async function main() {
     report = JSON.parse(await fs.readFile(reportPath, 'utf8'));
   } catch {
     await writeComment([
-      '## 🎮 Browser E2E — ⚠️ No report',
+      `## ${titlePrefix} — ⚠️ No report`,
       '',
       '`report.json` was not produced. The run likely failed before the e2e finished — check the workflow logs and the `browser-e2e-artifacts` artifact.',
     ].join('\n'));
@@ -103,18 +106,18 @@ async function main() {
   ];
 
   const sections = [];
-  sections.push(`## 🎮 Browser E2E — ${badge}`, '', ...context);
+  sections.push(`## ${titlePrefix} — ${badge}`, '', ...context);
 
   if (videoUrl) {
     sections.push('');
-    sections.push(`**E2E recording:** [watch full-game.webm](${videoUrl})`);
+    sections.push(`**E2E recording:** [watch ${videoLabel}](${videoUrl})`);
     if (url) {
       sections.push('');
-      sections.push(`_[Workflow run](${url}) — also available as the \`browser-e2e-artifacts\` artifact._`);
+      sections.push(`_[Workflow run](${url}) — also available as the \`${artifactName}\` artifact._`);
     }
   } else if (url) {
     sections.push('');
-    sections.push(`[Workflow run](${url}) — the \`browser-e2e-artifacts\` artifact has the \`full-game.webm\` video, \`report.json\`, and per-player screenshots.`);
+    sections.push(`[Workflow run](${url}) — the \`${artifactName}\` artifact has the \`${videoLabel}\` video, \`report.json\`, and per-player screenshots.`);
   }
 
   sections.push(

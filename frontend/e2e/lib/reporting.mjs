@@ -5,7 +5,10 @@ export async function savePlayerArtifacts(players, outputRoot) {
   const screenshots = {};
   for (const player of players) {
     const screenshot = path.join(outputRoot, `${player.name}.png`);
-    await player.page.screenshot({ path: screenshot, fullPage: true }).catch(() => {});
+    const clip = await player.page.evaluate(() => ({
+      x: 0, y: 0, width: window.innerWidth, height: window.innerHeight,
+    }));
+    await player.page.screenshot({ path: screenshot, clip }).catch(() => {});
     screenshots[player.name] = screenshot;
   }
   return screenshots;

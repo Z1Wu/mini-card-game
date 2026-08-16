@@ -480,45 +480,35 @@ export const Game: React.FC = () => {
 
   return (
     <div className="campus-shell flex min-h-screen flex-col">
-      <div className="fixed top-0 left-0 right-0 z-50 border-b border-[#cbb99e]/60 bg-[#fffaf1]/95 shadow-sm backdrop-blur">
-        <div className="p-4">
-          <div className="max-w-6xl mx-auto flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:gap-4">
-              <div>
-                <p className="campus-kicker">Campus Table</p>
-                {playerName && <span className="font-semibold text-slate-700">{playerName}</span>}
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="rounded-full bg-[#f3e5d0] px-3 py-1 text-sm font-semibold text-slate-600">第 {gameState.turn_count} 回合</span>
-              <Button onClick={handleResetGame} variant="secondary" size="sm" disabled={!isHost}>{isHost ? '重新开始' : '等待房主'}</Button>
-              <Button onClick={handleLeave} variant="danger" size="sm">离开</Button>
-            </div>
-          </div>
+      {/* Portrait rotation prompt (mobile only) */}
+      <div className="portrait-rotate-prompt">
+        <div className="portrait-rotate-icon">📱</div>
+        <p className="portrait-rotate-text">请横屏游玩</p>
+      </div>
+      {/* ── Floating HUD: turn pill + action buttons (overlay, zero layout cost) ── */}
+      <div className="game-hud">
+        <div className="game-hud-left">
+          <span className="game-hud-name">{playerName}</span>
+          <span className="game-hud-round">R{gameState.turn_count}</span>
         </div>
-        {topBannerMessage && (
-          <div
-            role="status"
-            aria-live={topBannerMessage.type === 'your-turn' ? 'assertive' : 'polite'}
-            className={`px-4 py-2.5 text-center text-sm font-medium ${
-              topBannerMessage.type === 'your-turn'
-                ? 'border-t border-[#dc6255] bg-[#ef7667]/95 text-white'
-                : 'border-t border-[#d9c8ae] bg-[#f3e5d0]/95 text-slate-700'
-            }`}
-          >
-            {topBannerMessage.type === 'your-turn' && <span className="mr-1">▶</span>}
-            {topBannerMessage.text}
-            {topBannerMessage.type === 'your-turn' && topBannerMessage.text === '轮到你出牌！' && (
-              <span className="mt-0.5 block text-xs font-normal text-white/85">请选择一张手牌并选择出牌方式（调和 / 质疑 / 特技）</span>
-            )}
-          </div>
-        )}
+        <div className="game-hud-center">
+          {topBannerMessage && (
+            <span className={`game-hud-pill ${topBannerMessage.type === 'your-turn' ? 'game-hud-pill-active' : 'game-hud-pill-idle'}`}>
+              {topBannerMessage.type === 'your-turn' && '▶ '}
+              {topBannerMessage.text}
+            </span>
+          )}
+        </div>
+        <div className="game-hud-right">
+          <Button onClick={handleResetGame} variant="secondary" size="sm" disabled={!isHost} className="game-hud-btn">{isHost ? '重开' : '等待'}</Button>
+          <Button onClick={handleLeave} variant="danger" size="sm" className="game-hud-btn">离开</Button>
+        </div>
       </div>
 
-      <div className={`flex-1 max-w-6xl mx-auto w-full p-4 space-y-6 ${topBannerMessage ? 'pt-28' : 'pt-24'}`}>
+      <div className="flex-1 w-full">
         {gameError && (
-          <div role="alert" className="flex items-center justify-between rounded-xl border border-red-300 bg-red-50 p-3">
-            <span className="text-red-700">{gameError}</span>
+          <div role="alert" className="fixed top-10 left-1/2 -translate-x-1/2 z-[60] flex items-center justify-between gap-3 rounded-xl border border-red-300 bg-red-50/95 backdrop-blur px-4 py-2 shadow-lg">
+            <span className="text-red-700 text-sm">{gameError}</span>
             <Button variant="danger" size="sm" onClick={() => setGameError(null)}>关闭</Button>
           </div>
         )}
@@ -795,7 +785,6 @@ export const Game: React.FC = () => {
         )}
 
         {currentPlayer && <GameTable players={gameState.players} localPlayer={currentPlayer} localPlayerId={playerId ?? ''} currentPlayerIndex={gameState.current_player_index} harmonyArea={gameState.harmony_area} isGameOver={isGameOver} selectedCard={selectedCard} onSelectCard={setSelectedCard} onPlayCard={handlePlayCard} newsClubMyChosenCard={newsClubMyChosenCard} />}
-
         {viewHandResult && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setViewHandResult(null)}>
             <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl" onClick={e => e.stopPropagation()}>

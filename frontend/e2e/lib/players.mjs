@@ -7,11 +7,11 @@ function attachDiagnostics(page, player) {
   page.on('pageerror', (error) => player.pageErrors.push(error.message));
 }
 
-export async function openPlayers(accounts, { appUrl, rawVideoRoot }) {
+export async function openPlayers(accounts, { appUrl, rawVideoRoot, viewport = { width: 1280, height: 720 } }) {
   const browser = await chromium.launch({ headless: true });
   const players = [];
   for (let index = 0; index < accounts.length; index += 1) {
-    const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, ...(index === 0 ? { recordVideo: { dir: rawVideoRoot, size: { width: 1280, height: 720 } } } : {}) });
+    const context = await browser.newContext({ viewport, ...(index === 0 ? { recordVideo: { dir: rawVideoRoot, size: viewport } } : {}) });
     const page = await context.newPage();
     page.setDefaultTimeout(TIMEOUT_MS);
     const player = { ...accounts[index], name: `player${index + 1}`, page, context, consoleErrors: [], pageErrors: [], video: index === 0 ? page.video() : null };
@@ -72,14 +72,18 @@ export async function waitForState(page, predicate, description, argument, timeo
 }
 
 export async function chooseVisibleCard(page, cardName, action) {
-  const card = page.getByLabel(`卡牌：${cardName}`, { exact: true }).first();
+  // Scope to hand area — field/doubt cards share the same aria-label
+  const hand = page.locator('.table-hand');
+  const card = hand.getByLabel(`卡牌：${cardName}`, { exact: true }).first();
   await card.waitFor({ state: 'visible' });
+  await card.scrollIntoViewIfNeeded();
   await card.click();
   await card.getByRole('button', { name: action, exact: true }).click();
 }
 
 export async function chooseFirstVisibleCard(page, action, excludedNames = []) {
-  const labels = await page.locator('[aria-label^="卡牌："]').evaluateAll((cards, names) => cards
+  // Only enumerate cards inside the hand area (not field/doubt copies)
+  const labels = await page.locator('.table-hand [aria-label^="卡牌："]').evaluateAll((cards, names) => cards
     .filter((card) => card instanceof HTMLElement && card.offsetParent !== null)
     .map((card) => card.getAttribute('aria-label'))
     .filter((label) => label && !names.includes(label.replace(/^卡牌：/, ''))), excludedNames);
@@ -88,6 +92,70 @@ export async function chooseFirstVisibleCard(page, action, excludedNames = []) {
   const cardName = label.replace(/^卡牌：/, '');
   await chooseVisibleCard(page, cardName, action);
   return cardName;
+}
+
+/**
+ * Play a mixed-action turn: mostly harmony, but occasionally doubt or skill
+ * for broader UI coverage. Criminal (犯人) is always excluded.
+ */
+export async function playMixedTurn(page, state, step) {
+  const excludedNames = ['犯人'];
+  const actionRoll = step % 5;
+  let action, cardName;
+
+  if (actionRoll === 1) {
+    // ── Doubt: pick a card, play doubt, then select target ──
+    try {
+      cardName = await chooseFirstVisibleCard(page, '质疑', excludedNames);
+      // Target selection modal: click first other-player button
+      const currentId = state.game?.current_player_id;
+      const targets = state.game?.players?.filter(p => p.id !== currentId) ?? [];
+      const targetName = targets[0]?.name;
+      if (targetName) {
+        const targetBtn = page.getByRole('button', { name: targetName, exact: true });
+        await targetBtn.waitFor({ state: 'visible' });
+        await targetBtn.click();
+      }
+      action = 'doubt';
+    } catch {
+      cardName = await chooseFirstVisibleCard(page, '调和', excludedNames);
+      action = 'harmony';
+    }
+  } else if (actionRoll === 3) {
+    // ── Skill (simple): try 图书委员 / 外星人 from HAND only, fallback to harmony ──
+    const simpleSkills = ['图书委员', '外星人'];
+    let found = false;
+    for (const name of simpleSkills) {
+      // Scope to hand area to avoid matching field/doubt cards
+      const hand = page.locator('.table-hand');
+      const locator = hand.getByLabel(`卡牌：${name}`, { exact: true });
+      if (await locator.first().isVisible().catch(() => false)) {
+        try {
+          await locator.first().scrollIntoViewIfNeeded();
+          await locator.first().click();
+          await locator.first().getByRole('button', { name: '特技', exact: true }).click();
+          // Dismiss any result modal (e.g. 图书委员 shows harmony area)
+          await page.waitForTimeout(500);
+          const closeBtn = page.getByRole('button', { name: '关闭', exact: true });
+          if (await closeBtn.isVisible().catch(() => false)) await closeBtn.click();
+          cardName = name;
+          action = 'skill';
+          found = true;
+          break;
+        } catch { /* fall through */ }
+      }
+    }
+    if (!found) {
+      cardName = await chooseFirstVisibleCard(page, '调和', excludedNames);
+      action = 'harmony';
+    }
+  } else {
+    // ── Harmony (default) ──
+    cardName = await chooseFirstVisibleCard(page, '调和', excludedNames);
+    action = 'harmony';
+  }
+
+  return { action, card: cardName };
 }
 
 export async function closePlayers(browser, players, afterContextsClose = async () => {}) {
