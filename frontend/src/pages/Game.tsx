@@ -480,19 +480,21 @@ export const Game: React.FC = () => {
 
   return (
     <div className="campus-shell flex min-h-screen flex-col">
-      <div className="fixed top-0 left-0 right-0 z-50 border-b border-[#cbb99e]/60 bg-[#fffaf1]/95 shadow-sm backdrop-blur">
-        <div className="p-4">
-          <div className="max-w-6xl mx-auto flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:gap-4">
-              <div>
-                <p className="campus-kicker">Campus Table</p>
-                {playerName && <span className="font-semibold text-slate-700">{playerName}</span>}
-              </div>
+      {/* Portrait rotation prompt (mobile only) */}
+      <div className="portrait-rotate-prompt">
+        <div className="portrait-rotate-icon">📱</div>
+        <p className="portrait-rotate-text">请横屏游玩</p>
+      </div>
+      <div className="fixed top-0 left-0 right-0 z-50 mobile-compact-header border-b border-[#cbb99e]/60 bg-[#fffaf1]/95 shadow-sm backdrop-blur">
+        <div className="px-3 py-2">
+          <div className="max-w-6xl mx-auto flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              {playerName && <span className="font-semibold text-slate-700 text-sm truncate">{playerName}</span>}
+              <span className="rounded-full bg-[#f3e5d0] px-2 py-0.5 text-xs font-semibold text-slate-600 whitespace-nowrap">R{gameState.turn_count}</span>
             </div>
-            <div className="flex items-center gap-4">
-              <span className="rounded-full bg-[#f3e5d0] px-3 py-1 text-sm font-semibold text-slate-600">第 {gameState.turn_count} 回合</span>
-              <Button onClick={handleResetGame} variant="secondary" size="sm" disabled={!isHost}>{isHost ? '重新开始' : '等待房主'}</Button>
-              <Button onClick={handleLeave} variant="danger" size="sm">离开</Button>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button onClick={handleResetGame} variant="secondary" size="sm" disabled={!isHost} className="text-xs px-2 py-1">{isHost ? '重开' : '等待'}</Button>
+              <Button onClick={handleLeave} variant="danger" size="sm" className="text-xs px-2 py-1">离开</Button>
             </div>
           </div>
         </div>
@@ -515,7 +517,7 @@ export const Game: React.FC = () => {
         )}
       </div>
 
-      <div className={`flex-1 w-full p-4 ${topBannerMessage ? 'pt-28' : 'pt-20'}`}>
+      <div className={`flex-1 w-full p-2 sm:p-4 ${topBannerMessage ? 'pt-20' : 'pt-12'}`}>
         {gameError && (
           <div role="alert" className="flex items-center justify-between rounded-xl border border-red-300 bg-red-50 p-3">
             <span className="text-red-700">{gameError}</span>

@@ -244,9 +244,9 @@ code {
 .game-card-emblem {
   position: absolute;
   z-index: 2;
-  top: 25%;
+  top: 28%;
   left: 50%;
-  width: 45%;
+  width: 34%;
   aspect-ratio: 1;
   transform: translateX(-50%);
   display: grid;
@@ -533,6 +533,7 @@ code {
   position: relative;
   z-index: 1;
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: .65rem;
@@ -706,6 +707,129 @@ code {
   .table-hand { padding: .35rem .5rem .65rem; }
   .table-hand-card { width: 6.8rem; }
   .table-seat { min-width: 6.2rem; padding: .38rem .5rem; }
+  .mobile-compact-header { padding: .4rem .75rem; }
+  .mobile-compact-header .campus-kicker { display: none; }
+}
+
+/* ── Portrait rotation prompt (visible only in portrait on small screens) ── */
+.portrait-rotate-prompt {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  background: #0b2e16;
+  color: #e2e8f0;
+}
+
+.portrait-rotate-icon {
+  font-size: 3rem;
+  animation: rotate-hint 2s ease-in-out infinite;
+}
+
+.portrait-rotate-text {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+}
+
+@keyframes rotate-hint {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(90deg); }
+}
+
+@media (orientation: portrait) and (max-width: 768px) {
+  .portrait-rotate-prompt { display: flex; }
+  .game-table,
+  .mobile-compact-header,
+  .table-hand { display: none !important; }
+}
+
+/* ── Landscape: 斗地主/三国杀 style compressed layout ── */
+@media (orientation: landscape) and (max-height: 500px) {
+  .game-table {
+    min-height: 100vh;
+    border-width: 3px;
+    border-radius: 10px;
+  }
+
+  .table-opponents {
+    padding: .25rem .5rem;
+    gap: .3rem;
+  }
+
+  .table-seat {
+    min-width: 5rem;
+    padding: .22rem .4rem;
+    border-radius: 7px;
+  }
+
+  .table-seat-avatar { gap: .2rem; }
+  .table-seat-icon { width: 1.2rem; height: 1.2rem; font-size: .55rem; }
+  .table-seat-name { font-size: .65rem; }
+  .table-seat-meta { gap: .2rem; margin-top: .1rem; }
+  .table-seat-stat { font-size: .5rem; }
+  .table-seat-dot { width: .28rem; height: .28rem; }
+  .table-seat-badge { font-size: .45rem; padding: .06rem .28rem; top: -.2rem; right: -.2rem; }
+
+  .table-center {
+    padding: .2rem .5rem;
+    gap: .3rem;
+  }
+
+  .table-field {
+    padding: .3rem;
+    gap: .3rem;
+    min-height: 3rem;
+    border-radius: 8px;
+  }
+
+  .table-field-item { gap: .1rem; }
+  .table-field-label { font-size: .45rem; }
+
+  .table-zones {
+    grid-template-columns: 1fr 1fr;
+    gap: .3rem;
+  }
+
+  .table-zone {
+    padding: .25rem .35rem;
+    border-radius: 7px;
+  }
+
+  .table-zone-title { font-size: .55rem; margin-bottom: .2rem; }
+  .table-zone-cards { gap: .2rem; }
+  .table-zone-empty { font-size: .55rem; }
+  .table-doubt-item { gap: .08rem; }
+  .table-doubt-label { font-size: .4rem; }
+
+  .table-hand {
+    padding: .2rem .4rem .5rem;
+  }
+
+  .table-hand-info {
+    margin-bottom: .15rem;
+    padding: 0 .1rem;
+  }
+
+  .table-hand-title { font-size: .6rem; }
+  .table-hand-stats { font-size: .5rem; }
+  .table-hand-turn { font-size: .6rem; }
+  .table-hand-scroll { gap: .3rem; }
+  .table-hand-card { width: 4.5rem; }
+  .table-hand-card-lifted { transform: translateY(-.5rem); }
+
+  .mobile-compact-header {
+    padding: .2rem .5rem;
+  }
+}
+
+@media (orientation: landscape) and (min-width: 769px) and (max-height: 500px) {
+  .table-hand-card { width: 5rem; }
+  .table-seat { min-width: 6rem; }
 }
 
 @media (min-width: 481px) and (max-width: 768px) {
