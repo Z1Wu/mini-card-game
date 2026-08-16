@@ -78,9 +78,13 @@ export async function chooseVisibleCard(page, cardName, action) {
   await card.waitFor({ state: 'visible' });
   await card.scrollIntoViewIfNeeded();
   await card.click();
+  // Brief pause so the card lift animation + action bar are visible in video.
+  await page.waitForTimeout(350);
   // Action buttons live in a dedicated action bar (sibling of the card),
   // not inside the card element — scope to the hand container.
   await hand.getByRole('button', { name: action, exact: true }).click();
+  // Pause so the green play-feedback toast is captured in the video.
+  await page.waitForTimeout(500);
 }
 
 export async function chooseFirstVisibleCard(page, action, excludedNames = []) {
@@ -97,11 +101,60 @@ export async function chooseFirstVisibleCard(page, action, excludedNames = []) {
 }
 
 /**
+ * First-turn showcase: demonstrates card selection, cancel/deselect, and
+ * reselect+play so the new UI features (action bar, cancel button, hint
+ * text, play-feedback toast) are clearly visible in the E2E video.
+ */
+async function showcaseFirstTurn(page, excludedNames) {
+  // Enumerate visible non-criminal cards in the hand
+  const labels = await page.locator('.table-hand [aria-label^="卡牌："]')
+    .evaluateAll((cards, names) => cards
+      .filter((card) => card instanceof HTMLElement && card.offsetParent !== null)
+      .map((card) => card.getAttribute('aria-label'))
+      .filter((label) => label && !names.includes(label.replace(/^卡牌：/, ''))), excludedNames);
+  const label = labels[0];
+  if (!label) throw new Error('No playable visible card was found for showcase');
+  const cardName = label.replace(/^卡牌：/, '');
+
+  const hand = page.locator('.table-hand');
+  const card = hand.getByLabel(`卡牌：${cardName}`, { exact: true }).first();
+  await card.waitFor({ state: 'visible' });
+  await card.scrollIntoViewIfNeeded();
+
+  // 1. Select card — shows lift animation + action bar (调和/质疑/特技/✕)
+  await card.click();
+  await page.waitForTimeout(800);
+
+  // 2. Cancel via ✕ button — shows card returning down + hint text reappearing
+  const cancelBtn = hand.getByRole('button', { name: '取消选择', exact: true });
+  if (await cancelBtn.isVisible().catch(() => false)) {
+    await cancelBtn.click();
+    await page.waitForTimeout(600);
+    // 3. Reselect the same card
+    await card.click();
+    await page.waitForTimeout(500);
+  }
+
+  // 4. Play harmony — shows play-feedback toast
+  await hand.getByRole('button', { name: '调和', exact: true }).click();
+  await page.waitForTimeout(600);
+
+  return { action: 'harmony', card: cardName };
+}
+
+/**
  * Play a mixed-action turn: mostly harmony, but occasionally doubt or skill
  * for broader UI coverage. Criminal (犯人) is always excluded.
+ * The first turn (step 0) is a showcase that demonstrates cancel/deselect.
  */
 export async function playMixedTurn(page, state, step) {
   const excludedNames = ['犯人'];
+
+  // ── First turn: showcase card selection + cancel/deselect ──
+  if (step === 0) {
+    return showcaseFirstTurn(page, excludedNames);
+  }
+
   const actionRoll = step % 5;
   let action, cardName;
 
@@ -116,6 +169,8 @@ export async function playMixedTurn(page, state, step) {
       if (targetName) {
         const targetBtn = page.getByRole('button', { name: targetName, exact: true });
         await targetBtn.waitFor({ state: 'visible' });
+        // Pause so the target-selection modal is visible in the video.
+        await page.waitForTimeout(500);
         await targetBtn.click();
       }
       action = 'doubt';
@@ -135,9 +190,10 @@ export async function playMixedTurn(page, state, step) {
         try {
           await locator.first().scrollIntoViewIfNeeded();
           await locator.first().click();
+          await page.waitForTimeout(350);
           await hand.getByRole('button', { name: '特技', exact: true }).click();
-          // Dismiss any result modal (e.g. 图书委员 shows harmony area)
-          await page.waitForTimeout(500);
+          // Pause so skill result modal is visible in the video.
+          await page.waitForTimeout(700);
           const closeBtn = page.getByRole('button', { name: '关闭', exact: true });
           if (await closeBtn.isVisible().catch(() => false)) await closeBtn.click();
           cardName = name;
