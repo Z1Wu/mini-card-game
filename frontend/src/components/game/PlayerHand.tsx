@@ -6,7 +6,7 @@ interface PlayerHandProps {
   player: Player;
   isCurrentTurn: boolean;
   selectedCard: Card | null;
-  onSelect: (card: Card) => void;
+  onSelect: (card: Card | null) => void;
   onPlay: (card: Card, usage: CardUsageType) => void;
   harmonyIsEmpty: boolean;
   newsClubMyChosenCard: Card | null;
@@ -27,7 +27,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     <div className={`table-hand${isSettlement ? ' table-hand-settlement' : ''}${isCurrentTurn ? ' table-hand-my-turn' : ''}`}>
       <div className="table-hand-info">
         <span className="table-hand-title">
-          我的手牌{isCurrentTurn && <span className="table-hand-turn"> · 你的回合</span>}
+          我的手牌{isCurrentTurn && <span className="table-hand-turn-dot" />}
         </span>
         <span className="table-hand-stats">手牌 {player.hand.length} · 质疑 {player.doubt_cards?.length ?? 0}</span>
       </div>
@@ -46,7 +46,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 card={card}
                 isPlayable={playable}
                 isSelected={selected}
-                onClick={() => onSelect(card)}
+                onClick={() => onSelect(selected ? null : card)}
               />
             </div>
           );
@@ -74,7 +74,17 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           >
             特技{skillDisabled ? '（不可用）' : ''}
           </button>
+          <button
+            className="table-hand-action-btn table-hand-action-cancel"
+            onClick={() => onSelect(null)}
+            aria-label="取消选择"
+          >
+            ✕
+          </button>
         </div>
+      )}
+      {isCurrentTurn && !canShowActions && !isSettlement && (
+        <div className="table-hand-hint">点击卡牌选择 · 长按查看技能</div>
       )}
     </div>
   );

@@ -10,9 +10,10 @@ interface GameTableProps {
   localPlayerId: string;
   currentPlayerIndex: number;
   harmonyArea: Card[];
+  requiredHarmonyValue: number;
   isGameOver: boolean;
   selectedCard: Card | null;
-  onSelectCard: (card: Card) => void;
+  onSelectCard: (card: Card | null) => void;
   onPlayCard: (card: Card, usage: CardUsageType) => void;
   newsClubMyChosenCard: Card | null;
 }
@@ -60,7 +61,7 @@ export const GameTable: React.FC<GameTableProps> = (props) => {
         {/* Harmony + Doubt zones */}
         <div className="table-zones">
           <div className="table-zone">
-            <h3 className="table-zone-title">调和区 ({props.harmonyArea.length})</h3>
+            <h3 className="table-zone-title">调和区 ({props.harmonyArea.length})<span className="table-zone-target">目标 {props.requiredHarmonyValue}</span></h3>
             <div className="table-zone-cards">
               {props.harmonyArea.length > 0 ? (
                 props.harmonyArea.map(card => (
@@ -80,7 +81,7 @@ export const GameTable: React.FC<GameTableProps> = (props) => {
               {props.players.flatMap(p =>
                 (p.doubt_cards ?? []).map(c => (
                   <div key={`${p.id}-${c.id}`} className="table-doubt-item">
-                    <span className="table-doubt-label">{p.name}</span>
+                    <span className="table-doubt-label">→ {p.name}</span>
                     <div className="w-9 sm:w-10">
                       <CardView card={c} showAsFaceDown={!props.isGameOver} />
                     </div>

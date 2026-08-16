@@ -23,17 +23,17 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({ player, isCurrentTurn })
         <span className="table-seat-name">{player.name}</span>
       </div>
       <div className="table-seat-meta">
-        <span className="table-seat-stat">
+        <span className="table-seat-stat" title="手牌数">
           <span className="table-seat-dot table-seat-dot-hand" />
-          {player.current_hand_count}
+          <span className="table-seat-stat-label">手</span>{player.current_hand_count}
         </span>
-        <span className="table-seat-stat">
+        <span className="table-seat-stat" title="场牌数">
           <span className="table-seat-dot table-seat-dot-field" />
-          {fieldCount}
+          <span className="table-seat-stat-label">场</span>{fieldCount}
         </span>
-        <span className="table-seat-stat">
+        <span className="table-seat-stat" title="质疑牌数">
           <span className="table-seat-dot table-seat-dot-doubt" />
-          {doubtCount}
+          <span className="table-seat-stat-label">疑</span>{doubtCount}
         </span>
       </div>
       {isWaitingSettlement && <div className="table-seat-settle">等待结算</div>}

@@ -97,6 +97,7 @@ export const Card: React.FC<CardProps> = ({
       <div
         className={cn(
           'game-card group relative aspect-[2/3] w-full overflow-hidden rounded-xl p-1.5 shadow-xl transition-all duration-200',
+          { 'game-card-criminal': card.name === RoleType.CRIMINAL },
           { 'ring-2 ring-primary-500': isSelected },
           { 'cursor-pointer': onClick || isPlayable },
           { 'opacity-75 grayscale-[0.25]': !isPlayable && onClick }
@@ -141,11 +142,6 @@ export const Card: React.FC<CardProps> = ({
             <span className="game-card-title" title={card.name}>{card.name}</span>
           </div>
 
-          {showVictoryPriority && (
-            <div className="game-card-footer">
-              <span className="game-card-priority">胜利 {card.victory_priority}</span>
-            </div>
-          )}
         </div>
 
       {showActions && onPlay && (
