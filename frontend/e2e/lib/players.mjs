@@ -7,11 +7,11 @@ function attachDiagnostics(page, player) {
   page.on('pageerror', (error) => player.pageErrors.push(error.message));
 }
 
-export async function openPlayers(accounts, { appUrl, rawVideoRoot }) {
+export async function openPlayers(accounts, { appUrl, rawVideoRoot, viewport = { width: 1280, height: 720 } }) {
   const browser = await chromium.launch({ headless: true });
   const players = [];
   for (let index = 0; index < accounts.length; index += 1) {
-    const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, ...(index === 0 ? { recordVideo: { dir: rawVideoRoot, size: { width: 1280, height: 720 } } } : {}) });
+    const context = await browser.newContext({ viewport, ...(index === 0 ? { recordVideo: { dir: rawVideoRoot, size: viewport } } : {}) });
     const page = await context.newPage();
     page.setDefaultTimeout(TIMEOUT_MS);
     const player = { ...accounts[index], name: `player${index + 1}`, page, context, consoleErrors: [], pageErrors: [], video: index === 0 ? page.video() : null };
