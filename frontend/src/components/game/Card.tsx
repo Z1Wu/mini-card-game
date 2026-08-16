@@ -136,8 +136,6 @@ export const Card: React.FC<CardProps> = ({
             </div>
           )}
 
-          <div className="game-card-emblem" aria-hidden="true">{visual.mark}</div>
-
           <div className="game-card-title-wrap">
             <div className="game-card-ribbon" />
             <span className="game-card-title" title={card.name}>{card.name}</span>
