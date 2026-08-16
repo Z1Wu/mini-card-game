@@ -38,7 +38,8 @@ body {
 .campus-shell {
   position: relative;
   isolation: isolate;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   background:
     radial-gradient(circle at 8% 12%, rgba(255, 226, 145, .8), transparent 20rem),
     radial-gradient(circle at 93% 82%, rgba(128, 207, 188, .5), transparent 22rem),
