@@ -6,19 +6,37 @@ interface PlayerZoneProps {
   isCurrentTurn: boolean;
 }
 
-/** A read-only opponent seat. Game state and transport stay in the page container. */
 export const PlayerZone: React.FC<PlayerZoneProps> = ({ player, isCurrentTurn }) => {
   const isWaitingSettlement = player.current_hand_count === 1;
+  const initial = player.name.charAt(0);
+  const fieldCount = player.field_cards?.length ?? 0;
+  const doubtCount = player.doubt_cards?.length ?? 0;
+
   return (
-    <article className={`min-w-[11rem] rounded-xl border-2 p-3 transition-all ${
-      isWaitingSettlement ? 'border-red-400 bg-red-50 ring-2 ring-red-200' : isCurrentTurn ? 'border-[#ef7667] bg-[#fff4e8] shadow-md shadow-[#ef7667]/15' : 'border-[#dfcfb9] bg-white/70'
-    }`} aria-label={`${player.name}${isCurrentTurn ? '，当前回合' : ''}`}>
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <span className="text-sm font-semibold text-slate-700">{player.name}</span>
-        {isCurrentTurn && <span className="rounded bg-[#ef7667] px-1.5 py-0.5 text-[10px] font-bold text-white">▶ 当前回合</span>}
-        {isWaitingSettlement && <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-600">等待结算</span>}
+    <div
+      className={`table-seat${isCurrentTurn ? ' table-seat-current' : ''}${isWaitingSettlement ? ' table-seat-settlement' : ''}`}
+      aria-label={`${player.name}${isCurrentTurn ? ' (当前回合)' : ''}`}
+    >
+      {isCurrentTurn && <span className="table-seat-badge">出牌中</span>}
+      <div className="table-seat-avatar">
+        <div className="table-seat-icon">{initial}</div>
+        <span className="table-seat-name">{player.name}</span>
       </div>
-      <div className="mt-0.5 text-xs text-slate-500">手牌: {player.current_hand_count} · 正面: {player.field_cards?.length ?? 0} · 质疑: {player.doubt_cards?.length ?? 0}</div>
-    </article>
+      <div className="table-seat-meta">
+        <span className="table-seat-stat">
+          <span className="table-seat-dot table-seat-dot-hand" />
+          {player.current_hand_count}
+        </span>
+        <span className="table-seat-stat">
+          <span className="table-seat-dot table-seat-dot-field" />
+          {fieldCount}
+        </span>
+        <span className="table-seat-stat">
+          <span className="table-seat-dot table-seat-dot-doubt" />
+          {doubtCount}
+        </span>
+      </div>
+      {isWaitingSettlement && <div className="table-seat-settle">等待结算</div>}
+    </div>
   );
 };

@@ -515,7 +515,7 @@ export const Game: React.FC = () => {
         )}
       </div>
 
-      <div className={`flex-1 max-w-6xl mx-auto w-full p-4 space-y-6 ${topBannerMessage ? 'pt-28' : 'pt-24'}`}>
+      <div className={`flex-1 w-full p-4 ${topBannerMessage ? 'pt-28' : 'pt-20'}`}>
         {gameError && (
           <div role="alert" className="flex items-center justify-between rounded-xl border border-red-300 bg-red-50 p-3">
             <span className="text-red-700">{gameError}</span>
@@ -795,7 +795,6 @@ export const Game: React.FC = () => {
         )}
 
         {currentPlayer && <GameTable players={gameState.players} localPlayer={currentPlayer} localPlayerId={playerId ?? ''} currentPlayerIndex={gameState.current_player_index} harmonyArea={gameState.harmony_area} isGameOver={isGameOver} selectedCard={selectedCard} onSelectCard={setSelectedCard} onPlayCard={handlePlayCard} newsClubMyChosenCard={newsClubMyChosenCard} />}
-
         {viewHandResult && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setViewHandResult(null)}>
             <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl" onClick={e => e.stopPropagation()}>
