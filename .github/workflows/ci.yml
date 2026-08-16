@@ -186,3 +186,133 @@ jobs:
         with:
           header: e2e-result
           path: frontend/test-results/full-game/pr-comment.md
+
+  mobile-e2e:
+    name: Mobile E2E
+    runs-on: ubuntu-latest
+    needs: [backend]
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.3.2
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.10
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: uv sync --frozen
+
+      - name: Cache Playwright Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
+
+      - name: Install frontend dependencies and Chromium
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Run mobile game (390x844)
+        working-directory: frontend
+        run: npm run test:e2e:mobile
+
+      - name: Upload mobile E2E artifacts
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: mobile-e2e-artifacts
+          path: frontend/test-results/mobile-game/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish mobile webm to GitHub Pages
+        id: publish-mobile-webm
+        if: always() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          WEBM="frontend/test-results/mobile-game/mobile-game.webm"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          RUN_ID="${{ github.run_id }}"
+          REPO="${{ github.repository }}"
+          OWNER="${{ github.repository_owner }}"
+          REPO_NAME="${REPO##*/}"
+          FILENAME="pr-${PR_NUMBER}-${RUN_ID}-mobile.webm"
+
+          if [ ! -f "$WEBM" ]; then
+            echo "No mobile webm produced; skipping publish."
+            echo "url=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          STAGING=$(mktemp -d)
+          if ! git clone --depth=1 --branch=gh-pages \
+               "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" \
+               "$STAGING"; then
+            echo "gh-pages branch not available; skipping publish."
+            echo "url=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          mkdir -p "$STAGING/ci-runs"
+          cp "$WEBM" "$STAGING/ci-runs/$FILENAME"
+
+          cd "$STAGING/ci-runs"
+          (ls -1 *-mobile.webm 2>/dev/null || true) \
+            | sort -t- -k3 -rn \
+            | tail -n +31 \
+            | xargs -r rm -f
+          cd "$STAGING"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No changes to publish."
+          else
+            git commit -m "ci: mobile E2E video for PR #${PR_NUMBER} (run ${RUN_ID})"
+            if ! git push; then
+              echo "Push to gh-pages failed; skipping embed."
+              echo "url=" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+
+          URL="https://${OWNER}.github.io/${REPO_NAME}/ci-runs/${FILENAME}"
+          echo "Published mobile webm: $URL"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+
+      - name: Build mobile PR comment from report
+        if: always() && github.event_name == 'pull_request'
+        working-directory: frontend
+        env:
+          WEBM_URL: ${{ steps.publish-mobile-webm.outputs.url }}
+          E2E_REPORT_PATH: test-results/mobile-game/report.json
+          E2E_COMMENT_PATH: test-results/mobile-game/pr-comment.md
+          E2E_TITLE_PREFIX: "📱 Mobile"
+          E2E_VIDEO_LABEL: "mobile-game.webm"
+        run: node e2e/build-pr-comment.mjs
+
+      - name: Post mobile e2e result to PR
+        if: always() && github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: mobile-e2e-result
+          path: frontend/test-results/mobile-game/pr-comment.md
