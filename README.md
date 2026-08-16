@@ -1,4 +1,4 @@
-# 少女尸体卡牌游戏
+# Mini Card Game
 
 一个使用 React、WebSocket 与 Python 构建的 3–5 人在线卡牌游戏。前端通过同一个 WebSocket 服务与后端通信；部署镜像同时包含前端静态文件、Nginx 和后端。
 
