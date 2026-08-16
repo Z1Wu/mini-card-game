@@ -16,9 +16,15 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   player, isCurrentTurn, selectedCard, onSelect, onPlay, harmonyIsEmpty, newsClubMyChosenCard,
 }) => {
   const isSettlement = player.current_hand_count === 1;
+  const canShowActions =
+    isCurrentTurn &&
+    !isSettlement &&
+    selectedCard != null &&
+    selectedCard.name !== CardType.CRIMINAL;
+  const skillDisabled = selectedCard?.name === CardType.HOME_CLUB && harmonyIsEmpty;
 
   return (
-    <div className={`table-hand${isSettlement ? ' table-hand-settlement' : ''}`}>
+    <div className={`table-hand${isSettlement ? ' table-hand-settlement' : ''}${isCurrentTurn ? ' table-hand-my-turn' : ''}`}>
       <div className="table-hand-info">
         <span className="table-hand-title">
           我的手牌{isCurrentTurn && <span className="table-hand-turn"> · 你的回合</span>}
@@ -41,14 +47,35 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 isPlayable={playable}
                 isSelected={selected}
                 onClick={() => onSelect(card)}
-                showActions={selected && isCurrentTurn && card.name !== CardType.CRIMINAL}
-                onPlay={onPlay}
-                disabledSkill={card.name === CardType.HOME_CLUB && harmonyIsEmpty}
               />
             </div>
           );
         })}
       </div>
+      {canShowActions && selectedCard && (
+        <div className="table-hand-actions">
+          <button
+            className="table-hand-action-btn table-hand-action-harmony"
+            onClick={() => onPlay(selectedCard, CardUsageType.HARMONY)}
+          >
+            调和
+          </button>
+          <button
+            className="table-hand-action-btn table-hand-action-doubt"
+            onClick={() => onPlay(selectedCard, CardUsageType.DOUBT)}
+          >
+            质疑
+          </button>
+          <button
+            className="table-hand-action-btn table-hand-action-skill"
+            disabled={skillDisabled}
+            onClick={() => !skillDisabled && onPlay(selectedCard, CardUsageType.SKILL)}
+            title={skillDisabled ? '调和区为空时无法使用该特技' : undefined}
+          >
+            特技{skillDisabled ? '（不可用）' : ''}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

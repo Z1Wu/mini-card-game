@@ -505,6 +505,13 @@ export const Game: React.FC = () => {
         </div>
       </div>
 
+      {/* ── Turn-change toast (auto-dismiss) ── */}
+      {turnChangeToast && (
+        <div className="turn-toast" role="status" aria-live="polite">
+          {turnChangeToast}
+        </div>
+      )}
+
       <div className="flex-1 w-full">
         {gameError && (
           <div role="alert" className="fixed top-10 left-1/2 -translate-x-1/2 z-[60] flex items-center justify-between gap-3 rounded-xl border border-red-300 bg-red-50/95 backdrop-blur px-4 py-2 shadow-lg">
