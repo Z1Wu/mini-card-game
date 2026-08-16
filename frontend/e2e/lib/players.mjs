@@ -72,14 +72,18 @@ export async function waitForState(page, predicate, description, argument, timeo
 }
 
 export async function chooseVisibleCard(page, cardName, action) {
-  const card = page.getByLabel(`卡牌：${cardName}`, { exact: true }).first();
+  // Scope to hand area — field/doubt cards share the same aria-label
+  const hand = page.locator('.table-hand');
+  const card = hand.getByLabel(`卡牌：${cardName}`, { exact: true }).first();
   await card.waitFor({ state: 'visible' });
+  await card.scrollIntoViewIfNeeded();
   await card.click();
   await card.getByRole('button', { name: action, exact: true }).click();
 }
 
 export async function chooseFirstVisibleCard(page, action, excludedNames = []) {
-  const labels = await page.locator('[aria-label^="卡牌："]').evaluateAll((cards, names) => cards
+  // Only enumerate cards inside the hand area (not field/doubt copies)
+  const labels = await page.locator('.table-hand [aria-label^="卡牌："]').evaluateAll((cards, names) => cards
     .filter((card) => card instanceof HTMLElement && card.offsetParent !== null)
     .map((card) => card.getAttribute('aria-label'))
     .filter((label) => label && !names.includes(label.replace(/^卡牌：/, ''))), excludedNames);

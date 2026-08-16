@@ -890,3 +890,40 @@ code {
   .table-hand-card { width: 6rem; }
   .table-seat { min-width: 8rem; }
 }
+
+/* ── Login / Lobby: compact for short viewports (landscape mobile) ── */
+@media (max-height: 500px) {
+  .campus-shell {
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+  }
+
+  .campus-panel {
+    overflow-y: auto;
+    max-height: calc(100vh - 1rem);
+    border-radius: 14px;
+    padding: 1rem 1.25rem !important;
+  }
+
+  .campus-panel .campus-kicker { display: none; }
+
+  .campus-panel .campus-title {
+    font-size: 1.35rem;
+    margin-bottom: .25rem;
+  }
+
+  .campus-panel .text-center { margin-bottom: .75rem; padding-top: 0; }
+  .campus-panel .campus-note { padding: .5rem .75rem; margin-bottom: .75rem; }
+  .campus-panel .space-y-6 > * + * { margin-top: .75rem; }
+  .campus-panel input { padding-top: .4rem !important; padding-bottom: .4rem !important; }
+  .campus-panel label { margin-bottom: .25rem; font-size: .78rem; }
+
+  /* Lobby specifics */
+  .campus-panel .campus-player { padding: .5rem .75rem; }
+  .campus-panel h2 { font-size: 1rem; margin-bottom: .5rem; }
+  .campus-panel .grid { gap: .5rem; }
+  .campus-panel .flex.gap-4 { gap: .5rem; }
+  .campus-panel .mb-8 { margin-bottom: .75rem; }
+  .campus-panel .space-y-4 > * + * { margin-top: .5rem; }
+  .campus-panel .mt-6 { margin-top: .5rem; }
+}
