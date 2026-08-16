@@ -22,8 +22,8 @@ const accounts = [
 const reportPath = path.join(outputRoot, 'report.json');
 const videoPath = path.join(outputRoot, 'mobile-game.webm');
 
-// iPhone 14 Pro viewport — primary mobile target
-const mobileViewport = { width: 390, height: 844 };
+// iPhone 14 Pro landscape — primary mobile target
+const mobileViewport = { width: 844, height: 390 };
 
 let services;
 let browser;

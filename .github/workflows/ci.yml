@@ -228,7 +228,7 @@ jobs:
           npm ci
           npx playwright install --with-deps chromium
 
-      - name: Run mobile game (390x844)
+      - name: Run mobile game (844x390 landscape)
         working-directory: frontend
         run: npm run test:e2e:mobile
 
