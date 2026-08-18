@@ -390,10 +390,10 @@ button:focus-visible,
 /* ── Oval table felt / rim ── */
 .table-felt {
   position: absolute;
-  top: 5%;
+  top: 4%;
   left: 3%;
   right: 3%;
-  bottom: 24%;
+  bottom: 22%;
   z-index: 0;
   border-radius: 50% / 38%;
   background:
@@ -413,7 +413,7 @@ button:focus-visible,
   top: 0;
   left: 0;
   right: 0;
-  height: 44%;
+  height: 40%;
   z-index: 2;
   pointer-events: none;
 }
@@ -559,6 +559,30 @@ button:focus-visible,
   margin-top: .1rem;
 }
 
+/* ── Opponent face-down hand cards below the seat ── */
+.table-seat-cards {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  margin-top: .12rem;
+  padding: .1rem .25rem;
+  border-radius: 999px;
+  background: rgba(0,0,0,.14);
+  pointer-events: none;
+}
+
+.table-seat-card {
+  flex: 0 0 auto;
+  width: 1.35rem;
+  margin-left: -.5rem;
+}
+
+.table-seat-card:first-child {
+  margin-left: 0;
+}
+
 /* ── Center play area ── */
 .table-center {
   position: relative;
@@ -569,29 +593,29 @@ button:focus-visible,
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: .65rem;
-  padding: 5rem 1rem 13rem;
+  gap: .5rem;
+  padding: 2.5rem 1rem 9rem;
   overflow-y: auto;
 }
 
 .table-center-inner {
   width: 100%;
-  max-width: 48rem;
+  max-width: 46rem;
   display: flex;
   flex-direction: column;
-  gap: .65rem;
+  gap: .45rem;
 }
 
 .table-field {
   display: flex;
   flex-wrap: wrap;
-  gap: .45rem;
+  gap: .4rem;
   align-items: flex-end;
-  padding: .65rem;
+  padding: .4rem;
   border-radius: 12px;
   background: rgba(255,255,255,.09);
   border: 1px dashed rgba(255,255,255,.14);
-  min-height: 4.8rem;
+  min-height: 3.2rem;
 }
 
 .table-field-item {
@@ -610,7 +634,7 @@ button:focus-visible,
 .table-zones {
   display: grid;
   grid-template-columns: 1fr;
-  gap: .65rem;
+  gap: .45rem;
 }
 
 @media (min-width: 640px) {
@@ -618,17 +642,17 @@ button:focus-visible,
 }
 
 .table-zone {
-  padding: .55rem;
+  padding: .4rem;
   border-radius: 10px;
   background: rgba(255,255,255,.07);
   border: 1px solid rgba(255,255,255,.1);
 }
 
 .table-zone-title {
-  font-size: .68rem;
+  font-size: .64rem;
   font-weight: 800;
   color: rgba(203,213,225,.72);
-  margin-bottom: .35rem;
+  margin-bottom: .25rem;
   letter-spacing: .04em;
 }
 
@@ -664,17 +688,17 @@ button:focus-visible,
   color: rgba(203,213,225,.42);
 }
 
-/* ── Player hand (fixed at bottom) ── */
+/* ── Player hand (fixed at bottom, transparent so cards sit on the felt) ── */
 .table-hand {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   z-index: 30;
-  padding: .5rem .75rem 1rem;
-  background: linear-gradient(180deg, rgba(10,22,40,.76) 0%, rgba(10,22,40,.96) 100%);
-  border-top: 1px solid rgba(56,189,248,.1);
-  box-shadow: 0 -14px 36px rgba(0,0,0,.4);
+  padding: .4rem .6rem calc(env(safe-area-inset-bottom, 0px) + .6rem);
+  background: transparent;
+  border-top: none;
+  box-shadow: none;
 }
 
 .table-hand-info {
@@ -761,8 +785,8 @@ button:focus-visible,
 
 .table-hand-card {
   flex: 0 0 auto;
-  width: 5.8rem;
-  margin-left: -2.2rem;
+  width: 4.4rem;
+  margin-left: -1.55rem;
   scroll-snap-align: center;
   position: relative;
   z-index: 1;
@@ -774,17 +798,17 @@ button:focus-visible,
 }
 
 .table-hand-card-lifted {
-  transform: translateY(-1.6rem) scale(1.12);
+  transform: translateY(-.9rem) scale(1.08);
   z-index: 20;
-  filter: drop-shadow(0 14px 22px rgba(0,0,0,.55));
+  filter: drop-shadow(0 10px 18px rgba(0,0,0,.55));
 }
 
 @media (min-width: 640px) {
-  .table-hand-card { width: 6.5rem; margin-left: -2.4rem; }
+  .table-hand-card { width: 4.8rem; margin-left: -1.7rem; }
 }
 
 @media (min-width: 1024px) {
-  .table-hand-card { width: 7rem; margin-left: -2.6rem; }
+  .table-hand-card { width: 5rem; margin-left: -1.8rem; }
 }
 
 .table-hand-news {
@@ -858,10 +882,10 @@ button:focus-visible,
 /* ── Long-press hint text ── */
 .table-hand-hint {
   text-align: center;
-  font-size: .58rem;
+  font-size: .54rem;
   font-weight: 600;
-  color: rgba(148,163,184,.45);
-  padding: .2rem 0;
+  color: rgba(148,163,184,.38);
+  padding: .1rem 0;
 }
 
 /* ── Turn-change toast ── */
@@ -929,14 +953,16 @@ button:focus-visible,
   .table-seat-name { font-size: .7rem; }
   .table-seat-meta { gap: .28rem; }
   .table-seat-stat { font-size: .52rem; }
-  .table-center { padding: 4rem .65rem 15rem; }
-  .table-hand { padding: .35rem .5rem .65rem; }
+  .table-seat-cards { margin-top: .12rem; padding: .12rem .25rem; }
+  .table-seat-card { width: 1.25rem; margin-left: -.48rem; }
+  .table-center { padding: 3rem .65rem 11rem; }
+  .table-hand { padding: .3rem .45rem .55rem; }
   .table-hand-info { padding: .28rem .6rem; margin-bottom: .35rem; }
   .table-hand-icon { width: 1.7rem; height: 1.7rem; font-size: .72rem; }
   .table-hand-title { font-size: .72rem; }
   .table-hand-stats { font-size: .56rem; }
-  .table-hand-card { width: 6.8rem; margin-left: -2.6rem; }
-  .table-hand-card-lifted { transform: translateY(-1.4rem) scale(1.1); }
+  .table-hand-card { width: 5rem; margin-left: -1.8rem; }
+  .table-hand-card-lifted { transform: translateY(-.8rem) scale(1.06); }
 }
 
 /* ── Floating HUD: zero-layout-cost status bar overlaying the table ── */
@@ -949,7 +975,7 @@ button:focus-visible,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: .35rem .6rem;
+  padding: .25rem .5rem;
   pointer-events: none;
 }
 
@@ -987,12 +1013,12 @@ button:focus-visible,
 .game-hud-pill {
   display: inline-flex;
   align-items: center;
-  font-size: .68rem;
+  font-size: .62rem;
   font-weight: 700;
-  padding: .2rem .65rem;
+  padding: .14rem .5rem;
   border-radius: 999px;
   white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(0,0,0,.35);
+  box-shadow: 0 2px 6px rgba(0,0,0,.35);
 }
 
 .game-hud-pill-active {
@@ -1093,9 +1119,11 @@ button:focus-visible,
   .table-seat-stat { font-size: .48rem; }
   .table-seat-dot { width: .26rem; height: .26rem; }
   .table-seat-settle { font-size: .45rem; }
+  .table-seat-cards { margin-top: .1rem; padding: .1rem .25rem; }
+  .table-seat-card { width: 1.1rem; margin-left: -.42rem; }
 
   .table-center {
-    padding: 3.5rem .5rem 8rem;
+    padding: 2.5rem .5rem 6.5rem;
     gap: .3rem;
   }
 
@@ -1142,23 +1170,23 @@ button:focus-visible,
   .table-hand-hint { font-size: .5rem; padding: .1rem 0; }
   .play-feedback-toast { bottom: 8rem; font-size: .68rem; }
   .table-hand-scroll { padding: .15rem .5rem .3rem; }
-  .table-hand-card { width: 4.5rem; margin-left: -1.5rem; }
-  .table-hand-card-lifted { transform: translateY(-1rem) scale(1.08); }
+  .table-hand-card { width: 3.4rem; margin-left: -1rem; }
+  .table-hand-card-lifted { transform: translateY(-.6rem) scale(1.04); }
   .table-hand-actions { margin-top: .25rem; gap: .3rem; }
   .table-hand-action-btn { min-height: 36px; font-size: .75rem; border-radius: 9px; }
 }
 
 @media (orientation: landscape) and (min-width: 769px) and (max-height: 500px) {
-  .table-hand-card { width: 5rem; margin-left: -1.8rem; }
+  .table-hand-card { width: 3.8rem; margin-left: -1.2rem; }
   .table-seat { max-width: 9.5rem; }
 }
 
 @media (min-width: 481px) and (max-width: 768px) {
-  .table-hand-card { width: 6.5rem; margin-left: -2.2rem; }
+  .table-hand-card { width: 4.4rem; margin-left: -1.55rem; }
 }
 
 @media (min-width: 769px) {
-  .table-hand-card { width: 6rem; margin-left: -2rem; }
+  .table-hand-card { width: 4.8rem; margin-left: -1.7rem; }
   .opponents-2 .table-seat:nth-child(1) { left: 22%; top: 18%; }
   .opponents-2 .table-seat:nth-child(2) { right: 22%; top: 18%; }
   .opponents-3 .table-seat:nth-child(1) { left: 14%; top: 26%; }

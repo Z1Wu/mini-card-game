@@ -7,7 +7,7 @@ import { chromium } from 'playwright';
 const frontendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const outputDirectory = path.resolve(frontendRoot, '..', 'docs', 'issue-80-screenshots');
 const baseUrl = process.env.FIXTURE_BASE_URL ?? 'http://127.0.0.1:4173';
-const viewports = [{ width: 1280, height: 720 }, { width: 1024, height: 768 }, { width: 390, height: 844 }, { width: 320, height: 568 }];
+const viewports = [{ width: 1280, height: 720 }, { width: 1024, height: 768 }];
 const playerCounts = [3, 4, 5];
 
 await mkdir(outputDirectory, { recursive: true });

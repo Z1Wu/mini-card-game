@@ -42,48 +42,6 @@
       "screenshot": "1024x768-5-players.png",
       "page_horizontal_overflow": false,
       "keyboard_card_action": true
-    },
-    {
-      "viewport": "390x844",
-      "players": 3,
-      "screenshot": "390x844-3-players.png",
-      "page_horizontal_overflow": false,
-      "keyboard_card_action": true
-    },
-    {
-      "viewport": "390x844",
-      "players": 4,
-      "screenshot": "390x844-4-players.png",
-      "page_horizontal_overflow": false,
-      "keyboard_card_action": true
-    },
-    {
-      "viewport": "390x844",
-      "players": 5,
-      "screenshot": "390x844-5-players.png",
-      "page_horizontal_overflow": false,
-      "keyboard_card_action": true
-    },
-    {
-      "viewport": "320x568",
-      "players": 3,
-      "screenshot": "320x568-3-players.png",
-      "page_horizontal_overflow": false,
-      "keyboard_card_action": true
-    },
-    {
-      "viewport": "320x568",
-      "players": 4,
-      "screenshot": "320x568-4-players.png",
-      "page_horizontal_overflow": false,
-      "keyboard_card_action": true
-    },
-    {
-      "viewport": "320x568",
-      "players": 5,
-      "screenshot": "320x568-5-players.png",
-      "page_horizontal_overflow": false,
-      "keyboard_card_action": true
     }
   ]
 }
