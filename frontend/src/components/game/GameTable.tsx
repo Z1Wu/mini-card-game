@@ -10,14 +10,15 @@ interface GameTableProps {
   localPlayerId: string;
   currentPlayerIndex: number;
   harmonyArea: Card[];
+  requiredHarmonyValue: number;
   isGameOver: boolean;
   selectedCard: Card | null;
-  onSelectCard: (card: Card) => void;
+  onSelectCard: (card: Card | null) => void;
   onPlayCard: (card: Card, usage: CardUsageType) => void;
   newsClubMyChosenCard: Card | null;
 }
 
-/** Full-screen card-game table: opponents at top, play area in center, hand fixed at bottom. */
+/** Full-screen card-game table: opponents around an oval table, play area in center, hand fixed at bottom. */
 export const GameTable: React.FC<GameTableProps> = (props) => {
   const opponents = props.players.filter(p => p.id !== props.localPlayerId);
   const isMyTurn = props.players[props.currentPlayerIndex]?.id === props.localPlayerId;
@@ -28,8 +29,11 @@ export const GameTable: React.FC<GameTableProps> = (props) => {
 
   return (
     <div className="game-table">
-      {/* ── Opponents ── */}
-      <div className="table-opponents">
+      {/* ── Oval felt + table rim ── */}
+      <div className="table-felt" aria-hidden="true" />
+
+      {/* ── Opponents arranged around the table ── */}
+      <div className={`table-seats opponents-${opponents.length}`}>
         {opponents.map(player => (
           <PlayerZone
             key={player.id}
@@ -41,55 +45,57 @@ export const GameTable: React.FC<GameTableProps> = (props) => {
 
       {/* ── Center play area ── */}
       <div className="table-center">
-        {/* Face-up field cards */}
-        <div className="table-field">
-          {allFieldCards.length > 0 ? (
-            allFieldCards.map(({ player, card }) => (
-              <div key={card.id} className="table-field-item">
-                <span className="table-field-label">{player.name}</span>
-                <div className="w-14 sm:w-16">
-                  <CardView card={card} showAsFaceDown={false} />
-                </div>
-              </div>
-            ))
-          ) : (
-            <span className="table-zone-empty">出牌区暂无卡牌</span>
-          )}
-        </div>
-
-        {/* Harmony + Doubt zones */}
-        <div className="table-zones">
-          <div className="table-zone">
-            <h3 className="table-zone-title">调和区 ({props.harmonyArea.length})</h3>
-            <div className="table-zone-cards">
-              {props.harmonyArea.length > 0 ? (
-                props.harmonyArea.map(card => (
-                  <div key={card.id} className="w-10 sm:w-12">
-                    <CardView card={card} showAsFaceDown />
+        <div className="table-center-inner">
+          {/* Face-up field cards */}
+          <div className="table-field">
+            {allFieldCards.length > 0 ? (
+              allFieldCards.map(({ player, card }) => (
+                <div key={card.id} className="table-field-item">
+                  <span className="table-field-label">{player.name}</span>
+                  <div className="w-14 sm:w-16">
+                    <CardView card={card} showAsFaceDown={false} />
                   </div>
-                ))
-              ) : (
-                <span className="table-zone-empty">空</span>
-              )}
-            </div>
+                </div>
+              ))
+            ) : (
+              <span className="table-zone-empty">出牌区暂无卡牌</span>
+            )}
           </div>
 
-          <div className="table-zone">
-            <h3 className="table-zone-title">质疑牌</h3>
-            <div className="table-zone-cards">
-              {props.players.flatMap(p =>
-                (p.doubt_cards ?? []).map(c => (
-                  <div key={`${p.id}-${c.id}`} className="table-doubt-item">
-                    <span className="table-doubt-label">{p.name}</span>
-                    <div className="w-9 sm:w-10">
-                      <CardView card={c} showAsFaceDown={!props.isGameOver} />
+          {/* Harmony + Doubt zones */}
+          <div className="table-zones">
+            <div className="table-zone">
+              <h3 className="table-zone-title">调和区 ({props.harmonyArea.length})<span className="table-zone-target">目标 {props.requiredHarmonyValue}</span></h3>
+              <div className="table-zone-cards">
+                {props.harmonyArea.length > 0 ? (
+                  props.harmonyArea.map(card => (
+                    <div key={card.id} className="w-10 sm:w-12">
+                      <CardView card={card} showAsFaceDown />
                     </div>
-                  </div>
-                ))
-              )}
-              {props.players.every(p => !p.doubt_cards?.length) && (
-                <span className="table-zone-empty">暂无</span>
-              )}
+                  ))
+                ) : (
+                  <span className="table-zone-empty">空</span>
+                )}
+              </div>
+            </div>
+
+            <div className="table-zone">
+              <h3 className="table-zone-title">质疑牌</h3>
+              <div className="table-zone-cards">
+                {props.players.flatMap(p =>
+                  (p.doubt_cards ?? []).map(c => (
+                    <div key={`${p.id}-${c.id}`} className="table-doubt-item">
+                      <span className="table-doubt-label">→ {p.name}</span>
+                      <div className="w-9 sm:w-10">
+                        <CardView card={c} showAsFaceDown={!props.isGameOver} />
+                      </div>
+                    </div>
+                  ))
+                )}
+                {props.players.every(p => !p.doubt_cards?.length) && (
+                  <span className="table-zone-empty">暂无</span>
+                )}
+              </div>
             </div>
           </div>
         </div>

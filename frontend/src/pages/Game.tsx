@@ -91,6 +91,8 @@ export const Game: React.FC = () => {
   const [classRepResult, setClassRepResult] = useState<{ card_you_gave: CardType; card_you_received: CardType } | null>(null);
   /** 回合切换提示（几秒后消失） */
   const [turnChangeToast, setTurnChangeToast] = useState<string | null>(null);
+  /** 出牌反馈提示 */
+  const [playFeedback, setPlayFeedback] = useState<string | null>(null);
 
   useEffect(() => {
     if (!playerId) {
@@ -103,6 +105,12 @@ export const Game: React.FC = () => {
     const t = setTimeout(() => setTurnChangeToast(null), 3000);
     return () => clearTimeout(t);
   }, [turnChangeToast]);
+
+  useEffect(() => {
+    if (!playFeedback) return;
+    const t = setTimeout(() => setPlayFeedback(null), 2000);
+    return () => clearTimeout(t);
+  }, [playFeedback]);
 
   useEffect(() => {
     if (classRepPhase?.phase !== 'done') return;
@@ -321,6 +329,8 @@ export const Game: React.FC = () => {
       ...(handCardId != null ? { hand_card_id: handCardId } : {}),
       ...(harmonyCardId != null ? { harmony_card_id: harmonyCardId } : {}),
     };
+    const usageText = usageType === CardUsageType.HARMONY ? '放入调和区' : usageType === CardUsageType.DOUBT ? '质疑' : '使用特技';
+    setPlayFeedback(`${card.name} 已${usageText}`);
     send(message);
     setSelectedCard(null);
     setPendingTargetAction(null);
@@ -505,6 +515,19 @@ export const Game: React.FC = () => {
         </div>
       </div>
 
+      {/* ── Turn-change toast (auto-dismiss) ── */}
+      {turnChangeToast && (
+        <div className="turn-toast" role="status" aria-live="polite">
+          {turnChangeToast}
+        </div>
+      )}
+      {/* ── Play feedback toast ── */}
+      {playFeedback && (
+        <div className="play-feedback-toast" role="status" aria-live="polite">
+          {playFeedback}
+        </div>
+      )}
+
       <div className="flex-1 w-full">
         {gameError && (
           <div role="alert" className="fixed top-10 left-1/2 -translate-x-1/2 z-[60] flex items-center justify-between gap-3 rounded-xl border border-red-300 bg-red-50/95 backdrop-blur px-4 py-2 shadow-lg">
@@ -514,7 +537,7 @@ export const Game: React.FC = () => {
         )}
         {pendingTargetAction && (pendingTargetAction.card.name !== CardTypeEnum.HEALTH_COMMITTEE || pendingTargetAction.usageType === CardUsageType.DOUBT) && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setPendingTargetAction(null)}>
-            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-sm w-full shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl" onClick={e => e.stopPropagation()}>
               <p className="text-amber-200 font-medium mb-2">
                 {pendingTargetAction.usageType === CardUsageType.DOUBT ? '选择要质疑的玩家' : '选择目标玩家'}
               </p>
@@ -630,7 +653,7 @@ export const Game: React.FC = () => {
 
         {pendingInfectedChoice && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4">
-            <div className="bg-slate-800 rounded-xl p-6 border border-lime-600 max-w-md w-full shadow-xl">
+            <div className="bg-slate-800 rounded-xl p-6 border border-lime-600 max-w-lg w-full shadow-xl">
               <p className="text-lime-200 font-medium mb-2">感染者：回合开始效果</p>
               <p className="text-slate-300 text-sm mb-4">你可以从调和区拿一张牌加入手牌，也可以放弃。本效果只结算一次。</p>
               <div className="flex flex-wrap gap-2 mb-4">
@@ -655,7 +678,7 @@ export const Game: React.FC = () => {
 
         {pendingTargetAction && pendingTargetAction.card.name === CardTypeEnum.HEALTH_COMMITTEE && pendingTargetAction.usageType === CardUsageType.SKILL && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setPendingTargetAction(null); setSelectedFieldCard(null); }}>
-            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-2xl w-full shadow-xl max-h-[90vh] overflow-auto" onClick={e => e.stopPropagation()}>
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl max-h-[90vh] overflow-auto" onClick={e => e.stopPropagation()}>
               <p className="text-amber-200 font-medium mb-2">保健委员：选择一张场上正面朝上的卡牌，归入自己的手牌</p>
               <p className="text-slate-400 text-xs mb-4">手牌剩一张的玩家处于等待结算阶段，其场牌不可选</p>
               {!gameState.players.some(p => p.current_hand_count > 1 && p.field_cards.length > 0) ? (
@@ -734,7 +757,7 @@ export const Game: React.FC = () => {
 
         {pendingClassRepChoice && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setPendingClassRepChoice(null); setClassRepSelectedCardId(null); }}>
-            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-md w-full shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl" onClick={e => e.stopPropagation()}>
               <p className="text-amber-200 font-medium mb-4">班长：选一张手牌与 {pendingClassRepChoice.target_player_name} 交换</p>
               <div className="flex flex-wrap gap-2 mb-4">
                 {pendingClassRepChoice.your_hand.map((c) => (
@@ -753,7 +776,7 @@ export const Game: React.FC = () => {
 
         {honorStudentResult !== null && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setHonorStudentResult(null)}>
-            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-sm w-full shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl" onClick={e => e.stopPropagation()}>
               <h3 className="text-lg font-semibold text-white mb-2">优等生：举手结果</h3>
               <p className="text-slate-300 mb-4">
                 {honorStudentResult.length > 0 ? `举手的人：${honorStudentResult.join('、')}` : '无人举手'}
@@ -765,7 +788,7 @@ export const Game: React.FC = () => {
 
         {pendingHonorStudentChoice === 'criminal' && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-sm w-full shadow-xl">
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl">
               <p className="text-sky-200 font-medium mb-4">优等生特技：你持有犯人卡，必须举手示意</p>
               <Button variant="primary" onClick={() => handleHonorStudentResponse('raise_hand')}>举手</Button>
             </div>
@@ -774,7 +797,7 @@ export const Game: React.FC = () => {
 
         {pendingHonorStudentChoice === 'alien' && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-sm w-full shadow-xl">
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl">
               <p className="text-sky-200 font-medium mb-4">优等生特技：你持有外星人卡，可以假装犯人举手</p>
               <div className="flex gap-2">
                 <Button variant="primary" onClick={() => handleHonorStudentResponse('raise_hand')}>举手（假装犯人）</Button>
@@ -784,7 +807,7 @@ export const Game: React.FC = () => {
           </div>
         )}
 
-        {currentPlayer && <GameTable players={gameState.players} localPlayer={currentPlayer} localPlayerId={playerId ?? ''} currentPlayerIndex={gameState.current_player_index} harmonyArea={gameState.harmony_area} isGameOver={isGameOver} selectedCard={selectedCard} onSelectCard={setSelectedCard} onPlayCard={handlePlayCard} newsClubMyChosenCard={newsClubMyChosenCard} />}
+        {currentPlayer && <GameTable players={gameState.players} localPlayer={currentPlayer} localPlayerId={playerId ?? ''} currentPlayerIndex={gameState.current_player_index} harmonyArea={gameState.harmony_area} requiredHarmonyValue={gameState.required_harmony_value} isGameOver={isGameOver} selectedCard={selectedCard} onSelectCard={setSelectedCard} onPlayCard={handlePlayCard} newsClubMyChosenCard={newsClubMyChosenCard} />}
         {viewHandResult && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setViewHandResult(null)}>
             <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl" onClick={e => e.stopPropagation()}>
@@ -803,7 +826,7 @@ export const Game: React.FC = () => {
 
         {viewHarmonyResult && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setViewHarmonyResult(null)}>
-            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-2xl w-full shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl" onClick={e => e.stopPropagation()}>
               <h3 className="text-lg font-semibold text-white mb-2">图书委员：调和区所有卡牌</h3>
               {viewHarmonyResult.length === 0 ? (
                 <p className="text-slate-400 mb-4">当前调和区无牌</p>
@@ -823,7 +846,7 @@ export const Game: React.FC = () => {
 
         {classRepResult && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setClassRepResult(null)}>
-            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-md w-full shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl" onClick={e => e.stopPropagation()}>
               <h3 className="text-lg font-semibold text-white mb-4">班长：交换结果</h3>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
@@ -846,7 +869,7 @@ export const Game: React.FC = () => {
 
         {pendingNewsClubChoice && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setPendingNewsClubChoice(null); setNewsClubSelectedCardId(null); }}>
-            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-md w-full shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl" onClick={e => e.stopPropagation()}>
               <p className="text-sky-200 font-medium mb-4">新闻部：选择一张手牌递给 {pendingNewsClubChoice.next_player_name}（上家递来的牌不可选）</p>
               <div className="flex flex-wrap gap-2 mb-4">
                 {pendingNewsClubChoice.your_hand

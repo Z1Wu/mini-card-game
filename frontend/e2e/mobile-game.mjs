@@ -52,6 +52,9 @@ try {
     primary.getByRole('button', { name: '开始游戏', exact: true }).click(),
   ]);
 
+  // Pause so the initial game table (harmony target, opponent stats, hand) is visible in video.
+  await primary.waitForTimeout(800);
+
   const pagesByPlayer = new Map();
   for (const player of players) pagesByPlayer.set((await readState(player.page)).connection.player_id, player.page);
 
@@ -64,6 +67,7 @@ try {
   assert.equal(gameOverflow, false, 'Game table should have no horizontal overflow on mobile');
 
   // ── Play full game on mobile ──
+  let showcaseDone = false;
   for (let step = 0; step < 30; step += 1) {
     const before = await readState(primary);
     if (before.game?.state === 'game_over') break;
@@ -75,12 +79,17 @@ try {
     const firstCard = page.locator('[aria-label^="卡牌："]').first();
     await firstCard.scrollIntoViewIfNeeded();
 
-    const { action, card } = await playMixedTurn(page, before, step);
+    // Run showcase only on the video-recorded player's first turn
+    const showcase = page === players[0].page && !showcaseDone;
+    const { action, card } = await playMixedTurn(page, before, step, showcase);
+    if (showcase) showcaseDone = true;
     turns.push({ turn: before.game.turn_count, player_id: playerId, action, card });
     await waitForState(primary, (turn) => {
       const state = JSON.parse(window.render_game_to_text());
       return state.game?.state === 'game_over' || state.game?.turn_count > turn;
     }, `turn ${before.game.turn_count} to finish`, before.game.turn_count);
+    // Pause so the turn-change toast is visible in the video.
+    await primary.waitForTimeout(400);
   }
 
   finalState = await readState(primary);
@@ -96,13 +105,17 @@ try {
 
   // ── Settlement flow on mobile ──
   await primary.getByRole('heading', { name: '调和揭晓' }).waitFor({ state: 'visible' });
+  await primary.waitForTimeout(800);
   for (let stage = 0; stage < 3; stage += 1) {
     await primary.getByRole('button', { name: '下一步' }).click();
+    await primary.waitForTimeout(600);
   }
   await primary.getByRole('heading', { name: '胜者揭晓' }).waitFor({ state: 'visible' });
   const winnerName = finalState.game.players.find((player) => player.id === finalState.game.winner_id)?.name;
   assert.ok(winnerName, 'Winner name should be present in the final state');
   await primary.getByText(new RegExp(`${winnerName} 获胜！$`)).waitFor({ state: 'visible' });
+  // Pause so the winner screen is captured in the video.
+  await primary.waitForTimeout(1500);
 } catch (error) {
   testError = error;
 } finally {

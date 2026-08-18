@@ -34,17 +34,25 @@ try {
   const primary = host.page;
   await primary.getByText('3 / 5', { exact: true }).waitFor({ state: 'visible' });
   await Promise.all([...players.map((player) => player.page.waitForURL('**/game')), primary.getByRole('button', { name: '开始游戏', exact: true }).click()]);
+  // Pause so the initial game table (harmony target, opponent stats, hand) is visible in video.
+  await primary.waitForTimeout(800);
   const pagesByPlayer = new Map();
   for (const player of players) pagesByPlayer.set((await readState(player.page)).connection.player_id, player.page);
+  let showcaseDone = false;
   for (let step = 0; step < 30; step += 1) {
     const before = await readState(primary);
     if (before.game?.state === 'game_over') break;
     const playerId = before.game?.current_player_id;
     const page = pagesByPlayer.get(playerId);
     assert.ok(page, `A browser page should exist for ${playerId}`);
-    const { action, card } = await playMixedTurn(page, before, step);
+    // Run showcase only on the video-recorded player's first turn
+    const showcase = page === players[0].page && !showcaseDone;
+    const { action, card } = await playMixedTurn(page, before, step, showcase);
+    if (showcase) showcaseDone = true;
     turns.push({ turn: before.game.turn_count, player_id: playerId, action, card });
     await waitForState(primary, (turn) => { const state = JSON.parse(window.render_game_to_text()); return state.game?.state === 'game_over' || state.game?.turn_count > turn; }, `turn ${before.game.turn_count} to finish`, before.game.turn_count);
+    // Pause so the turn-change toast is visible in the video.
+    await primary.waitForTimeout(400);
   }
   finalState = await readState(primary);
   assert.equal(finalState.game?.state, 'game_over');
@@ -53,13 +61,17 @@ try {
   assert.ok(finalState.game?.winner_id, 'The winner should be exposed through render_game_to_text');
   assert.equal(players.flatMap((player) => [...player.consoleErrors, ...player.pageErrors]).length, 0, 'Unexpected browser errors');
   await primary.getByRole('heading', { name: '调和揭晓' }).waitFor({ state: 'visible' });
+  await primary.waitForTimeout(800);
   for (let stage = 0; stage < 3; stage += 1) {
     await primary.getByRole('button', { name: '下一步' }).click();
+    await primary.waitForTimeout(600);
   }
   await primary.getByRole('heading', { name: '胜者揭晓' }).waitFor({ state: 'visible' });
   const winnerName = finalState.game.players.find((player) => player.id === finalState.game.winner_id)?.name;
   assert.ok(winnerName, 'Winner name should be present in the final state');
   await primary.getByText(new RegExp(`${winnerName} 获胜！$`)).waitFor({ state: 'visible' });
+  // Pause so the winner screen is captured in the video.
+  await primary.waitForTimeout(1500);
 } catch (error) {
   testError = error;
 } finally {

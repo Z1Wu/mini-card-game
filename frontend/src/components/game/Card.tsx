@@ -97,6 +97,7 @@ export const Card: React.FC<CardProps> = ({
       <div
         className={cn(
           'game-card group relative aspect-[2/3] w-full overflow-hidden rounded-xl p-1.5 shadow-xl transition-all duration-200',
+          { 'game-card-criminal': card.name === RoleType.CRIMINAL },
           { 'ring-2 ring-primary-500': isSelected },
           { 'cursor-pointer': onClick || isPlayable },
           { 'opacity-75 grayscale-[0.25]': !isPlayable && onClick }
@@ -141,22 +142,16 @@ export const Card: React.FC<CardProps> = ({
             <span className="game-card-title" title={card.name}>{card.name}</span>
           </div>
 
-          <div className="game-card-footer">
-            <span className="game-card-hint">长按查看技能</span>
-            {showVictoryPriority && (
-              <span className="game-card-priority">胜利 {card.victory_priority}</span>
-            )}
-          </div>
         </div>
 
       {showActions && onPlay && (
-        <div className="absolute bottom-0 left-0 right-0 z-20 bg-slate-950/95 rounded-b-xl p-1.5 flex gap-1 shadow-[0_-10px_24px_rgba(15,23,42,0.28)]">
+        <div className="absolute bottom-0 left-0 right-0 z-20 bg-slate-950/95 rounded-b-xl p-2 flex gap-1.5 shadow-[0_-10px_24px_rgba(15,23,42,0.28)]">
           <button
             onClick={(e) => {
               e.stopPropagation();
               onPlay(card, CardUsageType.HARMONY);
             }}
-            className="flex-1 text-[10px] bg-primary-600 hover:bg-primary-700 text-white py-0.5 px-1.5 rounded transition-colors"
+            className="flex-1 text-xs bg-primary-600 hover:bg-primary-700 text-white py-1.5 px-2 rounded-lg transition-colors"
           >
             调和
           </button>
@@ -165,7 +160,7 @@ export const Card: React.FC<CardProps> = ({
               e.stopPropagation();
               onPlay(card, CardUsageType.DOUBT);
             }}
-            className="flex-1 text-[10px] bg-accent-600 hover:bg-accent-700 text-white py-0.5 px-1.5 rounded transition-colors"
+            className="flex-1 text-xs bg-accent-600 hover:bg-accent-700 text-white py-1.5 px-2 rounded-lg transition-colors"
           >
             质疑
           </button>
@@ -177,7 +172,7 @@ export const Card: React.FC<CardProps> = ({
             disabled={disabledSkill}
             title={disabledSkill ? "调和区为空时无法使用该特技" : undefined}
             className={cn(
-              "flex-1 text-[10px] py-0.5 px-1.5 rounded transition-colors",
+              "flex-1 text-xs py-1.5 px-2 rounded-lg transition-colors",
               disabledSkill ? "bg-slate-700 text-slate-500 cursor-not-allowed" : "bg-slate-600 hover:bg-slate-700 text-white"
             )}
           >
