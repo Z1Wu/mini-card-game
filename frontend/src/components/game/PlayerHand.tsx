@@ -23,13 +23,19 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     selectedCard.name !== CardType.CRIMINAL;
   const skillDisabled = selectedCard?.name === CardType.HOME_CLUB && harmonyIsEmpty;
 
+  const localInitial = player.name.charAt(0);
+
   return (
     <div className={`table-hand${isSettlement ? ' table-hand-settlement' : ''}${isCurrentTurn ? ' table-hand-my-turn' : ''}`}>
       <div className="table-hand-info">
-        <span className="table-hand-title">
-          我的手牌{isCurrentTurn && <span className="table-hand-turn-dot" />}
-        </span>
-        <span className="table-hand-stats">手牌 {player.hand.length} · 质疑 {player.doubt_cards?.length ?? 0}</span>
+        <div className="table-hand-avatar">
+          <div className="table-hand-icon">{localInitial}</div>
+          {isCurrentTurn && <span className="table-hand-turn-dot" aria-hidden="true" />}
+        </div>
+        <div className="table-hand-body">
+          <span className="table-hand-title">{player.name}</span>
+          <span className="table-hand-stats">手牌 {player.hand.length} · 质疑 {player.doubt_cards?.length ?? 0}</span>
+        </div>
       </div>
       {newsClubMyChosenCard && (
         <div className="table-hand-news">
