@@ -8,7 +8,7 @@ from typing import Set, Dict, Optional
 from game.state import GameManager
 from game.rules import GameRules
 from game.victory import VictoryChecker
-from game.models import GameState, CardUsageType, CardType
+from game.models import GameState, CardUsageType, CardType, PublicAction
 
 logger = logging.getLogger(__name__)
 
@@ -520,6 +520,33 @@ class GameWebSocketServer:
                 return c
         return None
 
+    def _record_public_action(
+        self,
+        player_id: str,
+        usage_type: CardUsageType,
+        card_name: CardType,
+        target_player_id: Optional[str] = None,
+    ) -> None:
+        """Append a reconnect-safe action without disclosing hidden card faces."""
+        game = self.game_manager.game
+        if not game:
+            return
+        actor = next((player for player in game.players if player.id == player_id), None)
+        if not actor:
+            return
+        target = next((player for player in game.players if player.id == target_player_id), None)
+        game.public_actions.append(PublicAction(
+            sequence=len(game.public_actions) + 1,
+            actor_id=actor.id,
+            actor_name=actor.name,
+            usage_type=usage_type,
+            target_player_id=target.id if target else None,
+            target_player_name=target.name if target else None,
+            card_name=card_name if usage_type == CardUsageType.SKILL else None,
+        ))
+        # A match currently lasts at most 20 plays, but keep a defensive bound.
+        game.public_actions = game.public_actions[-30:]
+
     async def _handle_play_card(self, websocket: websockets.WebSocketServerProtocol, data: dict):
         from game.models import CardUsageType
 
@@ -624,6 +651,7 @@ class GameWebSocketServer:
         )
         is_honor_student = card_for_check and card_for_check.name == CardType.HONOR_STUDENT
         if success:
+            self._record_public_action(player_id, usage_type, card_for_check.name, target_player_id)
             if is_infected and usage_type == CardUsageType.SKILL:
                 self.resolved_infected_card_ids.discard(card_id)
             # 仅当以「特技」出牌时才触发各类牌面后续流程；质疑/调和出牌不触发
@@ -756,6 +784,7 @@ class GameWebSocketServer:
         )
         self.pending_rich_girl = None
         if success:
+            self._record_public_action(player_id, CardUsageType.SKILL, CardType.RICH_GIRL, target_player_id)
             await self._broadcast_game_state()
             if self.game_manager.game.state == GameState.GAME_OVER:
                 victory_checker = VictoryChecker(self.game_manager.game)
@@ -816,6 +845,7 @@ class GameWebSocketServer:
         if success:
             actor_name = actor.name if actor else ""
             target_name = target_p.name if target_p else ""
+            self._record_public_action(actor_id, CardUsageType.SKILL, CardType.CLASS_REP, target_id)
             await self.broadcast({"type": "class_rep_phase", "phase": "done", "actor_name": actor_name, "target_name": target_name})
             aw = self.player_connections.get(actor_id)
             if aw and card_actor_gave and card_target_gave:

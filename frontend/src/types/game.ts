@@ -54,6 +54,17 @@ export interface Player {
   current_hand_count: number;
 }
 
+export interface PublicAction {
+  sequence: number;
+  actor_id: string;
+  actor_name: string;
+  usage_type: CardUsageType;
+  target_player_id: string | null;
+  target_player_name: string | null;
+  /** Only present for publicly revealed Skill plays. */
+  card_name: CardType | null;
+}
+
 export interface Game {
   id: string;
   state: GameState;
@@ -64,4 +75,5 @@ export interface Game {
   player_count: number;
   required_harmony_value: number;
   winner: string | null;
+  public_actions?: PublicAction[];
 }

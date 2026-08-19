@@ -4,6 +4,7 @@ import { Button } from '../components/common/Button';
 import { Card } from '../components/game/Card';
 import { SettlementView } from '../components/game/SettlementView';
 import { GameTable } from '../components/game/GameTable';
+import { ActionHistory } from '../components/game/ActionHistory';
 import { usePlayerStore } from '../stores/playerStore';
 import { useGameStore } from '../stores/gameStore';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -515,6 +516,8 @@ export const Game: React.FC = () => {
           <Button onClick={handleLeave} variant="danger" size="sm" className="game-hud-btn">离开</Button>
         </div>
       </div>
+
+      <ActionHistory actions={gameState.public_actions ?? []} />
 
       {/* ── Turn-change toast (auto-dismiss) ── */}
       {turnChangeToast && (

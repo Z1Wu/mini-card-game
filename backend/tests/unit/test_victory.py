@@ -150,3 +150,20 @@ def test_settlement_summary_reports_each_role_condition_even_when_it_loses_on_pr
     results = checker.get_settlement_summary()["role_condition_results"]
     assert results[alien.hand[0].id] is True
     assert results[harmony.hand[0].id] is True
+
+
+@pytest.mark.unit
+def test_settlement_summary_reports_server_authoritative_winner_reason():
+    winner = make_player("alien", [CardType.ALIEN], [CardType.CLASS_REP])
+    checker = VictoryChecker(make_game([winner, make_player("home", [CardType.HOME_CLUB])]))
+
+    assert checker.check_victory() == "alien"
+    reason = checker.get_settlement_summary()["winner_reason"]
+    assert reason == {
+        "player_id": "alien",
+        "player_name": "alien",
+        "card_id": winner.hand[0].id,
+        "card_name": CardType.ALIEN,
+        "victory_condition": "1 被监禁即可获胜",
+        "victory_priority": 1,
+    }

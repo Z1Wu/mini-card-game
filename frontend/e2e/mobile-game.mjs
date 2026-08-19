@@ -63,6 +63,24 @@ try {
   const pagesByPlayer = new Map();
   for (const player of players) pagesByPlayer.set((await readState(player.page)).connection.player_id, player.page);
 
+  // Selected-card decision sheet: verify the three outcome previews fit on the
+  // short landscape viewport before any state-changing action is submitted.
+  const initialState = await readState(primary);
+  const initialTurnPage = pagesByPlayer.get(initialState.game?.current_player_id);
+  assert.ok(initialTurnPage, 'The initial current player page should exist');
+  const initialCardLabel = await initialTurnPage.locator('.table-hand [aria-label^="卡牌："]').evaluateAll((cards) => cards
+    .map((card) => card.getAttribute('aria-label'))
+    .find((label) => label && label !== '卡牌：犯人'));
+  assert.ok(initialCardLabel, 'A non-Criminal card should be available for decision preview');
+  await initialTurnPage.getByLabel(initialCardLabel, { exact: true }).first().click();
+  const decisionSheet = initialTurnPage.getByLabel(/决策说明$/);
+  await decisionSheet.waitFor({ state: 'visible' });
+  await initialTurnPage.getByLabel('出牌结果预览').waitFor({ state: 'visible' });
+  await initialTurnPage.waitForTimeout(350);
+  assert.equal(await initialTurnPage.evaluate(() => document.documentElement.scrollWidth > window.innerWidth), false, 'Decision sheet should not create horizontal overflow');
+  await initialTurnPage.screenshot({ path: path.join(outputRoot, 'decision-panel.png') });
+  await initialTurnPage.getByRole('button', { name: '取消选择', exact: true }).click();
+
   // ── Mobile layout assertions on game page ──
   const gameTable = primary.locator('.game-table');
   await gameTable.waitFor({ state: 'visible' });
@@ -99,7 +117,13 @@ try {
       const state = JSON.parse(window.render_game_to_text());
       return state.game?.state === 'game_over' || state.game?.turn_count > turn;
     }, `turn ${before.game.turn_count} to finish`, before.game.turn_count);
-    if (step === 5) await primary.screenshot({ path: path.join(outputRoot, 'mid-game-table.png') });
+    if (step === 5) {
+      await primary.getByRole('button', { name: /行动记录/ }).click();
+      await primary.getByText('公开行动', { exact: true }).waitFor({ state: 'visible' });
+      await primary.screenshot({ path: path.join(outputRoot, 'action-history.png') });
+      await primary.getByRole('button', { name: /行动记录/ }).click();
+      await primary.screenshot({ path: path.join(outputRoot, 'mid-game-table.png') });
+    }
     // Pause so the turn-change toast is visible in the video.
     await primary.waitForTimeout(400);
   }
@@ -109,6 +133,7 @@ try {
   assert.ok(turns.length >= 15, `Expected at least 15 turns, got ${turns.length}`);
   assert.ok(finalState.game?.players.every((player) => player.hand_count === 1), 'Every player should have exactly 1 card in hand');
   assert.ok(finalState.game?.winner_id, 'The winner should be exposed through render_game_to_text');
+  assert.equal(finalState.game?.public_action_count, turns.length, 'Every completed play should have one reconnect-safe public action');
   assert.equal(
     players.flatMap((player) => [...player.consoleErrors, ...player.pageErrors]).length,
     0,
@@ -126,6 +151,9 @@ try {
   const winnerName = finalState.game.players.find((player) => player.id === finalState.game.winner_id)?.name;
   assert.ok(winnerName, 'Winner name should be present in the final state');
   await primary.getByText(new RegExp(`${winnerName} 获胜！$`)).waitFor({ state: 'visible' });
+  await primary.getByText(/服务器按优先级 1 → 5 判定/).waitFor({ state: 'attached' });
+  await primary.getByRole('button', { name: '重新开始一局', exact: true }).scrollIntoViewIfNeeded();
+  await primary.getByRole('button', { name: '返回登录', exact: true }).waitFor({ state: 'visible' });
   // Pause so the winner screen is captured in the video.
   await primary.waitForTimeout(1500);
 } catch (error) {
@@ -166,6 +194,8 @@ await writeReport(reportPath, {
   artifacts: {
     video: path.relative(frontendRoot, videoPath),
     game_table: path.relative(frontendRoot, path.join(outputRoot, 'game-table.png')),
+    decision_panel: path.relative(frontendRoot, path.join(outputRoot, 'decision-panel.png')),
+    action_history: path.relative(frontendRoot, path.join(outputRoot, 'action-history.png')),
     screenshots: Object.fromEntries(
       Object.entries(screenshots).map(([name, file]) => [name, path.relative(frontendRoot, file)]),
     ),

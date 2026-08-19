@@ -19,7 +19,18 @@ const game: Game = {
   ],
 }
 
-const summary: SettlementSummary = { harmony_total: 5, required_harmony_value: 5, harmony_reached: true, imprisoned_player_ids: ['p1', 'p2'], player_doubt_totals: { p1: 3, p2: 3 }, role_condition_results: { c1: true, c2: true } }
+const summary: SettlementSummary = {
+  harmony_total: 5,
+  required_harmony_value: 5,
+  harmony_reached: true,
+  imprisoned_player_ids: ['p1', 'p2'],
+  player_doubt_totals: { p1: 3, p2: 3 },
+  role_condition_results: { c1: true, c2: true },
+  winner_reason: {
+    player_id: 'p1', player_name: '小王', card_id: 'c1', card_name: CardType.ALIEN,
+    victory_condition: '1 被监禁即可获胜', victory_priority: 1,
+  },
+}
 const renderView = (overrides: Partial<React.ComponentProps<typeof SettlementView>> = {}) => render(<SettlementView gameState={game} winnerId="p1" settlementSummary={summary} isHost onRematch={vi.fn()} onReturnToLogin={vi.fn()} {...overrides} />)
 
 describe('SettlementView', () => {
@@ -62,6 +73,16 @@ describe('SettlementView', () => {
     expect(screen.getAllByText('胜利条件达成')).toHaveLength(2)
     expect(screen.getByText('4 调和成功即可获胜')).toBeInTheDocument()
     expect(screen.queryByText('未被服务器判定为胜者')).not.toBeInTheDocument()
+  })
+
+  it('explains the winner from the server-provided role, condition, and priority', async () => {
+    const user = userEvent.setup()
+    renderView()
+    for (let index = 0; index < 3; index += 1) await user.click(screen.getByRole('button', { name: '下一步' }))
+
+    expect(screen.getByText('获胜角色')).toHaveTextContent('外星人')
+    expect(screen.getByText('胜利条件')).toHaveTextContent('被监禁即可获胜')
+    expect(screen.getByText(/该角色以优先级 1 满足条件/)).toBeInTheDocument()
   })
 
   it('keeps the selected stage immediately visible with reduced motion enabled', async () => {

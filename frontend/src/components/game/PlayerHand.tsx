@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card as CardView } from './Card';
 import { Card, CardType, CardUsageType, Player } from '../../types/game';
+import { CardDecisionPanel } from './CardDecisionPanel';
 
 interface PlayerHandProps {
   player: Player;
@@ -42,6 +43,14 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           新闻部已选: <div className="w-8"><CardView card={newsClubMyChosenCard} showAsFaceDown={false} /></div>
         </div>
       )}
+      {selectedCard && (
+        <CardDecisionPanel
+          card={selectedCard}
+          harmonyIsEmpty={harmonyIsEmpty}
+          isCurrentTurn={isCurrentTurn}
+          isSettlement={isSettlement}
+        />
+      )}
       <div className="table-hand-scroll">
         {player.hand.map(card => {
           const playable = isCurrentTurn && card.name !== CardType.CRIMINAL && player.hand.length > 1;
@@ -63,22 +72,25 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           <button
             className="table-hand-action-btn table-hand-action-harmony"
             onClick={() => onPlay(selectedCard, CardUsageType.HARMONY)}
+            aria-label="调和"
           >
-            调和
+            <strong>调和</strong><small>秘密投入 {selectedCard.harmony_value > 0 ? '+' : ''}{selectedCard.harmony_value}</small>
           </button>
           <button
             className="table-hand-action-btn table-hand-action-doubt"
             onClick={() => onPlay(selectedCard, CardUsageType.DOUBT)}
+            aria-label="质疑"
           >
-            质疑
+            <strong>质疑</strong><small>选择目标玩家</small>
           </button>
           <button
             className="table-hand-action-btn table-hand-action-skill"
             disabled={skillDisabled}
             onClick={() => !skillDisabled && onPlay(selectedCard, CardUsageType.SKILL)}
             title={skillDisabled ? '调和区为空时无法使用该特技' : undefined}
+            aria-label={skillDisabled ? '特技（不可用）' : '特技'}
           >
-            特技{skillDisabled ? '（不可用）' : ''}
+            <strong>特技</strong><small>{skillDisabled ? '调和区为空' : '正面发动效果'}</small>
           </button>
           <button
             className="table-hand-action-btn table-hand-action-cancel"
@@ -89,8 +101,11 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           </button>
         </div>
       )}
+      {isCurrentTurn && selectedCard?.name === CardType.CRIMINAL && !isSettlement && (
+        <div className="table-hand-blocked">犯人不可主动打出，只能保留或被其他特技移动</div>
+      )}
       {isCurrentTurn && !canShowActions && !isSettlement && (
-        <div className="table-hand-hint">选择一张手牌出牌</div>
+        selectedCard?.name !== CardType.CRIMINAL && <div className="table-hand-hint">选择一张手牌出牌</div>
       )}
     </div>
   );

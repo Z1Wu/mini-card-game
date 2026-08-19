@@ -81,6 +81,18 @@ Original prompt: 你修复下把
 - Visually inspected the final settlement and auxiliary Playwright captures; role colors, emblems, values, card names, and winner presentation remain legible.
 - Temporary backend/frontend validation services were stopped after the browser checks.
 
+## 2026-08-19 Issue #118 decision clarity, public history, and settlement reveal
+
+- Goal: improve selected-card decision guidance, reconnect-safe public action history, and the four-stage settlement reveal; tutorial content is explicitly out of scope.
+- Added server-owned public action entries to game state. Harmony and Doubt entries omit card names, while face-up Skill entries expose only public card/target facts; reset clears the history.
+- Added a server-authoritative winner-reason payload with winner role, condition, and priority.
+- Added selected-card strategy copy, three action outcome previews, explicit Criminal/Home Club unavailable states, and a collapsible public action history.
+- Upgraded settlement stages with progressive item reveals, a stage track, winner presentation, and a server-backed priority explanation; reduced-motion disables delays.
+- Verification: 141 backend tests and 28 frontend component tests pass; frontend lint and production build pass.
+- Browser verification: the required web-game action loop captured and verified the selected-card strategy sheet; recorded desktop and 844×390 mobile matches both completed 15 turns with one public entry per play and zero console/page errors.
+- Visually inspected the settled mobile decision sheet, expanded public history, and desktop/mobile winner reveal. Short-landscape settlement keeps the rematch/login actions reachable by scrolling.
+- Remaining: commit, Draft PR, and CI confirmation. No known product or test TODOs remain in Issue #118 scope.
+
 ## 2026-07-21 security and roadmap implementation
 
 - Began the requested development roadmap with the authoritative-server security slice.

@@ -1,6 +1,6 @@
 from enum import Enum
 from typing import Optional, List
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class CardType(str, Enum):
     CLASS_REP = "班长"
@@ -49,6 +49,18 @@ class GameState(str, Enum):
     SPECIAL_PHASE = "special_phase"
     GAME_OVER = "game_over"
 
+class PublicAction(BaseModel):
+    """Public, room-scoped play history that never exposes hidden card faces."""
+
+    sequence: int
+    actor_id: str
+    actor_name: str
+    usage_type: CardUsageType
+    target_player_id: Optional[str] = None
+    target_player_name: Optional[str] = None
+    # Only populated for face-up Skill plays. Harmony and Doubt stay anonymous.
+    card_name: Optional[CardType] = None
+
 class Game(BaseModel):
     id: str
     state: GameState = GameState.WAITING
@@ -59,3 +71,4 @@ class Game(BaseModel):
     player_count: int = 0
     required_harmony_value: int = 0
     winner: Optional[str] = None
+    public_actions: List[PublicAction] = Field(default_factory=list)

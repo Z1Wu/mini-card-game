@@ -59,6 +59,7 @@ try {
   assert.ok(turns.length >= 15, `Expected at least 15 turns, got ${turns.length}`);
   assert.ok(finalState.game?.players.every((player) => player.hand_count === 1), 'Every player should have exactly 1 card in hand');
   assert.ok(finalState.game?.winner_id, 'The winner should be exposed through render_game_to_text');
+  assert.equal(finalState.game?.public_action_count, turns.length, 'Every completed play should have one reconnect-safe public action');
   assert.equal(players.flatMap((player) => [...player.consoleErrors, ...player.pageErrors]).length, 0, 'Unexpected browser errors');
   await primary.getByRole('heading', { name: '调和揭晓' }).waitFor({ state: 'visible' });
   await primary.waitForTimeout(800);

@@ -137,5 +137,6 @@ class GameManager:
         self.game.turn_count = 0
         self.game.winner = None
         self.game.required_harmony_value = 0
+        self.game.public_actions = []
         logger.info("reset_game: 已清除状态，回到等待开始")
         return True
