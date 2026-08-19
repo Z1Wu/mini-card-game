@@ -69,7 +69,7 @@ export const GameTable: React.FC<GameTableProps> = (props) => {
           </section>
 
           {/* Face-up field cards */}
-          <div className="table-field">
+          <div className={`table-field${allFieldCards.length === 0 ? ' table-field-empty' : ''}`}>
             <span className="table-field-heading">场上牌</span>
             {allFieldCards.length > 0 ? (
               allFieldCards.map(({ player, card }) => (
@@ -81,7 +81,7 @@ export const GameTable: React.FC<GameTableProps> = (props) => {
                 </div>
               ))
             ) : (
-              <span className="table-zone-empty">出牌区暂无卡牌</span>
+              <span className="table-zone-empty">场上暂无公开牌</span>
             )}
           </div>
 

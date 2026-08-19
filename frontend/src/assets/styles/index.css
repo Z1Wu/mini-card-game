@@ -553,18 +553,6 @@ button:focus-visible,
   margin-right: 1px;
 }
 
-.table-seat-dot {
-  width: .32rem;
-  height: .32rem;
-  border-radius: 50%;
-  background: #475569;
-  transition: background 200ms;
-}
-
-.table-seat-dot-hand { background: #38bdf8; }
-.table-seat-dot-field { background: #22c55e; }
-.table-seat-dot-doubt { background: #fbbf24; }
-
 .table-seat-settle {
   font-size: .52rem;
   font-weight: 700;
@@ -1472,21 +1460,6 @@ button:focus-visible,
 .table-seat-meta { gap: .42rem; flex-wrap: nowrap; }
 .table-seat-stat { gap: .16rem; color: #dbe4f1; font-size: .7rem; font-variant-numeric: tabular-nums; }
 .table-seat-stat-label { color: #94a3b8; font-size: .58rem; }
-.table-seat-dot { display: none; }
-.table-seat-doubts {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: .2rem;
-  margin-left: .1rem;
-  padding-left: .38rem;
-  border-left: 1px solid rgba(251, 191, 36, .28);
-  color: #fde68a;
-}
-.table-seat-doubt-label { font-size: .55rem; font-weight: 900; white-space: nowrap; }
-.table-seat-doubt-card { width: 1.15rem; transform: rotate(5deg); }
-.table-seat-doubts b { font-size: .58rem; }
-
 .table-turn-task {
   display: flex;
   width: fit-content;
@@ -1615,9 +1588,6 @@ button:focus-visible,
   .table-seat-name { font-size: .7rem; }
   .table-seat-stat { font-size: .64rem; }
   .table-seat-stat-label { font-size: .56rem; }
-  .table-seat-doubt-label { display: none; }
-  .table-seat-doubt-card { width: 1rem; }
-
   .table-center { padding-top: 5.35rem; padding-bottom: 10.4rem; }
   .table-center-inner { width: min(100%, 34rem); }
   .table-objective { min-height: 3.85rem; padding: .42rem .58rem; }
@@ -1733,9 +1703,6 @@ button:focus-visible,
   .table-seat-card { width: 1.16rem; margin-left: -.4rem; }
   .table-seat-card-overflow { color: #f1f5f9; font-size: .58rem; }
   .table-seat-settle { color: #fecaca; font-size: .52rem; }
-  .table-seat-doubt-card { width: 1.08rem; }
-  .table-seat-doubts { color: #fde68a; }
-
   .table-seat-current {
     border-color: #ffd277;
     background: linear-gradient(135deg, rgba(91, 58, 91, .99), rgba(28, 50, 94, .98));
@@ -1864,4 +1831,47 @@ button:focus-visible,
   .game-table-fixture > div { width: 100%; max-width: none; }
   .game-table-fixture-header { display: none; }
   .game-table-fixture .game-table { min-height: 100dvh; height: 100dvh; }
+}
+
+/* Compact, scannable public resource counters for every opponent. */
+.table-seat-meta { gap: .2rem; margin-top: .16rem; }
+.table-seat-stat {
+  min-height: 18px;
+  gap: .18rem;
+  padding: .08rem .28rem;
+  border: 1px solid rgba(148, 163, 184, .2);
+  border-radius: 999px;
+  color: #e5edf8;
+  background: rgba(15, 23, 48, .62);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.table-seat-stat-label { margin: 0; color: #aebbd0; font-size: .5rem; }
+.table-seat-stat strong { color: #fff; font-size: .68rem; font-weight: 950; }
+.table-seat-stat-hand { border-color: rgba(91, 191, 255, .35); background: rgba(25, 88, 126, .24); }
+.table-seat-stat-field.is-active { border-color: rgba(52, 211, 153, .44); background: rgba(13, 112, 89, .28); }
+.table-seat-stat-doubt.is-active { border-color: rgba(251, 191, 36, .52); background: rgba(133, 77, 14, .32); }
+.table-seat-stat-doubt.is-active .table-seat-stat-label,
+.table-seat-stat-doubt.is-active strong { color: #fde68a; }
+.table-seat-stat.is-zero { border-color: rgba(100, 116, 139, .16); color: #94a3b8; background: rgba(15, 23, 42, .34); }
+.table-seat-stat.is-zero strong { color: #a7b3c5; }
+
+/* An empty public field is state, not a container: avoid a large hollow frame. */
+.table-field.table-field-empty {
+  min-height: 1.15rem;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+.table-field-empty .table-field-heading { display: none; }
+.table-field-empty .table-zone-empty { color: #75849a; font-size: .55rem; letter-spacing: .04em; }
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .table-seat-meta { gap: .14rem; margin-top: .12rem; }
+  .table-seat-stat { min-height: 16px; gap: .14rem; padding: .07rem .22rem; }
+  .table-seat-stat-label { font-size: .46rem; }
+  .table-seat-stat strong { font-size: .62rem; }
+  .table-field.table-field-empty { min-height: 1rem; padding: 0; border: 0; background: none; }
 }

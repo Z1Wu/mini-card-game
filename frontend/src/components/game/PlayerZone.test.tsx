@@ -14,10 +14,11 @@ const player: Player = {
 };
 
 describe('PlayerZone', () => {
-  it('keeps doubt cards attached to their target player', () => {
+  it('presents public hand, field, and doubt counts as distinct resources', () => {
     render(<PlayerZone player={player} isCurrentTurn />);
-    expect(screen.getByRole('listitem', { name: /小王/ })).toHaveTextContent('手4');
-    expect(screen.getByLabelText('小王 有 1 张质疑牌')).toBeInTheDocument();
-    expect(screen.getByText('被质疑')).toBeInTheDocument();
+    expect(screen.getByLabelText('手牌 4 张')).toBeInTheDocument();
+    expect(screen.getByLabelText('场牌 0 张')).toBeInTheDocument();
+    expect(screen.getByLabelText('质疑牌 1 张')).toHaveClass('is-active');
+    expect(screen.queryByText('被质疑')).not.toBeInTheDocument();
   });
 });

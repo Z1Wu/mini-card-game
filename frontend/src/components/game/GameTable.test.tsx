@@ -41,9 +41,10 @@ describe('GameTable information hierarchy', () => {
     expect(screen.getByLabelText('调和目标 6，已投入 1 张，当前总值未知')).toBeInTheDocument();
     expect(screen.getByText('当前总值未知')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: '质疑牌' })).not.toBeInTheDocument();
-    expect(screen.getByLabelText('小王 有 1 张质疑牌')).toBeInTheDocument();
+    expect(screen.getByLabelText('质疑牌 1 张')).toHaveClass('is-active');
     expect(screen.getByLabelText('你有 1 张质疑牌')).toBeInTheDocument();
     expect(screen.getByText('请选择一张手牌')).toBeInTheDocument();
+    expect(screen.getByText('场上暂无公开牌').closest('.table-field')).toHaveClass('table-field-empty');
   });
 
   it('keeps a server-driven multi-player wait visible to the current actor', () => {

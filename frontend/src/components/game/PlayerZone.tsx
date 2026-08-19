@@ -43,17 +43,17 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({ player, isCurrentTurn })
         <div className="table-seat-body">
           <span className="table-seat-name">{player.name}</span>
           <div className="table-seat-meta">
-            <span className="table-seat-stat" title="手牌数">
-              <span className="table-seat-dot table-seat-dot-hand" />
-              <span className="table-seat-stat-label">手</span>{player.current_hand_count}
+            <span className="table-seat-stat table-seat-stat-hand" aria-label={`手牌 ${player.current_hand_count} 张`}>
+              <span className="table-seat-stat-label" aria-hidden="true">手牌</span>
+              <strong>{player.current_hand_count}</strong>
             </span>
-            <span className="table-seat-stat" title="场牌数">
-              <span className="table-seat-dot table-seat-dot-field" />
-              <span className="table-seat-stat-label">场</span>{fieldCount}
+            <span className={`table-seat-stat table-seat-stat-field${fieldCount > 0 ? ' is-active' : ' is-zero'}`} aria-label={`场牌 ${fieldCount} 张`}>
+              <span className="table-seat-stat-label" aria-hidden="true">场牌</span>
+              <strong>{fieldCount}</strong>
             </span>
-            <span className="table-seat-stat" title="质疑牌数">
-              <span className="table-seat-dot table-seat-dot-doubt" />
-              <span className="table-seat-stat-label">疑</span>{doubtCount}
+            <span className={`table-seat-stat table-seat-stat-doubt${doubtCount > 0 ? ' is-active' : ' is-zero'}`} aria-label={`质疑牌 ${doubtCount} 张`}>
+              <span className="table-seat-stat-label" aria-hidden="true">质疑</span>
+              <strong>{doubtCount}</strong>
             </span>
           </div>
           {isWaitingSettlement && <div className="table-seat-settle">等待结算</div>}
@@ -69,15 +69,6 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({ player, isCurrentTurn })
           {player.current_hand_count > handCards.length && (
             <b className="table-seat-card-overflow">+{player.current_hand_count - handCards.length}</b>
           )}
-        </div>
-      )}
-      {doubtCount > 0 && (
-        <div className="table-seat-doubts" aria-label={`${player.name} 有 ${doubtCount} 张质疑牌`}>
-          <span className="table-seat-doubt-label">被质疑</span>
-          <div className="table-seat-doubt-card" aria-hidden="true">
-            <CardView card={player.doubt_cards[0]} showAsFaceDown />
-          </div>
-          {doubtCount > 1 && <b>×{doubtCount}</b>}
         </div>
       )}
     </div>
