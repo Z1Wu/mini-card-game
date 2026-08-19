@@ -24,6 +24,8 @@ describe('Card', () => {
     expect(screen.getByLabelText('牌背')).toBeInTheDocument()
     expect(screen.queryByLabelText(`卡牌：${card.name}`)).not.toBeInTheDocument()
     expect(screen.queryByText(card.name)).not.toBeInTheDocument()
+    expect(screen.queryByText('秘')).not.toBeInTheDocument()
+    expect(screen.queryByText('牌背')).not.toBeInTheDocument()
   })
 
   it('gives a face-up card its role-based accessible name', () => {

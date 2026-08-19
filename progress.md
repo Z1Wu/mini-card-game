@@ -129,3 +129,21 @@ Original prompt: 你修复下把
 - Published commit `e7e8a9d` and draft PR #123. Backend and frontend CI passed; both E2E runners were manually cancelled after more than 41 minutes because `playwright install --with-deps` hung while refreshing `azure.archive.ubuntu.com`, despite a successful Chromium cache restore.
 - CI follow-up: run desktop and mobile E2E in one job backed by the version-matched official Playwright 1.61.1 Noble container. This removes the flaky apt step and avoids duplicate environment initialization; CI confirmation remains.
 - Container CI reached both desktop and mobile tests in 4m35s; every E2E and artifact-upload step passed. Fixed the remaining reporting-only failures by selecting Bash for brace expansion and covering the no-preview-URL PR-comment path without the stale `videoLabel` reference.
+
+## 2026-08-19 Issue #124 mobile-first table visuals
+
+- Goal: make the 844x390 landscape table the primary visual target while preserving desktop layout, rules, protocol messages, and recipient-specific visibility.
+- Issue #124 is assigned to Z1Wu; implementation branch is `codex/issue-124-mobile-table-visuals` from `origin/main` at `8e41f91`.
+- Planned visual scope: strengthen player-seat and public-zone hierarchy, improve short-landscape type/contrast/spacing, clarify action colors, and remove card/footer overlap in complex skill dialogs.
+- Baseline evidence will use the deterministic four-player mobile scenarios plus explicit 3/5-player table fixtures; desktop 1280x720 remains the regression reference.
+- Baseline mobile E2E passed after restoring locked frontend/backend environments. Visual review confirmed tiny opponent metadata, an invisible empty field zone, competing coral confirm/cancel colors, and Rich Girl footer overlap.
+- First visual pass: stronger short-landscape seats/current actor, persistent compact public field zone, higher-contrast objective/task text, semantic teal/amber/violet action colors, neutral modal cancellation, wider complex dialogs, smaller in-dialog cards, and non-overlapping dialog footers.
+- Visual follow-up: demoted result dismissal buttons, and extended deterministic table capture to cover 844x390 at three, four, and five players without page-level horizontal overflow.
+- Multi-player capture exposed a selected-card decision sheet covering the harmony objective on short landscape screens; the mobile layout now keeps that sheet in the hand bar's normal flow so public game state remains unobscured.
+- The same decision-sheet collision existed at desktop sizes and is now prevented there too. Result dialogs also sit above transient turn toasts, avoiding competing feedback layers.
+- Validation passed: 35 frontend component tests, lint, production build, the 15-turn desktop smoke game, all 12 deterministic desktop scenarios, all four targeted 844x390 mobile scenarios, and nine 3/4/5-player table captures across desktop/tablet/mobile sizes.
+- Follow-up visual critique: replace the ambiguous card-back “秘” and literal “牌背” text with a text-free geometric crest, replace the unexplained three-dot control with a labeled menu icon, and make the local player viewpoint explicit as “我 / player name / turn number”.
+- Added mobile E2E evidence for the local viewpoint and opened table menu, including an assertion that the menu control does not overlap any opponent seat.
+- Follow-up validation passed: required web-game client capture with no console-error artifact, 35 component tests, lint, build, all targeted 844x390 scenarios, and nine 3/4/5-player fixture captures. Visual inspection confirmed the geometric backs remain legible at tiny opponent-hand size and the HUD controls have clear separation.
+- Player-state follow-up: replace the tiny undifferentiated “手/场/疑” string with three semantic count pills, emphasize non-zero field/doubt states, remove the redundant separate doubt-card ornament, and render an empty public field as lightweight status text instead of a hollow framed container.
+- Player-state validation passed: required web-game client capture, 3/4/5-player fixtures at 844x390, 35 component tests, lint, build, and the full targeted mobile E2E suite. Visual review confirmed the empty field has no frame and all counters fit without seat overlap.

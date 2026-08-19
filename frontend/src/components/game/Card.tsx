@@ -96,8 +96,7 @@ export const Card: React.FC<CardProps> = ({
         )}
         aria-label="牌背"
       >
-        <div className="game-card-back-mark">秘</div>
-        <span className="game-card-back-label">牌背</span>
+        <div className="game-card-back-emblem" aria-hidden="true" />
       </div>
     );
   }

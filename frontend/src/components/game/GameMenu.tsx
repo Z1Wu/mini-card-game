@@ -49,7 +49,10 @@ export const GameMenu: React.FC<GameMenuProps> = ({
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <span aria-hidden="true">•••</span>
+        <svg className="game-menu-trigger-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h16" />
+        </svg>
+        <span className="game-menu-trigger-label" aria-hidden="true">菜单</span>
       </button>
       {open && (
         <div className="game-menu-panel" role="menu" aria-label="牌桌菜单">
