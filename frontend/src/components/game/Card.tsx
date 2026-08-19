@@ -47,6 +47,7 @@ export const Card: React.FC<CardProps> = ({
   showVictoryPriority = true,
 }) => {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressOpened = useRef(false);
   const [showDescriptionPopover, setShowDescriptionPopover] = useState(false);
   const visual = roleVisuals[card.name] ?? roleVisuals[RoleType.HOME_CLUB];
   const cardStyle = {
@@ -65,14 +66,25 @@ export const Card: React.FC<CardProps> = ({
   const handleLongPressStart = () => {
     if (showAsFaceDown) return;
     clearLongPress();
+    longPressOpened.current = false;
     longPressTimer.current = setTimeout(() => {
       longPressTimer.current = null;
+      longPressOpened.current = true;
       setShowDescriptionPopover(true);
     }, 500);
   };
 
   const handleLongPressEnd = () => {
     clearLongPress();
+  };
+
+  const handleCardClick = () => {
+    // A long press opens the detail sheet; it must not also select/play the card on release.
+    if (longPressOpened.current) {
+      longPressOpened.current = false;
+      return;
+    }
+    onClick?.();
   };
 
   if (showAsFaceDown) {
@@ -106,7 +118,7 @@ export const Card: React.FC<CardProps> = ({
         role={onClick ? 'button' : undefined}
         tabIndex={onClick ? 0 : undefined}
         style={cardStyle}
-        onClick={onClick}
+        onClick={handleCardClick}
         onKeyDown={(event) => {
           if (onClick && (event.key === 'Enter' || event.key === ' ')) {
             event.preventDefault();
@@ -118,6 +130,8 @@ export const Card: React.FC<CardProps> = ({
         onMouseUp={handleLongPressEnd}
         onTouchStart={handleLongPressStart}
         onTouchEnd={handleLongPressEnd}
+        onTouchCancel={handleLongPressEnd}
+        onTouchMove={handleLongPressEnd}
       >
         <div className="game-card-face">
           {art && (

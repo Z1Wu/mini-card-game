@@ -26,7 +26,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const localInitial = player.name.charAt(0);
 
   return (
-    <div className={`table-hand${isSettlement ? ' table-hand-settlement' : ''}${isCurrentTurn ? ' table-hand-my-turn' : ''}`} aria-label="我的手牌">
+    <div className={`table-hand${isSettlement ? ' table-hand-settlement' : ''}${isCurrentTurn ? ' table-hand-my-turn' : ''}${player.hand.length <= 9 ? ' table-hand-compact' : ''}`} aria-label="我的手牌">
       <div className="table-hand-info">
         <div className="table-hand-avatar">
           <div className="table-hand-icon">{localInitial}</div>
@@ -90,7 +90,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
         </div>
       )}
       {isCurrentTurn && !canShowActions && !isSettlement && (
-        <div className="table-hand-hint">点击卡牌选择 · 长按查看技能</div>
+        <div className="table-hand-hint">选择一张手牌出牌</div>
       )}
     </div>
   );
