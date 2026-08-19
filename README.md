@@ -47,9 +47,10 @@ npm test
 npm run lint
 npm run build
 npm run test:e2e
+npm run test:e2e:mobile
 ```
 
-浏览器 E2E 首次运行需执行 `npx playwright install chromium`。它使用隔离端口，并将录像、截图和报告写入 `frontend/test-results/full-game/`。
+浏览器 E2E 首次运行需执行 `npx playwright install chromium`。桌面命令依次运行三人完整牌局冒烟和四人确定性玩法场景；移动命令在 844×390 运行精选复杂场景。每套产物都包含逐玩家 WebM、同步多视角 `multiview.html`、时间线、截图和覆盖报告，写入 `frontend/test-results/` 下对应目录。
 
 ## 部署与安全
 

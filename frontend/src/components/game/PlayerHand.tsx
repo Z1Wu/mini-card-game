@@ -24,6 +24,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     selectedCard != null &&
     selectedCard.name !== CardType.CRIMINAL;
   const skillDisabled = selectedCard?.name === CardType.HOME_CLUB && harmonyIsEmpty;
+  const isWaitingForInteraction = isCurrentTurn && /等待|正在选牌/.test(turnStatusText);
 
   const localInitial = player.name.charAt(0);
 
@@ -36,10 +37,12 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       )}
       <div className={`table-turn-task${isCurrentTurn ? ' table-turn-task-active' : ''}`} role="status" aria-live="polite">
         <span className="table-turn-task-icon" aria-hidden="true">{isCurrentTurn ? '◆' : '◇'}</span>
-        <strong>{isCurrentTurn
+        <strong>{isWaitingForInteraction
+          ? turnStatusText
+          : isCurrentTurn
           ? selectedCard ? `已选「${selectedCard.name}」` : '轮到你'
           : turnStatusText}</strong>
-        {isCurrentTurn && <span>{selectedCard ? '请选择行动' : '请选择一张手牌'}</span>}
+        {isCurrentTurn && <span>{isWaitingForInteraction ? '等待其他玩家完成操作' : selectedCard ? '请选择行动' : '请选择一张手牌'}</span>}
       </div>
       <div className="table-hand-info">
         <div className="table-hand-avatar">

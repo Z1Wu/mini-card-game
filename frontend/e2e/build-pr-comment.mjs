@@ -6,7 +6,6 @@ const frontendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 
 const reportPath = path.join(frontendRoot, process.env.E2E_REPORT_PATH ?? 'test-results/full-game/report.json');
 const commentPath = path.join(frontendRoot, process.env.E2E_COMMENT_PATH ?? 'test-results/full-game/pr-comment.md');
 const titlePrefix = process.env.E2E_TITLE_PREFIX ?? '🎮 Browser E2E';
-const videoLabel = process.env.E2E_VIDEO_LABEL ?? 'full-game.webm';
 const artifactName = process.env.E2E_ARTIFACT_NAME ?? 'browser-e2e-artifacts';
 
 const MAX_ERROR_CHARS = 4000;
@@ -67,6 +66,19 @@ function turnsTable(report) {
   return lines.join('\n');
 }
 
+function scenarioTable(report) {
+  const results = report.scenarios ?? [];
+  if (results.length === 0) return '_No deterministic scenario results were recorded._';
+  const lines = ['| Scenario | Result | Evidence |', '| --- | --- | --- |'];
+  for (const result of results) lines.push(`| ${result.label ?? result.scenario} | ${result.result === 'passed' ? '✅' : '❌'} | ${result.evidence ?? '—'} |`);
+  return lines.join('\n');
+}
+
+function actionDistribution(report) {
+  const distribution = report.action_distribution ?? {};
+  return `调和 ${distribution.harmony ?? 0} · 质疑 ${distribution.doubt ?? 0} · 特技 ${distribution.skill ?? 0}`;
+}
+
 function fence(content, language = '') {
   return ` \`\`\`${language}\n${content}\n\`\`\``;
 }
@@ -94,23 +106,29 @@ async function main() {
   const badge = passed ? '✅ Passed' : '❌ Failed';
   const url = runUrl();
 
-  const videoUrl = process.env.WEBM_URL || '';
-  const context = [`Recorded 3-player deterministic E2E (seed ${report.seed ?? '—'}).`];
+  const previewUrl = process.env.MULTIVIEW_URL || process.env.WEBM_URL || '';
+  const isScenarioSuite = Array.isArray(report.planned_scenarios);
+  const context = [isScenarioSuite
+    ? `Server-owned deterministic gameplay scenarios at ${report.viewport?.width ?? '—'}×${report.viewport?.height ?? '—'}.`
+    : `Complete three-player match smoke test (seed ${report.seed ?? '—'}).`];
 
-  const rows = [
-    `| Result | ${badge} |`,
-    `| Turns played | ${report.turns_played ?? 0} |`,
-    `| Seed | ${report.seed ?? '—'} |`,
-    `| Room code | ${report.room_code ?? '—'} |`,
-    `| Winner | ${winnerName(report)} |`,
-  ];
+  const rows = [`| Result | ${badge} |`, `| Seed | ${report.seed ?? '—'} |`, `| Room code | ${report.room_code ?? '—'} |`];
+  if (isScenarioSuite) {
+    rows.push(
+      `| Planned / hit | ${(report.planned_scenarios ?? []).length} / ${(report.hit_scenarios ?? []).length} |`,
+      `| Missing coverage | ${(report.missing_coverage ?? []).join(', ') || 'none' } |`,
+      `| Action distribution | ${actionDistribution(report)} |`,
+    );
+  } else {
+    rows.push(`| Turns played | ${report.turns_played ?? 0} |`, `| Winner | ${winnerName(report)} |`, `| Action distribution | ${actionDistribution(report)} |`);
+  }
 
   const sections = [];
   sections.push(`## ${titlePrefix} — ${badge}`, '', ...context);
 
-  if (videoUrl) {
+  if (previewUrl) {
     sections.push('');
-    sections.push(`**E2E recording:** [watch ${videoLabel}](${videoUrl})`);
+    sections.push(`**Multi-player recording:** [open synchronized multiview](${previewUrl})`);
     if (url) {
       sections.push('');
       sections.push(`_[Workflow run](${url}) — also available as the \`${artifactName}\` artifact._`);
@@ -120,20 +138,10 @@ async function main() {
     sections.push(`[Workflow run](${url}) — the \`${artifactName}\` artifact has the \`${videoLabel}\` video, \`report.json\`, and per-player screenshots.`);
   }
 
-  sections.push(
-    '',
-    '| Field | Value |',
-    '| --- | --- |',
-    ...rows,
-    '',
-    '### Turns',
-    '',
-    turnsTable(report),
-    '',
-    '### Browser errors',
-    '',
-    formatBrowserErrors(report.players),
-  );
+  sections.push('', '| Field | Value |', '| --- | --- |', ...rows, '');
+  if (isScenarioSuite) sections.push('### Scenario evidence', '', scenarioTable(report), '');
+  else sections.push('### Turns', '', turnsTable(report), '');
+  sections.push('### Browser errors', '', formatBrowserErrors(report.players));
 
   if (!passed) {
     sections.push('', '### Failure detail');

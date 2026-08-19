@@ -10,10 +10,12 @@ from config import Config, ProductionConfigurationError
 @pytest.fixture(autouse=True)
 def restore_config(monkeypatch):
     original_environment = Config.APP_ENV
+    original_e2e_scenarios = Config.ENABLE_E2E_SCENARIOS
     yield
     monkeypatch.delenv("AUTH_USERS_FILE", raising=False)
     monkeypatch.delenv("ALLOWED_ORIGINS", raising=False)
     Config.APP_ENV = original_environment
+    Config.ENABLE_E2E_SCENARIOS = original_e2e_scenarios
 
 
 def write_users_file(tmp_path, users):
@@ -25,9 +27,22 @@ def write_users_file(tmp_path, users):
 @pytest.mark.unit
 def test_development_allows_demo_defaults(monkeypatch):
     Config.APP_ENV = "development"
+    Config.ENABLE_E2E_SCENARIOS = False
     monkeypatch.delenv("AUTH_USERS_FILE", raising=False)
     monkeypatch.delenv("ALLOWED_ORIGINS", raising=False)
 
+    Config.validate_startup_configuration()
+
+
+@pytest.mark.unit
+def test_e2e_scenario_initializer_is_restricted_to_e2e_runtime():
+    Config.APP_ENV = "development"
+    Config.ENABLE_E2E_SCENARIOS = True
+
+    with pytest.raises(ProductionConfigurationError, match="restricted to APP_ENV=e2e"):
+        Config.validate_startup_configuration()
+
+    Config.APP_ENV = "e2e"
     Config.validate_startup_configuration()
 
 

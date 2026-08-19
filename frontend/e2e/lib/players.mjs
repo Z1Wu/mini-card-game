@@ -7,19 +7,20 @@ function attachDiagnostics(page, player) {
   page.on('pageerror', (error) => player.pageErrors.push(error.message));
 }
 
-export async function openPlayers(accounts, { appUrl, rawVideoRoot, viewport = { width: 1280, height: 720 } }) {
+export async function openPlayers(accounts, { appUrl, rawVideoRoot, viewport = { width: 1280, height: 720 }, recordVideo = true }) {
   const browser = await chromium.launch({ headless: true });
   const players = [];
   for (let index = 0; index < accounts.length; index += 1) {
-    const context = await browser.newContext({ viewport, ...(index === 0 ? { recordVideo: { dir: rawVideoRoot, size: viewport } } : {}) });
+    const context = await browser.newContext({ viewport, ...(recordVideo ? { recordVideo: { dir: rawVideoRoot, size: viewport } } : {}) });
     const page = await context.newPage();
+    const videoStartedAt = Date.now();
     page.setDefaultTimeout(TIMEOUT_MS);
-    const player = { ...accounts[index], name: `player${index + 1}`, page, context, consoleErrors: [], pageErrors: [], video: index === 0 ? page.video() : null };
+    const player = { ...accounts[index], name: `player${index + 1}`, page, context, consoleErrors: [], pageErrors: [], video: recordVideo ? page.video() : null, videoStartedAt };
     attachDiagnostics(page, player);
     await page.goto(appUrl, { waitUntil: 'domcontentloaded', timeout: TIMEOUT_MS });
     players.push(player);
   }
-  return { browser, players };
+  return { browser, players, recordingStartedAt: Math.min(...players.map((player) => player.videoStartedAt)) };
 }
 
 export async function createRoomAndLogin(players) {
@@ -159,6 +160,13 @@ async function showcaseTurn(page, excludedNames) {
   await page.waitForTimeout(600);
 
   return { action: 'harmony', card: cardName };
+}
+
+export async function playSmokeTurn(page, showcase = false) {
+  const excludedNames = ['犯人'];
+  if (showcase) return showcaseTurn(page, excludedNames);
+  const card = await chooseFirstVisibleCard(page, '调和', excludedNames);
+  return { action: 'harmony', card };
 }
 
 /**

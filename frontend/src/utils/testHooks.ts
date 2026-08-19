@@ -6,6 +6,7 @@ declare global {
   interface Window {
     render_game_to_text?: () => string;
     advanceTime?: (milliseconds: number) => Promise<void>;
+    initialize_e2e_scenario?: (scenario: string) => void;
   }
 }
 
@@ -39,6 +40,10 @@ export function installGameTestHooks(): void {
             latest_public_action: game.public_actions?.length
               ? game.public_actions[game.public_actions.length - 1]
               : null,
+            public_actions: game.public_actions ?? [],
+            own_hand: game.players
+              .find((gamePlayer) => gamePlayer.id === player.playerId)
+              ?.hand.map((card) => ({ id: card.id, name: card.name })) ?? [],
             winner_id: game.winner,
             players: game.players.map((gamePlayer) => ({
               id: gamePlayer.id,
@@ -54,4 +59,10 @@ export function installGameTestHooks(): void {
 
   window.advanceTime ??= (milliseconds: number) =>
     new Promise((resolve) => window.setTimeout(resolve, Math.max(0, milliseconds)));
+
+  if (import.meta.env.VITE_E2E_SCENARIOS === 'true') {
+    window.initialize_e2e_scenario = (scenario: string) => {
+      wsService.send({ type: 'e2e_initialize_scenario', scenario } as never);
+    };
+  }
 }

@@ -44,6 +44,7 @@ class RoomHubWebSocketServer:
         allow_legacy_join_game: bool = True,
         rng_seed: Optional[int] = None,
         rng_factory: Optional[Callable[[], Random]] = None,
+        enable_e2e_scenarios: bool = False,
     ):
         self.host = host
         self.port = port
@@ -52,6 +53,7 @@ class RoomHubWebSocketServer:
         self.origins = origins
         self.max_messages_per_second = max(1, max_messages_per_second)
         self.allow_legacy_join_game = allow_legacy_join_game
+        self.enable_e2e_scenarios = enable_e2e_scenarios
         if rng_factory is not None:
             self._rng_factory = rng_factory
         elif rng_seed is not None:
@@ -81,6 +83,7 @@ class RoomHubWebSocketServer:
             allow_legacy_join_game=self.allow_legacy_join_game,
             rng=rng,
             hub=self,
+            enable_e2e_scenarios=self.enable_e2e_scenarios,
         )
 
         async def admin_push(kind: str) -> None:

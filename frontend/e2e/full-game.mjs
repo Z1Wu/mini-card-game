@@ -3,8 +3,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { findFreePort, prepareOutput, startServices, stopProcess } from './lib/services.mjs';
-import { chooseFirstVisibleCard, closePlayers, createRoomAndLogin, findHost, openPlayers, playMixedTurn, readState, waitForState } from './lib/players.mjs';
-import { savePlayerArtifacts, writeReport } from './lib/reporting.mjs';
+import { closePlayers, createRoomAndLogin, findHost, openPlayers, playSmokeTurn, readState, waitForState } from './lib/players.mjs';
+import { savePlayerArtifacts, savePlayerVideos, writeMultiviewArtifact, writeReport } from './lib/reporting.mjs';
 
 const frontendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const backendRoot = path.resolve(frontendRoot, '..', 'backend');
@@ -16,19 +16,22 @@ const frontendPort = Number(process.env.E2E_FRONTEND_PORT) || await findFreePort
 const seed = Number(process.env.E2E_SEED ?? 75);
 const accounts = [{ username: 'player1', password: 'password1' }, { username: 'player2', password: 'password2' }, { username: 'player3', password: 'password3' }];
 const reportPath = path.join(outputRoot, 'report.json');
-const videoPath = path.join(outputRoot, 'full-game.webm');
 let services;
 let browser;
 let players = [];
+let recordingStartedAt = 0;
 let roomCode;
 let finalState = null;
 let testError;
 const turns = [];
 let screenshots = {};
+let videos = {};
+let multiview = {};
+const timeline = [];
 
 try {
   services = await startServices({ frontendRoot, backendRoot, backendPort, frontendPort, seed });
-  ({ browser, players } = await openPlayers(accounts, { appUrl: services.appUrl, rawVideoRoot }));
+  ({ browser, players, recordingStartedAt } = await openPlayers(accounts, { appUrl: services.appUrl, rawVideoRoot }));
   roomCode = await createRoomAndLogin(players);
   const host = await findHost(players);
   const primary = host.page;
@@ -48,9 +51,9 @@ try {
     const playerId = before.game?.current_player_id;
     const page = pagesByPlayer.get(playerId);
     assert.ok(page, `A browser page should exist for ${playerId}`);
-    // Run showcase only on the video-recorded player's first turn
-    const showcase = page === players[0].page && !showcaseDone;
-    const { action, card } = await playMixedTurn(page, before, step, showcase);
+    const showcase = !showcaseDone;
+    timeline.push({ at_ms: Date.now() - recordingStartedAt, player_id: playerId, label: `完整牌局：${before.game.players.find((player) => player.id === playerId)?.name ?? playerId} 第 ${before.game.turn_count + 1} 次行动` });
+    const { action, card } = await playSmokeTurn(page, showcase);
     if (showcase) showcaseDone = true;
     turns.push({ turn: before.game.turn_count, player_id: playerId, action, card });
     await waitForState(primary, (turn) => { const state = JSON.parse(window.render_game_to_text()); return state.game?.state === 'game_over' || state.game?.turn_count > turn; }, `turn ${before.game.turn_count} to finish`, before.game.turn_count);
@@ -80,18 +83,25 @@ try {
   testError = error;
 } finally {
   if (players.length) screenshots = await savePlayerArtifacts(players, outputRoot);
-  const video = players[0]?.video;
   await closePlayers(browser, players, async () => {
-    if (video) await video.saveAs(videoPath).catch((error) => { if (!testError) testError = error; });
+    try {
+      videos = await savePlayerVideos(players, outputRoot);
+      multiview = await writeMultiviewArtifact({ outputRoot, title: '完整牌局冒烟测试（跟随实际行动玩家）', players, videos, timeline, recordingStartedAt });
+    } catch (error) {
+      if (!testError) testError = error;
+    }
   });
   await Promise.all([stopProcess(services?.frontend), stopProcess(services?.backend)]);
 }
 
 if (!testError) {
-  try { assert.ok((await fs.stat(videoPath)).size > 10_000, 'Recorded video is unexpectedly small'); } catch (error) { testError = error; }
+  try {
+    assert.equal(Object.keys(videos).length, players.length, 'Every player should have a recording');
+    for (const video of Object.values(videos)) assert.ok((await fs.stat(video)).size > 10_000, `Recorded video is unexpectedly small: ${video}`);
+  } catch (error) { testError = error; }
 }
 await writeReport(reportPath, {
-  result: testError ? 'failed' : 'passed', seed, room_code: roomCode, ports: { backend: backendPort, frontend: frontendPort }, players: players.map((player) => ({ name: player.name, username: player.username, console_errors: player.consoleErrors, page_errors: player.pageErrors })), turns_played: turns.length, turns, final_state: finalState, winner_parity: !testError, service_logs: { backend: services?.backend.logs ?? [], frontend: services?.frontend.logs ?? [] }, artifacts: { video: path.relative(frontendRoot, videoPath), screenshots: Object.fromEntries(Object.entries(screenshots).map(([name, file]) => [name, path.relative(frontendRoot, file)])) }, error: testError instanceof Error ? testError.stack : null,
+  suite: 'complete-game-smoke', result: testError ? 'failed' : 'passed', seed, room_code: roomCode, ports: { backend: backendPort, frontend: frontendPort }, players: players.map((player) => ({ name: player.name, username: player.username, console_errors: player.consoleErrors, page_errors: player.pageErrors })), turns_played: turns.length, turns, action_distribution: Object.fromEntries([...new Set(turns.map((turn) => turn.action))].map((action) => [action, turns.filter((turn) => turn.action === action).length])), final_state: finalState, winner_parity: !testError, service_logs: { backend: services?.backend.logs ?? [], frontend: services?.frontend.logs ?? [] }, artifacts: { multiview: path.relative(frontendRoot, multiview.htmlPath ?? ''), timeline: path.relative(frontendRoot, multiview.timelinePath ?? ''), videos: Object.fromEntries(Object.entries(videos).map(([name, file]) => [name, path.relative(frontendRoot, file)])), screenshots: Object.fromEntries(Object.entries(screenshots).map(([name, file]) => [name, path.relative(frontendRoot, file)])) }, error: testError instanceof Error ? testError.stack : null,
 });
 if (testError) throw testError;
 console.log(`Recorded E2E passed: ${turns.length} turns, winner ${finalState.game.winner_id}; report: ${reportPath}`);

@@ -9,8 +9,10 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "test": "vitest run --config vitest.config.ts",
     "test:watch": "vitest --config vitest.config.ts",
-    "test:e2e": "node e2e/full-game.mjs",
-    "test:e2e:mobile": "node e2e/mobile-game.mjs --viewport=844x390",
+    "test:e2e": "npm run test:e2e:smoke && npm run test:e2e:scenarios",
+    "test:e2e:smoke": "node e2e/full-game.mjs",
+    "test:e2e:scenarios": "node e2e/deterministic-scenarios.mjs",
+    "test:e2e:mobile": "node e2e/deterministic-scenarios.mjs --viewport=844x390 --scenarios=home-club,rich-girl,class-representative,honor-student",
     "test:tabletop-fixtures": "node e2e/capture-game-table-fixtures.mjs"
   },
   "dependencies": {

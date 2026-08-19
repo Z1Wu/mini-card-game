@@ -21,6 +21,7 @@ async def main():
         max_messages_per_second=Config.MAX_MESSAGES_PER_SECOND,
         allow_legacy_join_game=Config.ALLOW_LEGACY_JOIN_GAME,
         rng_seed=Config.E2E_RANDOM_SEED,
+        enable_e2e_scenarios=Config.ENABLE_E2E_SCENARIOS,
     )
     session_manager = AdminSessionManager(ttl_seconds=Config.ADMIN_SESSION_TTL)
     admin_http = AdminHttpServer(

@@ -21,11 +21,13 @@ class GameWebSocketServer:
         allow_legacy_join_game: bool = True,
         rng: Optional[Random] = None,
         hub=None,
+        enable_e2e_scenarios: bool = False,
     ):
         self.host = host
         self.port = port
         self.allow_legacy_join_game = allow_legacy_join_game
         self.hub = hub
+        self.enable_e2e_scenarios = enable_e2e_scenarios
         self.clients: Set[websockets.WebSocketServerProtocol] = set()
         self.player_connections: Dict[str, websockets.WebSocketServerProtocol] = dict()
         self.game_manager = GameManager(rng=rng)
@@ -165,6 +167,8 @@ class GameWebSocketServer:
                 await self._handle_honor_student_response(websocket, data)
             elif message_type == "infected_choice":
                 await self._handle_infected_choice(websocket, data)
+            elif message_type == "e2e_initialize_scenario" and self.enable_e2e_scenarios:
+                await self._handle_e2e_initialize_scenario(websocket, data)
             elif message_type == "get_game_state":
                 await self._handle_get_game_state(websocket, data)
             elif message_type == "query_game_status":
@@ -513,6 +517,44 @@ class GameWebSocketServer:
                 "type": "error",
                 "message": "重置游戏失败"
             })
+
+    async def _handle_e2e_initialize_scenario(self, websocket, data: dict) -> None:
+        """Load a named fixture only in the explicitly enabled E2E runtime."""
+        from game.e2e_scenarios import initialize_e2e_scenario
+
+        player_id = await self._authenticated_actor_id(websocket, data)
+        if not player_id:
+            return
+        game = self.game_manager.game
+        host_id = game.players[0].id if game and game.players else None
+        if player_id != host_id:
+            await self.send_to_client(websocket, {
+                "type": "error",
+                "message": "只有房主可以初始化 E2E 场景",
+            })
+            return
+        scenario_name = str(data.get("scenario") or "")
+        try:
+            self.pending_rich_girl = None
+            self.pending_news_club = None
+            self.pending_class_rep = None
+            self.pending_honor_student_responders = None
+            self.honor_student_actor_id = None
+            self.honor_student_responses.clear()
+            self.pending_infected = None
+            self.resolved_infected_card_ids.clear()
+            initialize_e2e_scenario(game, scenario_name)
+        except ValueError as error:
+            await self.send_to_client(websocket, {
+                "type": "error",
+                "message": str(error),
+            })
+            return
+        await self.send_to_client(websocket, {
+            "type": "e2e_scenario_ready",
+            "scenario": scenario_name,
+        })
+        await self._broadcast_game_state()
 
     def _find_card_in_hand(self, player, card_id: str):
         for c in player.hand:
