@@ -26,7 +26,7 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({ player, isCurrentTurn })
   const fieldCount = player.field_cards?.length ?? 0;
   const doubtCount = player.doubt_cards?.length ?? 0;
   const handCards = player.current_hand_count > 0
-    ? Array.from({ length: player.current_hand_count }, (_, i) => faceDownCard(player.id, i))
+    ? Array.from({ length: Math.min(player.current_hand_count, 4) }, (_, i) => faceDownCard(player.id, i))
     : [];
 
   return (
@@ -66,6 +66,18 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({ player, isCurrentTurn })
               <CardView card={card} showAsFaceDown />
             </div>
           ))}
+          {player.current_hand_count > handCards.length && (
+            <b className="table-seat-card-overflow">+{player.current_hand_count - handCards.length}</b>
+          )}
+        </div>
+      )}
+      {doubtCount > 0 && (
+        <div className="table-seat-doubts" aria-label={`${player.name} 有 ${doubtCount} 张质疑牌`}>
+          <span className="table-seat-doubt-label">被质疑</span>
+          <div className="table-seat-doubt-card" aria-hidden="true">
+            <CardView card={player.doubt_cards[0]} showAsFaceDown />
+          </div>
+          {doubtCount > 1 && <b>×{doubtCount}</b>}
         </div>
       )}
     </div>

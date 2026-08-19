@@ -11,10 +11,11 @@ interface PlayerHandProps {
   onPlay: (card: Card, usage: CardUsageType) => void;
   harmonyIsEmpty: boolean;
   newsClubMyChosenCard: Card | null;
+  turnStatusText: string;
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
-  player, isCurrentTurn, selectedCard, onSelect, onPlay, harmonyIsEmpty, newsClubMyChosenCard,
+  player, isCurrentTurn, selectedCard, onSelect, onPlay, harmonyIsEmpty, newsClubMyChosenCard, turnStatusText,
 }) => {
   const isSettlement = player.current_hand_count === 1;
   const canShowActions =
@@ -28,6 +29,18 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
   return (
     <div className={`table-hand${isSettlement ? ' table-hand-settlement' : ''}${isCurrentTurn ? ' table-hand-my-turn' : ''}${player.hand.length <= 9 ? ' table-hand-compact' : ''}`} aria-label="我的手牌">
+      {(player.doubt_cards?.length ?? 0) > 0 && (
+        <div className="table-hand-doubt-state" aria-label={`你有 ${player.doubt_cards.length} 张质疑牌`}>
+          <span aria-hidden="true">!</span> 被质疑 ×{player.doubt_cards.length}
+        </div>
+      )}
+      <div className={`table-turn-task${isCurrentTurn ? ' table-turn-task-active' : ''}`} role="status" aria-live="polite">
+        <span className="table-turn-task-icon" aria-hidden="true">{isCurrentTurn ? '◆' : '◇'}</span>
+        <strong>{isCurrentTurn
+          ? selectedCard ? `已选「${selectedCard.name}」` : '轮到你'
+          : turnStatusText}</strong>
+        {isCurrentTurn && <span>{selectedCard ? '请选择行动' : '请选择一张手牌'}</span>}
+      </div>
       <div className="table-hand-info">
         <div className="table-hand-avatar">
           <div className="table-hand-icon">{localInitial}</div>
@@ -35,7 +48,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
         </div>
         <div className="table-hand-body">
           <span className="table-hand-title">{player.name}</span>
-          <span className="table-hand-stats">手牌 {player.hand.length} · 质疑 {player.doubt_cards?.length ?? 0}</span>
+          <span className="table-hand-stats">手牌 {player.hand.length} · 场牌 {player.field_cards?.length ?? 0} · 质疑 {player.doubt_cards?.length ?? 0}</span>
         </div>
       </div>
       {newsClubMyChosenCard && (
@@ -103,9 +116,6 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       )}
       {isCurrentTurn && selectedCard?.name === CardType.CRIMINAL && !isSettlement && (
         <div className="table-hand-blocked">犯人不可主动打出，只能保留或被其他特技移动</div>
-      )}
-      {isCurrentTurn && !canShowActions && !isSettlement && (
-        selectedCard?.name !== CardType.CRIMINAL && <div className="table-hand-hint">选择一张手牌出牌</div>
       )}
     </div>
   );

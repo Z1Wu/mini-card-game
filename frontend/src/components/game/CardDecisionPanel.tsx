@@ -28,15 +28,18 @@ export const CardDecisionPanel: React.FC<CardDecisionPanelProps> = ({
         <span>优先级 {card.victory_priority}</span>
         <em>{stateCopy}</em>
       </div>
-      <p className="table-decision-skill"><b>特技</b>{decision.skill}</p>
-      <p className="table-decision-victory"><b>保留胜利</b>{decision.victory}</p>
-      {!blocked && !isSettlement && (
-        <div className="table-decision-previews" aria-label="出牌结果预览">
-          <span><b>调和</b>{decision.harmony}</span>
-          <span><b>质疑</b>{decision.doubt}</span>
-          <span className={decision.skillUnavailable ? 'is-unavailable' : ''}><b>特技</b>{decision.skill}</span>
-        </div>
-      )}
+      <details className="table-decision-details">
+        <summary>查看完整决策说明</summary>
+        <p className="table-decision-skill"><b>特技</b>{decision.skill}</p>
+        <p className="table-decision-victory"><b>保留胜利</b>{decision.victory}</p>
+        {!blocked && !isSettlement && (
+          <div className="table-decision-previews" aria-label="出牌结果预览">
+            <span><b>调和</b>{decision.harmony}</span>
+            <span><b>质疑</b>{decision.doubt}</span>
+            <span className={decision.skillUnavailable ? 'is-unavailable' : ''}><b>特技</b>{decision.skill}</span>
+          </div>
+        )}
+      </details>
     </section>
   );
 };
