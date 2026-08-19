@@ -53,6 +53,7 @@ const timeline = [];
 const hits = new Set();
 const actions = [];
 const scenarioResults = [];
+let mobileChromeCaptured = false;
 
 function actionDistribution() {
   const distribution = { harmony: 0, doubt: 0, skill: 0 };
@@ -330,6 +331,24 @@ try {
   for (const scenario of planned) {
     const initial = await initializeScenario(scenario, host, pagesById);
     assert.equal(initial.game.public_actions.length, 0);
+    if (isMobile && !mobileChromeCaptured) {
+      const playerView = pagesById.get('player1');
+      await playerView.getByLabel(/我的视角：/).waitFor({ state: 'visible' });
+      const menuOverlapsSeat = await playerView.evaluate(() => {
+        const menu = document.querySelector('.game-menu-trigger')?.getBoundingClientRect();
+        if (!menu) return true;
+        return [...document.querySelectorAll('.table-seat')].some((seat) => {
+          const box = seat.getBoundingClientRect();
+          return menu.left < box.right && menu.right > box.left && menu.top < box.bottom && menu.bottom > box.top;
+        });
+      });
+      assert.equal(menuOverlapsSeat, false, 'Mobile table menu should not overlap an opponent seat');
+      await playerView.getByRole('button', { name: '打开牌桌菜单' }).click();
+      await playerView.getByRole('menu', { name: '牌桌菜单' }).waitFor({ state: 'visible' });
+      await saveScenarioScreenshot('mobile-player-view-menu', playerView);
+      await playerView.getByRole('button', { name: '打开牌桌菜单' }).click();
+      mobileChromeCaptured = true;
+    }
     await runners[scenario](pagesById.get('player1'), pagesById);
     await players[0].page.waitForTimeout(dwell);
   }

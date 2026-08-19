@@ -16,7 +16,9 @@ describe('GameMenu', () => {
     );
 
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: '打开牌桌菜单' }));
+    const trigger = screen.getByRole('button', { name: '打开牌桌菜单' });
+    expect(trigger).toHaveTextContent('菜单');
+    await user.click(trigger);
     expect(onToggle).toHaveBeenCalledOnce();
 
     rerender(<GameMenu open isHost actionCount={7} onToggle={onToggle} onClose={vi.fn()} onShowHistory={onShowHistory} onRequestReset={onRequestReset} onRequestLeave={onRequestLeave} />);
