@@ -35,6 +35,10 @@ export function installGameTestHooks(): void {
             current_player_id: currentPlayer?.id ?? null,
             turn_count: game.turn_count,
             harmony_card_count: game.harmony_area.length,
+            public_action_count: game.public_actions?.length ?? 0,
+            latest_public_action: game.public_actions?.length
+              ? game.public_actions[game.public_actions.length - 1]
+              : null,
             winner_id: game.winner,
             players: game.players.map((gamePlayer) => ({
               id: gamePlayer.id,

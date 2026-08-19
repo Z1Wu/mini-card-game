@@ -160,6 +160,33 @@ async def test_socket_cannot_spoof_another_players_action(server_uri):
 
 
 @pytest.mark.e2e
+async def test_public_action_history_restores_without_revealing_facedown_card(server_uri):
+    clients = await connect_players(server_uri, 3)
+    try:
+        state = (await clients[0].start_game())["game_state"]
+        current_id = state["players"][state["current_player_index"]]["id"]
+        current_client = next(client for client in clients if client.player_id == current_id)
+        current_state = (await current_client.get_game_state())["game_state"]
+        current_player = next(player for player in current_state["players"] if player["id"] == current_id)
+        playable = next(card for card in current_player["hand"] if card["name"] != "犯人")
+
+        played = await current_client.play_card(playable["id"], "调和")
+        assert played["type"] == "game_state"
+        restored = (await clients[0].get_game_state())["game_state"]
+        assert restored["public_actions"] == [{
+            "sequence": 1,
+            "actor_id": current_id,
+            "actor_name": current_player["name"],
+            "usage_type": "调和",
+            "target_player_id": None,
+            "target_player_name": None,
+            "card_name": None,
+        }]
+    finally:
+        await close_clients(clients)
+
+
+@pytest.mark.e2e
 async def test_only_host_can_start_or_reset_game(server_uri):
     clients = await connect_players(server_uri, 3)
     try:

@@ -196,6 +196,15 @@ export interface SettlementSummary {
   player_doubt_totals: Record<string, number>;
   /** Server-authoritative victory-condition outcome for each final hand card, keyed by card id. */
   role_condition_results?: Record<string, boolean>;
+  /** Server-authoritative explanation for the selected winner. */
+  winner_reason?: {
+    player_id: string;
+    player_name: string;
+    card_id: string;
+    card_name: Card['name'];
+    victory_condition: string;
+    victory_priority: number;
+  } | null;
 }
 
 export interface GameOverMessage extends BaseMessage {

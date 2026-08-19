@@ -10,6 +10,7 @@ class VictoryChecker:
         self._harmony_reached = False
         self._imprisoned_player_ids: List[str] = []
         self._role_condition_results: dict[str, bool] = {}
+        self._winner_id: Optional[str] = None
 
     def check_victory(self) -> Optional[str]:
         # 判定 1：调和值是否达到
@@ -23,7 +24,9 @@ class VictoryChecker:
         for priority in [1, 2, 3, 4, 5]:
             winner = self._find_winner_at_priority(priority)
             if winner:
+                self._winner_id = winner
                 return winner
+        self._winner_id = None
         return None
 
     def _evaluate_role_condition_results(self) -> dict[str, bool]:
@@ -133,6 +136,8 @@ class VictoryChecker:
             p.id: sum(c.harmony_value for c in p.doubt_cards)
             for p in self.game.players
         }
+        winner = self._get_player(self._winner_id) if self._winner_id else None
+        winner_card = winner.hand[0] if winner and winner.hand else None
         return {
             "harmony_total": harmony_total,
             "required_harmony_value": self.game.required_harmony_value,
@@ -140,4 +145,12 @@ class VictoryChecker:
             "imprisoned_player_ids": self._imprisoned_player_ids,
             "player_doubt_totals": player_doubt_totals,
             "role_condition_results": self._role_condition_results,
+            "winner_reason": {
+                "player_id": winner.id,
+                "player_name": winner.name,
+                "card_id": winner_card.id,
+                "card_name": winner_card.name,
+                "victory_condition": winner_card.victory_condition,
+                "victory_priority": winner_card.victory_priority,
+            } if winner and winner_card else None,
         }

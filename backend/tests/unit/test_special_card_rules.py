@@ -141,3 +141,20 @@ async def test_infected_offers_one_optional_next_turn_take():
     await server._broadcast_game_state()
     after = len([m for m in websocket.messages if m["type"] == "infected_choice_required"])
     assert after == before
+
+
+@pytest.mark.unit
+def test_public_action_history_hides_facedown_card_names_and_survives_serialization():
+    server = GameWebSocketServer()
+    manager = make_playing_manager(3)
+    server.game_manager = manager
+    actor, target, _ = manager.game.players
+
+    server._record_public_action(actor.id, CardUsageType.HARMONY, CardType.ALIEN)
+    server._record_public_action(actor.id, CardUsageType.DOUBT, CardType.CRIMINAL, target.id)
+    server._record_public_action(actor.id, CardUsageType.SKILL, CardType.LIBRARY_COMMITTEE)
+
+    serialized = server._serialize_game_state(actor.id)["public_actions"]
+    assert [entry["card_name"] for entry in serialized] == [None, None, CardType.LIBRARY_COMMITTEE]
+    assert serialized[1]["target_player_name"] == target.name
+    assert [entry["sequence"] for entry in serialized] == [1, 2, 3]

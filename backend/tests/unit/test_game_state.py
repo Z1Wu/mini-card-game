@@ -4,7 +4,7 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from backend.game.state import GameManager
-from backend.game.models import GameState, CardType
+from backend.game.models import GameState, CardType, PublicAction, CardUsageType
 
 @pytest.fixture
 def game_manager():
@@ -196,4 +196,20 @@ def test_reset_game_clears_round_state_but_preserves_players():
     assert manager.game.player_count == 3
     assert manager.game.required_harmony_value == 0
     assert manager.game.turn_count == 0
+    assert manager.game.public_actions == []
     assert all(not player.hand and player.current_hand_count == 0 for player in manager.game.players)
+
+
+@pytest.mark.unit
+def test_reset_game_clears_public_action_history():
+    manager = GameManager()
+    manager.create_game("history")
+    manager.game.public_actions.append(PublicAction(
+        sequence=1,
+        actor_id="player_1",
+        actor_name="玩家1",
+        usage_type=CardUsageType.HARMONY,
+    ))
+
+    assert manager.reset_game()
+    assert manager.game.public_actions == []
