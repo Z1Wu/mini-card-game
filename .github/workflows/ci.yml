@@ -61,9 +61,11 @@ jobs:
         run: npm run build
 
   browser-e2e:
-    name: Browser E2E
+    name: Browser and Mobile E2E
     runs-on: ubuntu-latest
     needs: [backend]
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.1-noble
     permissions:
       contents: write
       pull-requests: write
@@ -89,17 +91,9 @@ jobs:
         working-directory: backend
         run: uv sync --frozen
 
-      - name: Cache Playwright Chromium
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
-
-      - name: Install frontend dependencies and Chromium
+      - name: Install frontend dependencies
         working-directory: frontend
-        run: |
-          npm ci
-          npx playwright install --with-deps chromium
+        run: npm ci
 
       - name: Run recorded three-player game
         working-directory: frontend
@@ -207,48 +201,8 @@ jobs:
           header: e2e-scenarios-result
           path: frontend/test-results/scenarios/pr-comment.md
 
-  mobile-e2e:
-    name: Mobile E2E
-    runs-on: ubuntu-latest
-    needs: [backend]
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v8.3.2
-        with:
-          enable-cache: true
-
-      - name: Set up Python
-        run: uv python install 3.10
-
-      - name: Install backend dependencies
-        working-directory: backend
-        run: uv sync --frozen
-
-      - name: Cache Playwright Chromium
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
-
-      - name: Install frontend dependencies and Chromium
-        working-directory: frontend
-        run: |
-          npm ci
-          npx playwright install --with-deps chromium
-
       - name: Run mobile game (844x390 landscape)
+        if: always()
         working-directory: frontend
         run: npm run test:e2e:mobile
 

@@ -126,4 +126,5 @@ Original prompt: 你修复下把
 - Fixed the current actor's wait presentation so Class Representative/Honor Student multi-step waits do not misleadingly say to choose a hand card; added component coverage.
 - Visual QA: inspected desktop and mobile choice/wait/result screenshots, and played the generated four-view artifact with the required web-game Playwright client. No console/page errors were produced.
 - Validation: 156 backend tests, 35 frontend tests, frontend lint/build, combined desktop E2E, and mobile E2E all pass.
-- Remaining: commit, draft PR, and CI status confirmation. No known code or test TODOs remain in Issue #122 scope.
+- Published commit `e7e8a9d` and draft PR #123. Backend and frontend CI passed; both E2E runners were manually cancelled after more than 41 minutes because `playwright install --with-deps` hung while refreshing `azure.archive.ubuntu.com`, despite a successful Chromium cache restore.
+- CI follow-up: run desktop and mobile E2E in one job backed by the version-matched official Playwright 1.61.1 Noble container. This removes the flaky apt step and avoids duplicate environment initialization; CI confirmation remains.
