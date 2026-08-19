@@ -135,7 +135,7 @@ async function main() {
     }
   } else if (url) {
     sections.push('');
-    sections.push(`[Workflow run](${url}) — the \`${artifactName}\` artifact has the \`${videoLabel}\` video, \`report.json\`, and per-player screenshots.`);
+    sections.push(`[Workflow run](${url}) — the \`${artifactName}\` artifact has the synchronized multiview, timeline, every player's WebM, \`report.json\`, and screenshots.`);
   }
 
   sections.push('', '| Field | Value |', '| --- | --- |', ...rows, '');

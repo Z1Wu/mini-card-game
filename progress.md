@@ -128,3 +128,4 @@ Original prompt: 你修复下把
 - Validation: 156 backend tests, 35 frontend tests, frontend lint/build, combined desktop E2E, and mobile E2E all pass.
 - Published commit `e7e8a9d` and draft PR #123. Backend and frontend CI passed; both E2E runners were manually cancelled after more than 41 minutes because `playwright install --with-deps` hung while refreshing `azure.archive.ubuntu.com`, despite a successful Chromium cache restore.
 - CI follow-up: run desktop and mobile E2E in one job backed by the version-matched official Playwright 1.61.1 Noble container. This removes the flaky apt step and avoids duplicate environment initialization; CI confirmation remains.
+- Container CI reached both desktop and mobile tests in 4m35s; every E2E and artifact-upload step passed. Fixed the remaining reporting-only failures by selecting Bash for brace expansion and covering the no-preview-URL PR-comment path without the stale `videoLabel` reference.

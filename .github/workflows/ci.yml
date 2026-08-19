@@ -66,6 +66,9 @@ jobs:
     needs: [backend]
     container:
       image: mcr.microsoft.com/playwright:v1.61.1-noble
+    defaults:
+      run:
+        shell: bash
     permissions:
       contents: write
       pull-requests: write
