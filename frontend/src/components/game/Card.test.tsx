@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { Card } from './Card'
@@ -67,5 +67,21 @@ describe('Card', () => {
     await user.click(skill)
 
     expect(onPlay).not.toHaveBeenCalled()
+  })
+
+  it('opens details on a long press without also selecting the card', () => {
+    vi.useFakeTimers()
+    const onClick = vi.fn()
+    render(<Card card={card} onClick={onClick} />)
+
+    const cardButton = screen.getByLabelText(`卡牌：${card.name}`)
+    fireEvent.touchStart(cardButton)
+    act(() => vi.advanceTimersByTime(500))
+    fireEvent.touchEnd(cardButton)
+    fireEvent.click(cardButton)
+
+    expect(screen.getByText(card.description)).toBeInTheDocument()
+    expect(onClick).not.toHaveBeenCalled()
+    vi.useRealTimers()
   })
 })

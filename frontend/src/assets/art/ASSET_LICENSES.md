@@ -17,5 +17,6 @@ All thirteen runtime assets were generated for this repository with the built-in
 | `cards/accomplice.webp` | 共犯 | Image Generation (built-in) | 2026-08-15 | Project-owner use and distribution |
 | `cards/criminal.webp` | 犯人 | Image Generation (built-in) | 2026-08-15 | Project-owner use and distribution |
 | `cards/student-council-president.webp` | 学生会长 | Image Generation (built-in) | 2026-08-15 | Project-owner use and distribution |
+| `tabletop-arcane-v1.png` | 横屏对局桌面背景 | OpenAI Image Generation (built-in) | 2026-08-18 | Project-owner use and distribution |
 
 The original three cards had two concept variants generated per role; the selected sources were resized to 512 px wide and encoded as WebP at quality 78 for runtime use. The ten new cards added on 2026-08-15 were similarly resized to 512 px wide and encoded as WebP at quality 78.

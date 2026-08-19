@@ -73,14 +73,17 @@ function resolveBackendPython(backendRoot) {
 export async function startServices({ frontendRoot, backendRoot, backendPort, frontendPort, seed }) {
   const viteEntry = path.join(frontendRoot, 'node_modules', 'vite', 'bin', 'vite.js');
   const websocketUrl = `ws://127.0.0.1:${backendPort}`;
+  // The backend also starts a local admin HTTP service. Give each E2E run its
+  // own port so a developer's running game cannot prevent browser verification.
+  const adminHttpPort = await findFreePort();
   const build = spawnSync(process.execPath, [viteEntry, 'build'], { cwd: frontendRoot, env: { ...process.env, VITE_WS_URL: websocketUrl }, stdio: 'inherit' });
   if (build.status !== 0) throw new Error(`Frontend production build failed with exit code ${build.status}`);
 
-  const backend = startProcess(resolveBackendPython(backendRoot), ['main.py'], { cwd: backendRoot, env: { ...process.env, HOST: '127.0.0.1', PORT: String(backendPort), E2E_RANDOM_SEED: String(seed) } });
+  const backend = startProcess(resolveBackendPython(backendRoot), ['main.py'], { cwd: backendRoot, env: { ...process.env, HOST: '127.0.0.1', PORT: String(backendPort), ADMIN_HTTP_PORT: String(adminHttpPort), E2E_RANDOM_SEED: String(seed) } });
   const frontend = startProcess(process.execPath, [viteEntry, 'preview', '--host', '127.0.0.1', '--port', String(frontendPort), '--strictPort'], { cwd: frontendRoot, env: { ...process.env, VITE_WS_URL: websocketUrl } });
   const appUrl = `http://127.0.0.1:${frontendPort}`;
   await Promise.all([waitFor(() => websocketReady(backendPort), backend, `backend on ${backendPort}`), waitFor(() => httpReady(appUrl), frontend, `frontend on ${frontendPort}`)]);
-  return { backend, frontend, appUrl, websocketUrl };
+  return { backend, frontend, appUrl, websocketUrl, adminHttpPort };
 }
 
 export async function prepareOutput(frontendRoot, requestedOutput) {

@@ -8,7 +8,15 @@ import { savePlayerArtifacts, writeReport } from './lib/reporting.mjs';
 
 const frontendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const backendRoot = path.resolve(frontendRoot, '..', 'backend');
-const outputRoot = await prepareOutput(frontendRoot, process.env.E2E_OUTPUT_DIR ?? 'test-results/mobile-game');
+const viewportArgument = process.argv.find((argument) => argument.startsWith('--viewport='))?.split('=')[1] ?? '844x390';
+const [viewportWidth, viewportHeight] = viewportArgument.split('x').map(Number);
+assert.ok(Number.isFinite(viewportWidth) && Number.isFinite(viewportHeight), `Invalid mobile viewport: ${viewportArgument}`);
+const mobileViewport = { width: viewportWidth, height: viewportHeight };
+const viewportLabel = `${mobileViewport.width}x${mobileViewport.height}`;
+const defaultOutput = viewportLabel === '844x390'
+  ? 'test-results/mobile-game'
+  : `test-results/mobile-game/${viewportLabel}`;
+const outputRoot = await prepareOutput(frontendRoot, process.env.E2E_OUTPUT_DIR ?? defaultOutput);
 const rawVideoRoot = path.join(outputRoot, 'raw-video');
 await fs.mkdir(rawVideoRoot, { recursive: true });
 const backendPort = Number(process.env.E2E_BACKEND_PORT) || await findFreePort();
@@ -21,9 +29,6 @@ const accounts = [
 ];
 const reportPath = path.join(outputRoot, 'report.json');
 const videoPath = path.join(outputRoot, 'mobile-game.webm');
-
-// iPhone 14 Pro landscape — primary mobile target
-const mobileViewport = { width: 844, height: 390 };
 
 let services;
 let browser;
@@ -65,6 +70,9 @@ try {
   await hand.waitFor({ state: 'visible' });
   const gameOverflow = await primary.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
   assert.equal(gameOverflow, false, 'Game table should have no horizontal overflow on mobile');
+  await primary.getByRole('list', { name: '其他玩家' }).waitFor({ state: 'visible' });
+  await primary.getByLabel('我的手牌').waitFor({ state: 'visible' });
+  await primary.screenshot({ path: path.join(outputRoot, 'game-table.png') });
 
   // ── Play full game on mobile ──
   let showcaseDone = false;
@@ -74,6 +82,9 @@ try {
     const playerId = before.game?.current_player_id;
     const page = pagesByPlayer.get(playerId);
     assert.ok(page, `A browser page should exist for ${playerId}`);
+    if (page === players[0].page && before.game?.turn_count === 2) {
+      await page.screenshot({ path: path.join(outputRoot, 'my-turn-table.png') });
+    }
 
     // Ensure a hand card is scrolled into view before tapping
     const firstCard = page.locator('[aria-label^="卡牌："]').first();
@@ -88,6 +99,7 @@ try {
       const state = JSON.parse(window.render_game_to_text());
       return state.game?.state === 'game_over' || state.game?.turn_count > turn;
     }, `turn ${before.game.turn_count} to finish`, before.game.turn_count);
+    if (step === 5) await primary.screenshot({ path: path.join(outputRoot, 'mid-game-table.png') });
     // Pause so the turn-change toast is visible in the video.
     await primary.waitForTimeout(400);
   }
@@ -153,6 +165,7 @@ await writeReport(reportPath, {
   },
   artifacts: {
     video: path.relative(frontendRoot, videoPath),
+    game_table: path.relative(frontendRoot, path.join(outputRoot, 'game-table.png')),
     screenshots: Object.fromEntries(
       Object.entries(screenshots).map(([name, file]) => [name, path.relative(frontendRoot, file)]),
     ),

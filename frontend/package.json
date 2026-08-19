@@ -10,7 +10,7 @@
     "test": "vitest run --config vitest.config.ts",
     "test:watch": "vitest --config vitest.config.ts",
     "test:e2e": "node e2e/full-game.mjs",
-    "test:e2e:mobile": "node e2e/mobile-game.mjs",
+    "test:e2e:mobile": "node e2e/mobile-game.mjs --viewport=844x390",
     "test:tabletop-fixtures": "node e2e/capture-game-table-fixtures.mjs"
   },
   "dependencies": {
