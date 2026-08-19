@@ -61,7 +61,7 @@ jobs:
         run: npm run build
 
   browser-e2e:
-    name: Browser and Mobile E2E
+    name: Browser E2E
     runs-on: ubuntu-latest
     needs: [backend]
     container:
