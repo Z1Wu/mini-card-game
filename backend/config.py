@@ -114,6 +114,7 @@ class Config:
     MAX_MESSAGES_PER_SECOND = int(os.getenv("MAX_MESSAGES_PER_SECOND", 30))
     ALLOW_LEGACY_JOIN_GAME = os.getenv("ALLOW_LEGACY_JOIN_GAME", "false").lower() in {"1", "true", "yes"}
     E2E_RANDOM_SEED = int(os.environ["E2E_RANDOM_SEED"]) if os.getenv("E2E_RANDOM_SEED") else None
+    ENABLE_E2E_SCENARIOS = os.getenv("ENABLE_E2E_SCENARIOS", "false").lower() in {"1", "true", "yes"}
 
     # Admin API configuration
     ADMIN_HTTP_PORT = int(os.getenv("ADMIN_HTTP_PORT", 8766))
@@ -123,6 +124,10 @@ class Config:
     @classmethod
     def validate_startup_configuration(cls) -> None:
         """Reject insecure defaults before accepting traffic in production."""
+        if cls.ENABLE_E2E_SCENARIOS and cls.APP_ENV != "e2e":
+            raise ProductionConfigurationError(
+                "ENABLE_E2E_SCENARIOS is restricted to APP_ENV=e2e"
+            )
         if cls.APP_ENV not in _PRODUCTION_ENVIRONMENTS:
             return
 

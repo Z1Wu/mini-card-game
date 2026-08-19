@@ -111,3 +111,21 @@ Original prompt: 你修复下把
 - Disabled the legacy unauthenticated `join_game` path in the application entrypoint by default; an explicit compatibility flag remains for older clients and isolated tests.
 - Final verification: 72 backend tests pass; frontend lint and production build pass; the recorded three-browser match completes 15 turns with winner parity and zero console/page errors.
 - Visually inspected the refreshed room-creation screen and final settlement screenshots; room code/controls, settlement sections, card faces, and winner presentation are legible with no observed layout regressions.
+
+## 2026-08-19 Issue #122 deterministic E2E scenarios
+
+- Scope: separate the complete-match smoke test from named deterministic gameplay scenarios, remove silent action fallbacks, report planned/observed/missing coverage, and record the actual acting players.
+- Initial finding: the checkout was detached at merged commit `d85af93`; switched to the already-authorized `codex/issue-122-e2e-scenarios` branch with a clean working tree.
+- Design: use server-owned named scenario fixtures enabled only by an explicit E2E runtime flag. The authenticated room host may select a known fixture; clients cannot submit arbitrary state, and production configuration rejects the flag.
+- Recording plan: save every participating player's WebM and a synchronized multiview HTML/timeline artifact, avoiding a CI dependency on video-splicing tools.
+- TODO: implement fixtures and tests, add desktop/full and mobile/subset runners, inspect generated screenshots/videos, run all repository checks, then publish a draft PR and verify CI.
+- Implemented 12 named server-owned scenarios plus explicit waiting/result coverage. Desktop report hits 14/14 with action distribution: harmony 4, doubt 1, skill 10; missing coverage is empty.
+- The complete-match smoke remains a separate three-player, 15-turn terminal/settlement check and now saves all three player videos.
+- Every suite saves per-player WebMs, screenshots, `timeline.json`, and a synchronized `multiview.html` that highlights the active player without requiring ffmpeg.
+- The 844x390 suite intentionally runs Home Club, Rich Girl, Class Representative, and Honor Student rather than copying the full desktop matrix.
+- Fixed the current actor's wait presentation so Class Representative/Honor Student multi-step waits do not misleadingly say to choose a hand card; added component coverage.
+- Visual QA: inspected desktop and mobile choice/wait/result screenshots, and played the generated four-view artifact with the required web-game Playwright client. No console/page errors were produced.
+- Validation: 156 backend tests, 35 frontend tests, frontend lint/build, combined desktop E2E, and mobile E2E all pass.
+- Published commit `e7e8a9d` and draft PR #123. Backend and frontend CI passed; both E2E runners were manually cancelled after more than 41 minutes because `playwright install --with-deps` hung while refreshing `azure.archive.ubuntu.com`, despite a successful Chromium cache restore.
+- CI follow-up: run desktop and mobile E2E in one job backed by the version-matched official Playwright 1.61.1 Noble container. This removes the flaky apt step and avoids duplicate environment initialization; CI confirmation remains.
+- Container CI reached both desktop and mobile tests in 4m35s; every E2E and artifact-upload step passed. Fixed the remaining reporting-only failures by selecting Bash for brace expansion and covering the no-preview-URL PR-comment path without the stale `videoLabel` reference.

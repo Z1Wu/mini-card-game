@@ -24,16 +24,27 @@ Vite 输出实际访问地址（默认通常为 `http://localhost:5173`）。开
 | `npm run lint` | 运行 ESLint |
 | `npm test` | 运行 Vitest 组件测试（一次性） |
 | `npm run test:watch` | 以 watch 模式运行组件测试 |
-| `npm run test:e2e` | 运行记录式三人浏览器完整对局 |
+| `npm run test:e2e` | 依次运行完整牌局冒烟与桌面确定性玩法场景 |
+| `npm run test:e2e:smoke` | 仅运行三人完整牌局轮转、终局和结算冒烟 |
+| `npm run test:e2e:scenarios` | 仅运行四人确定性关键玩法矩阵 |
+| `npm run test:e2e:mobile` | 在 844×390 运行精选复杂交互场景 |
 
 首次运行浏览器 E2E：
 
 ```powershell
 npx playwright install chromium
 npm run test:e2e
+npm run test:e2e:mobile
 ```
 
-默认情况下测试会选择可用端口，不会干扰本地开发服务；产物位于 `test-results/full-game/`。可用 `E2E_BACKEND_PORT`、`E2E_FRONTEND_PORT`、`E2E_OUTPUT_DIR` 和 `E2E_SEED` 覆盖端口、产物目录和确定性发牌种子。
+默认情况下测试会选择可用端口，不会干扰本地开发服务。完整牌局、桌面场景和移动场景分别写入 `test-results/full-game/`、`test-results/scenarios/` 和 `test-results/mobile-game/`。每个目录包含：
+
+- 每名参与玩家的独立 WebM；
+- 可同步播放所有视角并按时间线高亮实际行动玩家的 `multiview.html`；
+- `timeline.json`、关键步骤截图与 `report.json`；
+- 报告中的计划场景、实际命中、动作分布及缺失覆盖（缺失时测试失败）。
+
+确定性场景只在测试进程显式使用 `APP_ENV=e2e` 与 `ENABLE_E2E_SCENARIOS=true` 时开放，客户端只能选择服务端内置的命名夹具，不能提交任意状态；生产启动会拒绝该开关。可用 `E2E_BACKEND_PORT`、`E2E_FRONTEND_PORT`、`E2E_OUTPUT_DIR`、`E2E_SEED` 和 `E2E_SHOWCASE=1` 覆盖端口、产物目录、发牌种子和录像停留节奏。
 
 ## 对局与隐私边界
 

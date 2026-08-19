@@ -31,6 +31,7 @@ npm run build
 cd frontend
 npx playwright install chromium
 npm run test:e2e
+npm run test:e2e:mobile
 ```
 
 ## GitHub Actions
@@ -41,7 +42,8 @@ npm run test:e2e
 | --- | --- | --- |
 | Backend | Ubuntu、Python 3.10、uv | `uv sync --frozen`；`uv run pytest tests/ -v --tb=short` |
 | Frontend | Ubuntu、Node.js 20 | `npm ci`；lint；`npm test`；build |
-| Browser E2E | Ubuntu、Python 3.10、Node.js 20、Chromium | 在前两个 job 成功后运行 `npm run test:e2e` 并上传 14 天产物 |
+| Browser E2E | Ubuntu、Python 3.10、Node.js 20、Chromium | 运行完整牌局冒烟与桌面确定性场景，上传逐玩家录像、多视角播放器、截图和覆盖报告（14 天） |
+| Mobile E2E | Ubuntu、Python 3.10、Node.js 20、Chromium | 在 844×390 运行精选复杂场景并上传同结构多视角产物（14 天） |
 
 `.github/workflows/build-push.yml` 只在推送 `v*` tag 时运行。它重新验证后端测试和前端 lint/build，再用 `Dockerfile.deploy` 构建并推送 Docker Hub 镜像的版本 tag 与 `latest`。该工作流需要 `DOCKERHUB_USERNAME` 和 `DOCKERHUB_TOKEN` secrets；它不是每个 PR 的镜像发布。
 

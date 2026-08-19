@@ -64,6 +64,11 @@ jobs:
     name: Browser E2E
     runs-on: ubuntu-latest
     needs: [backend]
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.1-noble
+    defaults:
+      run:
+        shell: bash
     permissions:
       contents: write
       pull-requests: write
@@ -89,17 +94,9 @@ jobs:
         working-directory: backend
         run: uv sync --frozen
 
-      - name: Cache Playwright Chromium
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
-
-      - name: Install frontend dependencies and Chromium
+      - name: Install frontend dependencies
         working-directory: frontend
-        run: |
-          npm ci
-          npx playwright install --with-deps chromium
+        run: npm ci
 
       - name: Run recorded three-player game
         working-directory: frontend
@@ -110,27 +107,30 @@ jobs:
         uses: actions/upload-artifact@v7.0.1
         with:
           name: browser-e2e-artifacts
-          path: frontend/test-results/full-game/
+          path: |
+            frontend/test-results/full-game/
+            frontend/test-results/scenarios/
           if-no-files-found: error
           retention-days: 14
 
-      - name: Publish webm to GitHub Pages
-        id: publish-webm
+      - name: Publish synchronized multiviews to GitHub Pages
+        id: publish-e2e
         if: always() && github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          WEBM="frontend/test-results/full-game/full-game.webm"
           PR_NUMBER="${{ github.event.pull_request.number }}"
           RUN_ID="${{ github.run_id }}"
           REPO="${{ github.repository }}"
           OWNER="${{ github.repository_owner }}"
           REPO_NAME="${REPO##*/}"
-          FILENAME="pr-${PR_NUMBER}-${RUN_ID}.webm"
+          TARGET="pr-${PR_NUMBER}-${RUN_ID}"
 
-          if [ ! -f "$WEBM" ]; then
-            echo "No webm produced; skipping publish."
-            echo "url=" >> "$GITHUB_OUTPUT"
+          if [ ! -f "frontend/test-results/full-game/multiview.html" ] || \
+             [ ! -f "frontend/test-results/scenarios/multiview.html" ]; then
+            echo "Multiview artifacts are incomplete; skipping publish."
+            echo "smoke_url=" >> "$GITHUB_OUTPUT"
+            echo "scenarios_url=" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -139,19 +139,18 @@ jobs:
                "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" \
                "$STAGING"; then
             echo "gh-pages branch not available; skipping publish."
-            echo "url=" >> "$GITHUB_OUTPUT"
+            echo "smoke_url=" >> "$GITHUB_OUTPUT"
+            echo "scenarios_url=" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          mkdir -p "$STAGING/ci-runs"
-          cp "$WEBM" "$STAGING/ci-runs/$FILENAME"
+          mkdir -p "$STAGING/ci-runs/$TARGET/smoke" "$STAGING/ci-runs/$TARGET/scenarios"
+          cp frontend/test-results/full-game/{multiview.html,timeline.json,player*.webm} "$STAGING/ci-runs/$TARGET/smoke/"
+          cp frontend/test-results/scenarios/{multiview.html,timeline.json,player*.webm} "$STAGING/ci-runs/$TARGET/scenarios/"
 
-          # Retention: keep newest 30 webms (run-id is monotonically increasing).
           cd "$STAGING/ci-runs"
-          (ls -1 *.webm 2>/dev/null || true) \
-            | sort -t- -k3 -rn \
-            | tail -n +31 \
-            | xargs -r rm -f
+          find . -mindepth 1 -maxdepth 1 -type d -name 'pr-*' ! -name '*-mobile' -printf '%f\n' \
+            | sort -t- -k3 -rn | tail -n +11 | xargs -r rm -rf
           cd "$STAGING"
 
           git config user.name "github-actions[bot]"
@@ -161,23 +160,24 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to publish."
           else
-            git commit -m "ci: E2E video for PR #${PR_NUMBER} (run ${RUN_ID})"
+            git commit -m "ci: E2E multiviews for PR #${PR_NUMBER} (run ${RUN_ID})"
             if ! git push; then
               echo "Push to gh-pages failed; skipping embed."
-              echo "url=" >> "$GITHUB_OUTPUT"
+              echo "smoke_url=" >> "$GITHUB_OUTPUT"
+              echo "scenarios_url=" >> "$GITHUB_OUTPUT"
               exit 0
             fi
           fi
 
-          URL="https://${OWNER}.github.io/${REPO_NAME}/ci-runs/${FILENAME}"
-          echo "Published webm: $URL"
-          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          BASE_URL="https://${OWNER}.github.io/${REPO_NAME}/ci-runs/${TARGET}"
+          echo "smoke_url=${BASE_URL}/smoke/multiview.html" >> "$GITHUB_OUTPUT"
+          echo "scenarios_url=${BASE_URL}/scenarios/multiview.html" >> "$GITHUB_OUTPUT"
 
       - name: Build PR comment from report
         if: always() && github.event_name == 'pull_request'
         working-directory: frontend
         env:
-          WEBM_URL: ${{ steps.publish-webm.outputs.url }}
+          MULTIVIEW_URL: ${{ steps.publish-e2e.outputs.smoke_url }}
         run: node e2e/build-pr-comment.mjs
 
       - name: Post e2e result to PR
@@ -187,48 +187,25 @@ jobs:
           header: e2e-result
           path: frontend/test-results/full-game/pr-comment.md
 
-  mobile-e2e:
-    name: Mobile E2E
-    runs-on: ubuntu-latest
-    needs: [backend]
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v8.3.2
-        with:
-          enable-cache: true
-
-      - name: Set up Python
-        run: uv python install 3.10
-
-      - name: Install backend dependencies
-        working-directory: backend
-        run: uv sync --frozen
-
-      - name: Cache Playwright Chromium
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
-
-      - name: Install frontend dependencies and Chromium
+      - name: Build deterministic scenario PR comment
+        if: always() && github.event_name == 'pull_request'
         working-directory: frontend
-        run: |
-          npm ci
-          npx playwright install --with-deps chromium
+        env:
+          MULTIVIEW_URL: ${{ steps.publish-e2e.outputs.scenarios_url }}
+          E2E_REPORT_PATH: test-results/scenarios/report.json
+          E2E_COMMENT_PATH: test-results/scenarios/pr-comment.md
+          E2E_TITLE_PREFIX: "🎯 Deterministic scenarios"
+        run: node e2e/build-pr-comment.mjs
+
+      - name: Post deterministic scenario result to PR
+        if: always() && github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: e2e-scenarios-result
+          path: frontend/test-results/scenarios/pr-comment.md
 
       - name: Run mobile game (844x390 landscape)
+        if: always()
         working-directory: frontend
         run: npm run test:e2e:mobile
 
@@ -241,22 +218,21 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Publish mobile webm to GitHub Pages
+      - name: Publish mobile multiview to GitHub Pages
         id: publish-mobile-webm
         if: always() && github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          WEBM="frontend/test-results/mobile-game/mobile-game.webm"
           PR_NUMBER="${{ github.event.pull_request.number }}"
           RUN_ID="${{ github.run_id }}"
           REPO="${{ github.repository }}"
           OWNER="${{ github.repository_owner }}"
           REPO_NAME="${REPO##*/}"
-          FILENAME="pr-${PR_NUMBER}-${RUN_ID}-mobile.webm"
+          TARGET="pr-${PR_NUMBER}-${RUN_ID}-mobile"
 
-          if [ ! -f "$WEBM" ]; then
-            echo "No mobile webm produced; skipping publish."
+          if [ ! -f "frontend/test-results/mobile-game/multiview.html" ]; then
+            echo "No mobile multiview produced; skipping publish."
             echo "url=" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -270,14 +246,12 @@ jobs:
             exit 0
           fi
 
-          mkdir -p "$STAGING/ci-runs"
-          cp "$WEBM" "$STAGING/ci-runs/$FILENAME"
+          mkdir -p "$STAGING/ci-runs/$TARGET"
+          cp frontend/test-results/mobile-game/{multiview.html,timeline.json,player*.webm} "$STAGING/ci-runs/$TARGET/"
 
           cd "$STAGING/ci-runs"
-          (ls -1 *-mobile.webm 2>/dev/null || true) \
-            | sort -t- -k3 -rn \
-            | tail -n +31 \
-            | xargs -r rm -f
+          find . -mindepth 1 -maxdepth 1 -type d -name 'pr-*-mobile' -printf '%f\n' \
+            | sort -t- -k3 -rn | tail -n +11 | xargs -r rm -rf
           cd "$STAGING"
 
           git config user.name "github-actions[bot]"
@@ -287,7 +261,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to publish."
           else
-            git commit -m "ci: mobile E2E video for PR #${PR_NUMBER} (run ${RUN_ID})"
+            git commit -m "ci: mobile E2E multiview for PR #${PR_NUMBER} (run ${RUN_ID})"
             if ! git push; then
               echo "Push to gh-pages failed; skipping embed."
               echo "url=" >> "$GITHUB_OUTPUT"
@@ -295,19 +269,18 @@ jobs:
             fi
           fi
 
-          URL="https://${OWNER}.github.io/${REPO_NAME}/ci-runs/${FILENAME}"
-          echo "Published mobile webm: $URL"
+          URL="https://${OWNER}.github.io/${REPO_NAME}/ci-runs/${TARGET}/multiview.html"
+          echo "Published mobile multiview: $URL"
           echo "url=$URL" >> "$GITHUB_OUTPUT"
 
       - name: Build mobile PR comment from report
         if: always() && github.event_name == 'pull_request'
         working-directory: frontend
         env:
-          WEBM_URL: ${{ steps.publish-mobile-webm.outputs.url }}
+          MULTIVIEW_URL: ${{ steps.publish-mobile-webm.outputs.url }}
           E2E_REPORT_PATH: test-results/mobile-game/report.json
           E2E_COMMENT_PATH: test-results/mobile-game/pr-comment.md
           E2E_TITLE_PREFIX: "📱 Mobile"
-          E2E_VIDEO_LABEL: "mobile-game.webm"
         run: node e2e/build-pr-comment.mjs
 
       - name: Post mobile e2e result to PR

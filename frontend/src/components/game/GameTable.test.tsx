@@ -45,4 +45,26 @@ describe('GameTable information hierarchy', () => {
     expect(screen.getByLabelText('你有 1 张质疑牌')).toBeInTheDocument();
     expect(screen.getByText('请选择一张手牌')).toBeInTheDocument();
   });
+
+  it('keeps a server-driven multi-player wait visible to the current actor', () => {
+    render(
+      <GameTable
+        players={[local, opponent]}
+        localPlayer={local}
+        localPlayerId="p1"
+        currentPlayerIndex={0}
+        harmonyArea={[]}
+        requiredHarmonyValue={6}
+        selectedCard={null}
+        onSelectCard={vi.fn()}
+        onPlayCard={() => undefined}
+        newsClubMyChosenCard={null}
+        turnStatusText="正在等待 小王 选牌"
+      />,
+    );
+
+    expect(screen.getByText('正在等待 小王 选牌')).toBeInTheDocument();
+    expect(screen.getByText('等待其他玩家完成操作')).toBeInTheDocument();
+    expect(screen.queryByText('请选择一张手牌')).not.toBeInTheDocument();
+  });
 });
