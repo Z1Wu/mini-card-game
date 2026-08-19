@@ -75,6 +75,7 @@ try {
   await initialTurnPage.getByLabel(initialCardLabel, { exact: true }).first().click();
   const decisionSheet = initialTurnPage.getByLabel(/决策说明$/);
   await decisionSheet.waitFor({ state: 'visible' });
+  await decisionSheet.getByText('查看完整决策说明', { exact: true }).click();
   await initialTurnPage.getByLabel('出牌结果预览').waitFor({ state: 'visible' });
   await initialTurnPage.waitForTimeout(350);
   assert.equal(await initialTurnPage.evaluate(() => document.documentElement.scrollWidth > window.innerWidth), false, 'Decision sheet should not create horizontal overflow');
@@ -90,7 +91,19 @@ try {
   assert.equal(gameOverflow, false, 'Game table should have no horizontal overflow on mobile');
   await primary.getByRole('list', { name: '其他玩家' }).waitFor({ state: 'visible' });
   await primary.getByLabel('我的手牌').waitFor({ state: 'visible' });
+  await primary.getByLabel(/调和目标 \d+，已投入 \d+ 张，当前总值未知/).waitFor({ state: 'visible' });
+  assert.equal(await primary.getByRole('heading', { name: '质疑牌' }).count(), 0, 'Doubt cards should stay attached to players instead of a central pile');
   await primary.screenshot({ path: path.join(outputRoot, 'game-table.png') });
+
+  // Disruptive actions live behind the table menu and require confirmation.
+  await primary.getByRole('button', { name: '打开牌桌菜单' }).click();
+  await primary.getByRole('menuitem', { name: /重新开始/ }).click();
+  await primary.getByRole('alertdialog').getByText('重新开始当前牌局？', { exact: true }).waitFor({ state: 'visible' });
+  await primary.getByRole('button', { name: '取消', exact: true }).click();
+  await primary.getByRole('button', { name: '打开牌桌菜单' }).click();
+  await primary.getByRole('menuitem', { name: '离开房间', exact: true }).click();
+  await primary.getByRole('alertdialog').getByText('确定要离开当前房间？', { exact: true }).waitFor({ state: 'visible' });
+  await primary.getByRole('button', { name: '取消', exact: true }).click();
 
   // ── Play full game on mobile ──
   let showcaseDone = false;
@@ -118,10 +131,11 @@ try {
       return state.game?.state === 'game_over' || state.game?.turn_count > turn;
     }, `turn ${before.game.turn_count} to finish`, before.game.turn_count);
     if (step === 5) {
-      await primary.getByRole('button', { name: /行动记录/ }).click();
+      await primary.getByRole('button', { name: '打开牌桌菜单' }).click();
+      await primary.getByRole('menuitem', { name: /行动记录/ }).click();
       await primary.getByText('公开行动', { exact: true }).waitFor({ state: 'visible' });
       await primary.screenshot({ path: path.join(outputRoot, 'action-history.png') });
-      await primary.getByRole('button', { name: /行动记录/ }).click();
+      await primary.getByRole('button', { name: '关闭行动记录' }).click();
       await primary.screenshot({ path: path.join(outputRoot, 'mid-game-table.png') });
     }
     // Pause so the turn-change toast is visible in the video.

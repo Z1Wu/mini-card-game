@@ -5,6 +5,8 @@ import { Card } from '../components/game/Card';
 import { SettlementView } from '../components/game/SettlementView';
 import { GameTable } from '../components/game/GameTable';
 import { ActionHistory } from '../components/game/ActionHistory';
+import { GameMenu } from '../components/game/GameMenu';
+import { GameConfirmDialog } from '../components/game/GameConfirmDialog';
 import { usePlayerStore } from '../stores/playerStore';
 import { useGameStore } from '../stores/gameStore';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -94,6 +96,9 @@ export const Game: React.FC = () => {
   const [turnChangeToast, setTurnChangeToast] = useState<string | null>(null);
   /** 出牌反馈提示 */
   const [playFeedback, setPlayFeedback] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [dangerAction, setDangerAction] = useState<'reset' | 'leave' | null>(null);
 
   useEffect(() => {
     if (!playerId) {
@@ -503,21 +508,34 @@ export const Game: React.FC = () => {
           <span className="game-hud-name">{playerName}</span>
           <span className="game-hud-round">R{gameState.turn_count}</span>
         </div>
-        <div className="game-hud-center">
-          {topBannerMessage && (
-            <span className={`game-hud-pill ${topBannerMessage.type === 'your-turn' ? 'game-hud-pill-active' : 'game-hud-pill-idle'}`}>
-              {topBannerMessage.type === 'your-turn' && '▶ '}
-              {topBannerMessage.text}
-            </span>
-          )}
-        </div>
         <div className="game-hud-right">
-          <Button onClick={handleResetGame} variant="secondary" size="sm" disabled={!isHost} className="game-hud-btn">{isHost ? '重开' : '等待'}</Button>
-          <Button onClick={handleLeave} variant="danger" size="sm" className="game-hud-btn">离开</Button>
+          <GameMenu
+            open={menuOpen}
+            isHost={isHost}
+            actionCount={gameState.public_actions?.length ?? 0}
+            onToggle={() => setMenuOpen(value => !value)}
+            onClose={() => setMenuOpen(false)}
+            onShowHistory={() => { setMenuOpen(false); setHistoryOpen(true); }}
+            onRequestReset={() => { setMenuOpen(false); setDangerAction('reset'); }}
+            onRequestLeave={() => { setMenuOpen(false); setDangerAction('leave'); }}
+          />
         </div>
       </div>
 
-      <ActionHistory actions={gameState.public_actions ?? []} />
+      <ActionHistory actions={gameState.public_actions ?? []} open={historyOpen} onOpenChange={setHistoryOpen} hideToggle />
+
+      {dangerAction && (
+        <GameConfirmDialog
+          kind={dangerAction}
+          onCancel={() => setDangerAction(null)}
+          onConfirm={() => {
+            const action = dangerAction;
+            setDangerAction(null);
+            if (action === 'reset') handleResetGame();
+            else handleLeave();
+          }}
+        />
+      )}
 
       {/* ── Turn-change toast (auto-dismiss) ── */}
       {turnChangeToast && (
@@ -534,8 +552,8 @@ export const Game: React.FC = () => {
 
       <div className="flex-1 w-full">
         {gameError && (
-          <div role="alert" className="fixed top-10 left-1/2 -translate-x-1/2 z-[60] flex items-center justify-between gap-3 rounded-xl border border-red-300 bg-red-50/95 backdrop-blur px-4 py-2 shadow-lg">
-            <span className="text-red-700 text-sm">{gameError}</span>
+          <div role="alert" className="game-error-banner">
+            <span>{gameError}</span>
             <Button variant="danger" size="sm" onClick={() => setGameError(null)}>关闭</Button>
           </div>
         )}
@@ -811,7 +829,7 @@ export const Game: React.FC = () => {
           </div>
         )}
 
-        {currentPlayer && <GameTable players={gameState.players} localPlayer={currentPlayer} localPlayerId={playerId ?? ''} currentPlayerIndex={gameState.current_player_index} harmonyArea={gameState.harmony_area} requiredHarmonyValue={gameState.required_harmony_value} isGameOver={isGameOver} selectedCard={selectedCard} onSelectCard={setSelectedCard} onPlayCard={handlePlayCard} newsClubMyChosenCard={newsClubMyChosenCard} />}
+        {currentPlayer && <GameTable players={gameState.players} localPlayer={currentPlayer} localPlayerId={playerId ?? ''} currentPlayerIndex={gameState.current_player_index} harmonyArea={gameState.harmony_area} requiredHarmonyValue={gameState.required_harmony_value} selectedCard={selectedCard} onSelectCard={setSelectedCard} onPlayCard={handlePlayCard} newsClubMyChosenCard={newsClubMyChosenCard} turnStatusText={topBannerMessage?.text ?? '等待牌局状态'} />}
         {viewHandResult && (
           <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setViewHandResult(null)}>
             <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl" onClick={e => e.stopPropagation()}>

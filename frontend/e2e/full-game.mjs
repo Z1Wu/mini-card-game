@@ -36,6 +36,9 @@ try {
   await Promise.all([...players.map((player) => player.page.waitForURL('**/game')), primary.getByRole('button', { name: '开始游戏', exact: true }).click()]);
   // Pause so the initial game table (harmony target, opponent stats, hand) is visible in video.
   await primary.waitForTimeout(800);
+  assert.equal(await primary.evaluate(() => document.documentElement.scrollWidth > window.innerWidth), false, 'Desktop game table should not create horizontal overflow');
+  await primary.getByLabel(/调和目标 \d+，已投入 \d+ 张，当前总值未知/).waitFor({ state: 'visible' });
+  await primary.screenshot({ path: path.join(outputRoot, 'game-table.png') });
   const pagesByPlayer = new Map();
   for (const player of players) pagesByPlayer.set((await readState(player.page)).connection.player_id, player.page);
   let showcaseDone = false;

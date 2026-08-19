@@ -9,26 +9,38 @@ const actionCopy = (action: PublicAction) => {
   return `发动 ${action.card_name ?? '一项特技'}${action.target_player_name ? `，目标为 ${action.target_player_name}` : ''}`;
 };
 
-export const ActionHistory: React.FC<{ actions: PublicAction[] }> = ({ actions }) => {
-  const [open, setOpen] = useState(false);
+interface ActionHistoryProps {
+  actions: PublicAction[];
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideToggle?: boolean;
+}
+
+export const ActionHistory: React.FC<ActionHistoryProps> = ({ actions, open: controlledOpen, onOpenChange, hideToggle = false }) => {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = (next: boolean) => {
+    setInternalOpen(next);
+    onOpenChange?.(next);
+  };
   const recent = [...actions].reverse();
   return (
     <aside className={`action-history${open ? ' action-history-open' : ''}`} aria-label="公开行动记录">
-      <button
+      {!hideToggle && <button
         type="button"
         className="action-history-toggle"
-        onClick={() => setOpen(value => !value)}
+        onClick={() => setOpen(!open)}
         aria-expanded={open}
       >
         <span aria-hidden="true">☷</span>
         行动记录
         <b>{actions.length}</b>
-      </button>
+      </button>}
       {open && (
         <div className="action-history-panel">
           <div className="action-history-heading">
-            <strong>公开行动</strong>
-            <span>不显示隐藏牌面</span>
+            <div><strong>公开行动</strong><span>不显示隐藏牌面</span></div>
+            {hideToggle && <button type="button" onClick={() => setOpen(false)} aria-label="关闭行动记录">×</button>}
           </div>
           {recent.length ? (
             <ol>

@@ -11,11 +11,11 @@ interface GameTableProps {
   currentPlayerIndex: number;
   harmonyArea: Card[];
   requiredHarmonyValue: number;
-  isGameOver: boolean;
   selectedCard: Card | null;
   onSelectCard: (card: Card | null) => void;
   onPlayCard: (card: Card, usage: CardUsageType) => void;
   newsClubMyChosenCard: Card | null;
+  turnStatusText: string;
 }
 
 /** Full-screen card-game table: opponents around an oval table, play area in center, hand fixed at bottom. */
@@ -47,14 +47,25 @@ export const GameTable: React.FC<GameTableProps> = (props) => {
       {/* ── Center play area ── */}
       <div className="table-center">
         <div className="table-center-inner">
-          <section className="table-objective" aria-label={`调和区已投入 ${harmonyCount} 张牌，目标值 ${props.requiredHarmonyValue} 暂时保密`}>
+          <section className="table-objective" aria-label={`调和目标 ${props.requiredHarmonyValue}，已投入 ${harmonyCount} 张，当前总值未知`}>
             <div className="table-objective-seal" aria-hidden="true">和</div>
             <div className="table-objective-copy">
               <span className="table-objective-kicker">调和仪式</span>
-              <div className="table-objective-value"><strong>{harmonyCount}</strong><span>张已投入</span></div>
-              <div className="table-objective-track" aria-hidden="true"><span /></div>
+              <div className="table-objective-summary">
+                <span>目标 <strong>{props.requiredHarmonyValue}</strong></span>
+                <i aria-hidden="true" />
+                <span>已投入 <strong>{harmonyCount}</strong> 张</span>
+                <i aria-hidden="true" />
+                <span className="table-objective-unknown">当前总值未知</span>
+              </div>
             </div>
-            <span className="table-objective-count">目标值 {props.requiredHarmonyValue} · 暂时保密</span>
+            <div className="table-objective-cards" aria-label={`调和区 ${harmonyCount} 张牌`}>
+              {props.harmonyArea.length > 0 ? props.harmonyArea.map(card => (
+                <div key={card.id} className="table-objective-card">
+                  <CardView card={card} showAsFaceDown />
+                </div>
+              )) : <span className="table-objective-empty">等待投入</span>}
+            </div>
           </section>
 
           {/* Face-up field cards */}
@@ -74,42 +85,6 @@ export const GameTable: React.FC<GameTableProps> = (props) => {
             )}
           </div>
 
-          {/* Harmony + Doubt zones */}
-          <div className="table-zones">
-            <div className="table-zone table-harmony-zone">
-              <h3 className="table-zone-title">调和牌堆 <span className="table-zone-target">{harmonyCount} 张</span></h3>
-              <div className="table-zone-cards">
-                {props.harmonyArea.length > 0 ? (
-                  props.harmonyArea.map(card => (
-                    <div key={card.id} className="w-10 sm:w-12">
-                      <CardView card={card} showAsFaceDown />
-                    </div>
-                  ))
-                ) : (
-                  <span className="table-zone-empty">空</span>
-                )}
-              </div>
-            </div>
-
-            <div className="table-zone">
-              <h3 className="table-zone-title">质疑牌</h3>
-              <div className="table-zone-cards">
-                {props.players.flatMap(p =>
-                  (p.doubt_cards ?? []).map(c => (
-                    <div key={`${p.id}-${c.id}`} className="table-doubt-item">
-                      <span className="table-doubt-label">→ {p.name}</span>
-                      <div className="w-9 sm:w-10">
-                        <CardView card={c} showAsFaceDown={!props.isGameOver} />
-                      </div>
-                    </div>
-                  ))
-                )}
-                {props.players.every(p => !p.doubt_cards?.length) && (
-                  <span className="table-zone-empty">暂无</span>
-                )}
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -122,6 +97,7 @@ export const GameTable: React.FC<GameTableProps> = (props) => {
         onPlay={props.onPlayCard}
         harmonyIsEmpty={!props.harmonyArea.length}
         newsClubMyChosenCard={props.newsClubMyChosenCard}
+        turnStatusText={props.turnStatusText}
       />
     </div>
   );
