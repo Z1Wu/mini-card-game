@@ -47,6 +47,7 @@ export const Login: React.FC = () => {
   const [roomList, setRoomList] = useState<RoomInfo[]>([]);
   const [sessionExpiredMsg, setSessionExpiredMsg] = useState('');
   const [serverErrorCode, setServerErrorCode] = useState('');
+  const [roomPanelOpen, setRoomPanelOpen] = useState(false);
 
   const isGameInProgressError = serverErrorCode === 'game_in_progress' || (serverError?.includes('游戏正在进行中') ?? false);
 
@@ -163,6 +164,7 @@ export const Login: React.FC = () => {
       setRoomCode('default');
       setRoomCodeInput('');
       setSessionExpiredMsg('你之前的房间已过期，请重新创建或加入房间。');
+      setRoomPanelOpen(true);
       // Auto-dismiss after 5s.
       setTimeout(() => setSessionExpiredMsg(''), 5000);
     });
@@ -346,81 +348,6 @@ export const Login: React.FC = () => {
           </div>
         )}
 
-        <div className="campus-note mb-6 p-4 rounded-xl">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium text-slate-700">游戏房间</span>
-            <span className="text-xs font-bold text-[#c66b5d]">{roomCode === 'default' ? '默认大厅' : roomCode}</span>
-          </div>
-          <div className="flex gap-2">
-            <input
-              value={roomCodeInput}
-              onChange={event => setRoomCodeInput(event.target.value.toUpperCase())}
-              placeholder="输入 6 位房间码"
-              maxLength={6}
-              className="min-w-0 flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white uppercase placeholder-slate-500"
-              disabled={roomBusy}
-            />
-            <Button type="button" variant="secondary" size="sm" onClick={handleJoinRoom} disabled={roomBusy || !roomCodeInput.trim()}>加入</Button>
-            <Button type="button" variant="primary" size="sm" onClick={handleCreateRoom} disabled={roomBusy}>创建</Button>
-          </div>
-          {roomError && <p className="text-red-300 text-xs mt-2">{roomError}</p>}
-          <p className="text-slate-500 text-xs mt-2">登录前选择房间；创建后可把房间码发给其他玩家。</p>
-
-          {roomList.length > 0 && (
-            <div className="mt-3 border-t border-slate-700 pt-3">
-              <p className="text-slate-400 text-xs mb-2">活跃房间：</p>
-              <div className="space-y-1">
-                {roomList.map(room => (
-                  <button
-                    key={room.code}
-                    type="button"
-                    onClick={() => handleJoinRoomFromList(room.code)}
-                    disabled={roomBusy}
-                    className="w-full flex items-center justify-between px-3 py-2 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700 rounded-lg text-left transition-colors disabled:opacity-50"
-                  >
-                    <div>
-                      <span className="text-sm font-mono text-[#c66b5d]">{room.code}</span>
-                      <span className="text-slate-400 text-xs ml-2">
-                        {room.state === 'waiting' ? '等待中' : room.state === 'playing' ? '对局中' : room.state === 'special_phase' ? '特技阶段' : room.state === 'game_over' ? '已结束' : ''}
-                      </span>
-                    </div>
-                    <span className="text-xs text-slate-400">
-                      {room.player_count}人{room.player_names.length > 0 ? ` · ${room.player_names.join('、')}` : ''}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* 对局状态（登录前可见） */}
-        <div className="campus-note mb-6 p-4 rounded-xl">
-          <div className="text-sm font-medium text-slate-700 mb-2">当前对局状态</div>
-          {gameStatusError && (
-            <p className="text-amber-400 text-sm">{gameStatusError}</p>
-          )}
-          {!gameStatusError && gameStatus === null && (
-            <p className="text-slate-500 text-sm">正在获取对局状态…</p>
-          )}
-          {!gameStatusError && gameStatus !== null && !gameStatus.has_game && (
-            <p className="text-slate-400 text-sm">当前无对局</p>
-          )}
-          {!gameStatusError && gameStatus !== null && gameStatus.has_game && (
-            <div className="text-slate-300 text-sm">
-              {gameStatus.state === 'waiting' && (
-                <p>等待中，已加入：{gameStatus.player_names.length ? gameStatus.player_names.join('、') : '暂无'}</p>
-              )}
-              {(gameStatus.state === 'playing' || gameStatus.state === 'special_phase') && (
-                <p>对局进行中，参与玩家：{gameStatus.player_names.join('、')}</p>
-              )}
-              {gameStatus.state === 'game_over' && (
-                <p>上一局已结束，参与玩家：{gameStatus.player_names.join('、')}</p>
-              )}
-            </div>
-          )}
-        </div>
-
         <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); void handleLogin(); }}>
           <div>
             <label htmlFor="username" className="block text-sm font-medium text-slate-300 mb-2">
@@ -490,6 +417,95 @@ export const Login: React.FC = () => {
             <p>断线后重新登录可回到对局</p>
           </div>
         </form>
+
+        {/* 房间选择（登录前可选，默认折叠） */}
+        <div className="campus-note mt-6 p-4 rounded-xl">
+          <button
+            type="button"
+            onClick={() => setRoomPanelOpen(open => !open)}
+            aria-expanded={roomPanelOpen}
+            className="w-full flex items-center justify-between rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+          >
+            <span className="text-sm font-medium text-slate-700">游戏房间</span>
+            <span className="flex items-center gap-2 text-xs">
+              <span className="font-bold text-[#c66b5d]">{roomCode === 'default' ? '默认大厅' : roomCode}</span>
+              <span className="text-slate-500">{roomPanelOpen ? '收起 ▲' : '更换房间 ▼'}</span>
+            </span>
+          </button>
+
+          {roomPanelOpen && (
+            <div className="mt-3 border-t border-slate-700 pt-3">
+              {roomError && <p className="text-red-300 text-xs mb-2">{roomError}</p>}
+              <div className="flex gap-2">
+                <input
+                  value={roomCodeInput}
+                  onChange={event => setRoomCodeInput(event.target.value.toUpperCase())}
+                  placeholder="输入 6 位房间码"
+                  maxLength={6}
+                  className="min-w-0 flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white uppercase placeholder-slate-500"
+                  disabled={roomBusy}
+                />
+                <Button type="button" variant="secondary" size="sm" onClick={handleJoinRoom} disabled={roomBusy || !roomCodeInput.trim()}>加入</Button>
+                <Button type="button" variant="primary" size="sm" onClick={handleCreateRoom} disabled={roomBusy}>创建</Button>
+              </div>
+              <p className="text-slate-500 text-xs mt-2">登录前选择房间；创建后可把房间码发给其他玩家。</p>
+
+              {roomList.length > 0 && (
+                <div className="mt-3 border-t border-slate-700 pt-3">
+                  <p className="text-slate-400 text-xs mb-2">活跃房间：</p>
+                  <div className="space-y-1">
+                    {roomList.map(room => (
+                      <button
+                        key={room.code}
+                        type="button"
+                        onClick={() => handleJoinRoomFromList(room.code)}
+                        disabled={roomBusy}
+                        className="w-full flex items-center justify-between px-3 py-2 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700 rounded-lg text-left transition-colors disabled:opacity-50"
+                      >
+                        <div>
+                          <span className="text-sm font-mono text-[#c66b5d]">{room.code}</span>
+                          <span className="text-slate-400 text-xs ml-2">
+                            {room.state === 'waiting' ? '等待中' : room.state === 'playing' ? '对局中' : room.state === 'special_phase' ? '特技阶段' : room.state === 'game_over' ? '已结束' : ''}
+                          </span>
+                        </div>
+                        <span className="text-xs text-slate-400">
+                          {room.player_count}人{room.player_names.length > 0 ? ` · ${room.player_names.join('、')}` : ''}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 对局状态（随所选房间展示） */}
+              <div className="mt-3 border-t border-slate-700 pt-3">
+                <div className="text-sm font-medium text-slate-700 mb-2">当前对局状态</div>
+                {gameStatusError && (
+                  <p className="text-amber-400 text-sm">{gameStatusError}</p>
+                )}
+                {!gameStatusError && gameStatus === null && (
+                  <p className="text-slate-500 text-sm">正在获取对局状态…</p>
+                )}
+                {!gameStatusError && gameStatus !== null && !gameStatus.has_game && (
+                  <p className="text-slate-400 text-sm">当前无对局</p>
+                )}
+                {!gameStatusError && gameStatus !== null && gameStatus.has_game && (
+                  <div className="text-slate-300 text-sm">
+                    {gameStatus.state === 'waiting' && (
+                      <p>等待中，已加入：{gameStatus.player_names.length ? gameStatus.player_names.join('、') : '暂无'}</p>
+                    )}
+                    {(gameStatus.state === 'playing' || gameStatus.state === 'special_phase') && (
+                      <p>对局进行中，参与玩家：{gameStatus.player_names.join('、')}</p>
+                    )}
+                    {gameStatus.state === 'game_over' && (
+                      <p>上一局已结束，参与玩家：{gameStatus.player_names.join('、')}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
