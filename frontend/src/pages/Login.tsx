@@ -8,6 +8,25 @@ import { adminApi } from '../services/adminApi';
 import { useAdminStore } from '../stores/adminStore';
 import { LoginMessage, ReconnectMessage, GameStatusMessage, LoginSuccessMessage, ReconnectSuccessMessage, RoomCreatedMessage, RoomJoinedMessage, RoomListMessage, RoomInfo } from '../types/message';
 import { logUnexpectedError } from '../utils/logger';
+import { describeServerError } from '../utils/errorMessages';
+
+const REMEMBERED_USERNAME_KEY = 'card-game-username';
+
+function loadRememberedUsername(): string {
+  try {
+    return window.localStorage.getItem(REMEMBERED_USERNAME_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function rememberUsername(username: string): void {
+  try {
+    window.localStorage.setItem(REMEMBERED_USERNAME_KEY, username);
+  } catch {
+    // Storage may be unavailable (privacy mode); remembering is best-effort.
+  }
+}
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -15,7 +34,7 @@ export const Login: React.FC = () => {
   const { connect, send, error } = useWebSocket();
   const [isConnecting, setIsConnecting] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
-  const [username, setUsernameInput] = useState('');
+  const [username, setUsernameInput] = useState(loadRememberedUsername);
   const [password, setPasswordInput] = useState('');
   const [serverError, setServerError] = useState('');
   /** 对局状态（登录前查询）：null=加载中/未请求 */
@@ -62,7 +81,7 @@ export const Login: React.FC = () => {
         setRoomBusy(false);
         return;
       }
-      setServerError(message.message);
+      setServerError(describeServerError(message));
       setServerErrorCode(message.code ?? '');
       setIsConnecting(false);
       setIsReconnecting(false);
@@ -75,6 +94,9 @@ export const Login: React.FC = () => {
       setIsReconnecting(false);
       if (message.player_id && message.player_name) {
         setPlayer(message.player_id, message.player_name);
+      }
+      if (username.trim()) {
+        rememberUsername(username.trim());
       }
       setReconnectToken(message.reconnect_token);
       wsService.setSession(roomCode, username.trim(), message.reconnect_token);
@@ -399,7 +421,7 @@ export const Login: React.FC = () => {
           )}
         </div>
 
-        <div className="space-y-6">
+        <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); void handleLogin(); }}>
           <div>
             <label htmlFor="username" className="block text-sm font-medium text-slate-300 mb-2">
               用户名
@@ -415,6 +437,7 @@ export const Login: React.FC = () => {
               placeholder="请输入用户名"
               className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               disabled={isConnecting}
+              autoFocus={!username}
               autoComplete="username"
               aria-invalid={Boolean(validationError && !username.trim())}
               aria-describedby={validationError ? 'login-validation-error' : undefined}
@@ -435,6 +458,7 @@ export const Login: React.FC = () => {
               placeholder="请输入密码"
               className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               disabled={isConnecting}
+              autoFocus={Boolean(username)}
               autoComplete="current-password"
               aria-invalid={Boolean(validationError && !password)}
               aria-describedby={validationError ? 'login-validation-error' : undefined}
@@ -443,7 +467,7 @@ export const Login: React.FC = () => {
           </div>
 
           <Button
-            onClick={handleLogin}
+            type="submit"
             disabled={isConnecting}
             className="w-full"
             variant="primary"
@@ -465,7 +489,7 @@ export const Login: React.FC = () => {
             <p>需要至少 3 名玩家开始游戏</p>
             <p>断线后重新登录可回到对局</p>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );
