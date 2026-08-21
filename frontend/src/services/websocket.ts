@@ -88,6 +88,11 @@ class WebSocketService {
         socket.onmessage = (event) => {
           try {
             const message: WebSocketMessage = JSON.parse(event.data);
+            if (message.type === 'reconnect_success') {
+              // The server rotates the token on every reconnect; keep the
+              // replay session valid for the next drop.
+              this.refreshSessionToken((message as { reconnect_token?: string }).reconnect_token);
+            }
             const handlers = this.messageHandlers.get(message.type);
             if (handlers) {
               handlers.forEach(handler => handler(message));
@@ -164,6 +169,15 @@ class WebSocketService {
 
   setSession(roomCode: string, username: string, reconnectToken: string): void {
     this.session = { roomCode, username, reconnectToken };
+    window.sessionStorage.setItem('card-game-session', JSON.stringify(this.session));
+  }
+
+  /** Persist a server-rotated reconnect token so session replay keeps working. */
+  private refreshSessionToken(reconnectToken?: string): void {
+    if (!reconnectToken || !this.session || this.session.reconnectToken === reconnectToken) {
+      return;
+    }
+    this.session = { ...this.session, reconnectToken };
     window.sessionStorage.setItem('card-game-session', JSON.stringify(this.session));
   }
 

@@ -27,8 +27,9 @@ export const Login: React.FC = () => {
   const [validationError, setValidationError] = useState('');
   const [roomList, setRoomList] = useState<RoomInfo[]>([]);
   const [sessionExpiredMsg, setSessionExpiredMsg] = useState('');
+  const [serverErrorCode, setServerErrorCode] = useState('');
 
-  const isGameInProgressError = serverError?.includes('游戏正在进行中') ?? false;
+  const isGameInProgressError = serverErrorCode === 'game_in_progress' || (serverError?.includes('游戏正在进行中') ?? false);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,12 +63,14 @@ export const Login: React.FC = () => {
         return;
       }
       setServerError(message.message);
+      setServerErrorCode(message.code ?? '');
       setIsConnecting(false);
       setIsReconnecting(false);
     };
 
     const handleLoginSuccess = async (message: LoginSuccessMessage) => {
       setServerError('');
+      setServerErrorCode('');
       setIsConnecting(false);
       setIsReconnecting(false);
       if (message.player_id && message.player_name) {
@@ -95,11 +98,21 @@ export const Login: React.FC = () => {
 
     const handleReconnectSuccess = (message: ReconnectSuccessMessage) => {
       setServerError('');
+      setServerErrorCode('');
       setIsReconnecting(false);
       if (message.player_id && message.player_name) {
         setPlayer(message.player_id, message.player_name);
       }
       if (message.reconnect_token) setReconnectToken(message.reconnect_token);
+      // Persist the session (with the rotated token) so a later drop can be
+      // replayed automatically; without this, manual reconnects leave no
+      // session behind and the next disconnect strands the player.
+      const { username: storedUsername, roomCode: storedRoomCode, reconnectToken } = usePlayerStore.getState();
+      const activeToken = message.reconnect_token ?? reconnectToken;
+      if (activeToken && storedUsername) {
+        wsService.setSession(storedRoomCode, storedUsername, activeToken);
+      }
+      setPassword('');
       navigate('/lobby');
     };
 

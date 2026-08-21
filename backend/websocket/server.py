@@ -212,24 +212,24 @@ class GameWebSocketServer:
         
         player_id = username
 
-        # Hub-level cross-room collision check.
+        # Hub-level cross-room collision check. A claim already held by this
+        # room's live session is resolved below by displacing that session.
         if self.hub and not self.hub.claim_username(player_id):
-            await self.send_to_client(websocket, {
-                "type": "error",
-                "message": "该玩家已在其他房间中登录"
-            })
-            return
-        
-        if player_id in self.player_connections:
-            # Release the hub claim since we're rejecting this login.
-            if self.hub:
-                self.hub.release_username(player_id)
-            await self.send_to_client(websocket, {
-                "type": "error",
-                "message": "该玩家已经在线"
-            })
-            return
-        
+            if player_id not in self.player_connections:
+                await self.send_to_client(websocket, {
+                    "type": "error",
+                    "code": "username_claimed_elsewhere",
+                    "message": "该玩家已在其他房间中登录"
+                })
+                return
+
+        existing_ws = self.player_connections.get(player_id)
+        if existing_ws is not None and existing_ws is not websocket:
+            # Authenticated re-login takes over the live session: notify and
+            # drop the old connection instead of stranding it as a ghost.
+            await self._displace_connection(player_id, existing_ws)
+        # Re-login on the very same socket falls through and succeeds idempotently.
+
         player_name = get_user_name(username)
         reconnect_token = secrets.token_urlsafe(32)
         self.reconnect_tokens[player_id] = reconnect_token
@@ -257,6 +257,7 @@ class GameWebSocketServer:
                     self.hub.release_username(player_id)
                 await self.send_to_client(websocket, {
                     "type": "error",
+                    "code": "game_in_progress",
                     "message": "游戏正在进行中，无法加入新玩家"
                 })
                 return
@@ -280,6 +281,24 @@ class GameWebSocketServer:
                     "message": "Failed to join game"
                 })
 
+    async def _displace_connection(self, player_id: str, old_websocket) -> None:
+        """Notify and drop a live connection that loses its session binding.
+
+        Without this the displaced socket stays in ``clients`` as a ghost: it
+        keeps receiving broadcasts while every action fails authentication.
+        """
+        self.player_connections.pop(player_id, None)
+        self.clients.discard(old_websocket)
+        await self.send_to_client(old_websocket, {
+            "type": "error",
+            "code": "session_taken_over",
+            "message": "该账号已在其他连接登录，当前连接已断开",
+        })
+        try:
+            await old_websocket.close(code=4001, reason="session taken over")
+        except Exception:
+            logger.debug("Failed to close displaced connection for %s", player_id, exc_info=True)
+
     async def _handle_reconnect(self, websocket: websockets.WebSocketServerProtocol, data: dict):
         from auth.users import authenticate_user
             
@@ -290,6 +309,7 @@ class GameWebSocketServer:
         if not username or (not password and not reconnect_token):
             await self.send_to_client(websocket, {
                 "type": "error",
+                "code": "invalid_reconnect_credentials",
                 "message": "Missing reconnect credentials"
             })
             return
@@ -302,6 +322,7 @@ class GameWebSocketServer:
         if not token_is_valid and not (password and authenticate_user(username, password)):
             await self.send_to_client(websocket, {
                 "type": "error",
+                "code": "invalid_reconnect_credentials",
                 "message": "Invalid reconnect credentials"
             })
             return
@@ -318,6 +339,7 @@ class GameWebSocketServer:
         if not existing_player:
             await self.send_to_client(websocket, {
                 "type": "error",
+                "code": "player_not_in_game",
                 "message": "Player not found in game"
             })
             return
@@ -328,16 +350,26 @@ class GameWebSocketServer:
             if not self.hub.claim_username(player_id):
                 await self.send_to_client(websocket, {
                     "type": "error",
+                    "code": "username_claimed_elsewhere",
                     "message": "该玩家已在其他房间中登录"
                 })
                 return
-            
+
+        # Take over the session from any live connection, then rotate the
+        # token so the displaced connection cannot reconnect with its stale
+        # copy and start a takeover ping-pong.
+        old_ws = self.player_connections.get(player_id)
+        if old_ws is not None and old_ws is not websocket:
+            await self._displace_connection(player_id, old_ws)
+
+        reconnect_token = secrets.token_urlsafe(32)
+        self.reconnect_tokens[player_id] = reconnect_token
         self.player_connections[player_id] = websocket
         await self.send_to_client(websocket, {
             "type": "reconnect_success",
             "player_id": player_id,
             "player_name": existing_player.name,
-            "reconnect_token": self.reconnect_tokens.get(player_id),
+            "reconnect_token": reconnect_token,
         })
         await self._broadcast_game_state()
         await self._resume_pending_interaction(player_id, websocket)
