@@ -23,14 +23,24 @@ export async function openPlayers(accounts, { appUrl, rawVideoRoot, viewport = {
   return { browser, players, recordingStartedAt: Math.min(...players.map((player) => player.videoStartedAt)) };
 }
 
+/** The room panel is collapsed by default; open it before using room controls. */
+async function ensureRoomPanelVisible(page) {
+  const roomInput = page.locator('input[placeholder="输入 6 位房间码"]');
+  if (await roomInput.isVisible().catch(() => false)) return;
+  await page.getByRole('button', { name: /更换房间|收起/ }).click();
+  await roomInput.waitFor({ state: 'visible' });
+}
+
 export async function createRoomAndLogin(players) {
   const host = players[0];
+  await ensureRoomPanelVisible(host.page);
   await host.page.getByRole('button', { name: '创建', exact: true }).click();
   const roomInput = host.page.locator('input[placeholder="输入 6 位房间码"]');
   await roomInput.waitFor({ state: 'visible' });
   await host.page.waitForFunction((selector) => document.querySelector(selector)?.value.length === 6, 'input[placeholder="输入 6 位房间码"]', { timeout: TIMEOUT_MS });
   const roomCode = await roomInput.inputValue();
   for (const player of players.slice(1)) {
+    await ensureRoomPanelVisible(player.page);
     const input = player.page.locator('input[placeholder="输入 6 位房间码"]');
     await input.fill(roomCode);
     await player.page.getByRole('button', { name: '加入', exact: true }).click();
