@@ -1,0 +1,31 @@
+{
+  "title": "844×390 关键场景（多视角）",
+  "recording_started_at": 1787306239186,
+  "players": [
+    {
+      "name": "player1",
+      "username": "player1",
+      "offset_ms": 0,
+      "video": "player1.webm"
+    },
+    {
+      "name": "player2",
+      "username": "player2",
+      "offset_ms": 107,
+      "video": "player2.webm"
+    },
+    {
+      "name": "player3",
+      "username": "player3",
+      "offset_ms": 250,
+      "video": "player3.webm"
+    },
+    {
+      "name": "player4",
+      "username": "player4",
+      "offset_ms": 364,
+      "video": "player4.webm"
+    }
+  ],
+  "events": []
+}
