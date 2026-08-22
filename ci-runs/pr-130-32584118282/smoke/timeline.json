@@ -1,0 +1,101 @@
+{
+  "title": "完整牌局冒烟测试（跟随实际行动玩家）",
+  "recording_started_at": 1787415410365,
+  "players": [
+    {
+      "name": "player1",
+      "username": "player1",
+      "offset_ms": 0,
+      "video": "player1.webm"
+    },
+    {
+      "name": "player2",
+      "username": "player2",
+      "offset_ms": 121,
+      "video": "player2.webm"
+    },
+    {
+      "name": "player3",
+      "username": "player3",
+      "offset_ms": 274,
+      "video": "player3.webm"
+    }
+  ],
+  "events": [
+    {
+      "at_ms": 3226,
+      "player_id": "player2",
+      "label": "完整牌局：玩家2 第 1 次行动"
+    },
+    {
+      "at_ms": 9662,
+      "player_id": "player3",
+      "label": "完整牌局：玩家3 第 2 次行动"
+    },
+    {
+      "at_ms": 11728,
+      "player_id": "player1",
+      "label": "完整牌局：玩家1 第 3 次行动"
+    },
+    {
+      "at_ms": 13649,
+      "player_id": "player2",
+      "label": "完整牌局：玩家2 第 4 次行动"
+    },
+    {
+      "at_ms": 15381,
+      "player_id": "player3",
+      "label": "完整牌局：玩家3 第 5 次行动"
+    },
+    {
+      "at_ms": 17129,
+      "player_id": "player1",
+      "label": "完整牌局：玩家1 第 6 次行动"
+    },
+    {
+      "at_ms": 18792,
+      "player_id": "player2",
+      "label": "完整牌局：玩家2 第 7 次行动"
+    },
+    {
+      "at_ms": 20485,
+      "player_id": "player3",
+      "label": "完整牌局：玩家3 第 8 次行动"
+    },
+    {
+      "at_ms": 22192,
+      "player_id": "player1",
+      "label": "完整牌局：玩家1 第 9 次行动"
+    },
+    {
+      "at_ms": 23918,
+      "player_id": "player2",
+      "label": "完整牌局：玩家2 第 10 次行动"
+    },
+    {
+      "at_ms": 25558,
+      "player_id": "player3",
+      "label": "完整牌局：玩家3 第 11 次行动"
+    },
+    {
+      "at_ms": 27326,
+      "player_id": "player1",
+      "label": "完整牌局：玩家1 第 12 次行动"
+    },
+    {
+      "at_ms": 29067,
+      "player_id": "player2",
+      "label": "完整牌局：玩家2 第 13 次行动"
+    },
+    {
+      "at_ms": 30782,
+      "player_id": "player3",
+      "label": "完整牌局：玩家3 第 14 次行动"
+    },
+    {
+      "at_ms": 32625,
+      "player_id": "player1",
+      "label": "完整牌局：玩家1 第 15 次行动"
+    }
+  ]
+}
