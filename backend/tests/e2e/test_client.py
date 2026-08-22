@@ -76,6 +76,30 @@ class GameTestClient:
         if self.websocket is None:
             self.websocket = await websockets.connect(self.uri)
 
+    async def login(self, username: str, password: str):
+        """Authenticate at the hub level (room binding happens via join/create)."""
+        await self.open()
+        await self.send_message({"type": "login", "username": username, "password": password})
+        response = await self.receive_message({"login_success", "error"})
+        if response["type"] == "login_success":
+            self.player_id = username
+            self.player_name = response.get("player_name", username)
+        return response
+
+    async def reconnect(self, username: str, reconnect_token: str = None, password: str = None):
+        payload = {"type": "reconnect", "username": username}
+        if reconnect_token:
+            payload["reconnect_token"] = reconnect_token
+        if password:
+            payload["password"] = password
+        await self.open()
+        await self.send_message(payload)
+        response = await self.receive_message({"reconnect_success", "error"})
+        if response["type"] == "reconnect_success":
+            self.player_id = username
+            self.player_name = response.get("player_name", username)
+        return response
+
     async def create_room(self):
         await self.open()
         await self.send_message({"type": "create_room"})

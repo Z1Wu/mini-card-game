@@ -24,20 +24,27 @@ export async function openPlayers(accounts, { appUrl, rawVideoRoot, viewport = {
 }
 
 export async function createRoomAndLogin(players) {
+  // New flow: everyone authenticates first (lands on /rooms), then the host
+  // creates a room and the rest join by code (each landing in /lobby).
+  for (const player of players) await login(player);
   const host = players[0];
-  await host.page.getByRole('button', { name: '创建', exact: true }).click();
-  const roomInput = host.page.locator('input[placeholder="输入 6 位房间码"]');
-  await roomInput.waitFor({ state: 'visible' });
-  await host.page.waitForFunction((selector) => document.querySelector(selector)?.value.length === 6, 'input[placeholder="输入 6 位房间码"]', { timeout: TIMEOUT_MS });
-  const roomCode = await roomInput.inputValue();
+  await host.page.getByRole('button', { name: '创建房间' }).click();
+  await host.page.waitForURL('**/lobby', { timeout: TIMEOUT_MS });
+  await host.page.waitForFunction(
+    () => Boolean(document.querySelector('[data-room-code]')?.getAttribute('data-room-code')),
+    null,
+    { timeout: TIMEOUT_MS },
+  );
+  const roomCode = await host.page.locator('[data-room-code]').getAttribute('data-room-code');
   for (const player of players.slice(1)) {
     const input = player.page.locator('input[placeholder="输入 6 位房间码"]');
+    await input.waitFor({ state: 'visible' });
     await input.fill(roomCode);
-    await player.page.getByRole('button', { name: '加入', exact: true }).click();
-    await player.page.waitForFunction((selector) => document.querySelector(selector)?.value.length === 6, 'input[placeholder="输入 6 位房间码"]', { timeout: TIMEOUT_MS });
+    await Promise.all([
+      player.page.waitForURL('**/lobby', { timeout: TIMEOUT_MS }),
+      player.page.locator('input[placeholder="输入 6 位房间码"] + button').click(),
+    ]);
   }
-  // Keep join order stable so a seeded deck maps to the same players every run.
-  for (const player of players) await login(player);
   return roomCode;
 }
 
@@ -56,7 +63,7 @@ export async function findHost(players, timeoutMs = TIMEOUT_MS) {
 async function login(player) {
   await player.page.getByLabel('用户名').fill(player.username);
   await player.page.getByLabel('密码').fill(player.password);
-  await Promise.all([player.page.waitForURL('**/lobby', { timeout: TIMEOUT_MS }), player.page.getByRole('button', { name: '登录', exact: true }).click()]);
+  await Promise.all([player.page.waitForURL('**/rooms', { timeout: TIMEOUT_MS }), player.page.getByRole('button', { name: '登录', exact: true }).click()]);
 }
 
 export async function readState(page) {

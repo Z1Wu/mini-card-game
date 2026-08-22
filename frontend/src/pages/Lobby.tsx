@@ -21,8 +21,11 @@ export const Lobby: React.FC = () => {
   useEffect(() => {
     if (!playerId) {
       navigate('/', { replace: true });
+    } else if (roomCode === 'default') {
+      // Authenticated but no room chosen yet: go pick one in the room hub.
+      navigate('/rooms', { replace: true });
     }
-  }, [playerId, navigate]);
+  }, [playerId, roomCode, navigate]);
 
   useEffect(() => {
     const handlePlayerList = (message: any) => {
@@ -102,7 +105,7 @@ export const Lobby: React.FC = () => {
           <div>
             <p className="campus-kicker mb-1">Waiting Room</p>
             <h1 className="campus-title text-3xl font-bold">集合大厅</h1>
-            <p className="text-slate-500 text-xs mt-1">房间：{roomCode === 'default' ? '默认大厅' : roomCode}</p>
+            <p className="text-slate-500 text-xs mt-1">房间：<span data-room-code={roomCode === 'default' ? '' : roomCode}>{roomCode === 'default' ? '默认大厅' : roomCode}</span></p>
           </div>
           <div className="text-slate-600">
             {playerName && <span className="mr-4">{playerName}</span>}
