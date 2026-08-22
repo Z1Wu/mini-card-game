@@ -1,4 +1,4 @@
-import { readState, waitForState } from './players.mjs';
+import { readState, waitForState } from '../lib/players.mjs';
 
 export const CARD_LABEL_PREFIX = '卡牌：';
 
