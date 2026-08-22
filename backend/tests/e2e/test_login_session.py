@@ -1,8 +1,8 @@
-"""Session takeover, token rotation, and stable error codes for login/reconnect.
+"""Hub-level session semantics: takeover, token rotation, and stable error codes.
 
-Covers issue #126: an authenticated re-login or token reconnect must displace a
-live session with an explicit notification instead of silently ghosting the old
-connection, and every successful login/reconnect must rotate the token.
+Covers #126/#128: an authenticated re-login or reconnect displaces any live
+session of the same account with an explicit notification, tokens rotate on
+every success, and room actions require a hub session.
 """
 import asyncio
 import json
@@ -47,7 +47,6 @@ class RawClient:
         return json.loads(await asyncio.wait_for(self.ws.recv(), timeout=timeout))
 
     async def recv_until(self, wanted_types, timeout=3.0):
-        """Collect messages until one of ``wanted_types`` arrives."""
         seen = []
         while True:
             message = await self.recv(timeout=timeout)
@@ -56,7 +55,6 @@ class RawClient:
                 return seen, message
 
     async def expect_close(self, timeout=3.0):
-        """Drain messages until the server closes the socket."""
         while True:
             try:
                 await self.recv(timeout=timeout)
@@ -69,45 +67,43 @@ class RawClient:
             self.ws = None
 
 
-async def _login(client: RawClient, username: str, password: str):
+async def _login(client: RawClient, username: str = "player2", password: str = "password2"):
+    await client.open()
     await client.send(type="login", username=username, password=password)
     _, message = await client.recv_until({"login_success", "error"})
     return message
 
 
 async def _start_three_player_game(uri: str):
-    """Open a running game; returns (host_client, game_room_code)."""
+    """Authenticated players create/join one room and start the game."""
     host = RawClient(uri)
-    await host.open()
+    login = await _login(host, "player1", "password1")
+    assert login["type"] == "login_success"
     await host.send(type="create_room")
     _, created = await host.recv_until({"room_created"})
     code = created["room_code"]
-    assert (await _login(host, "player1", "password1"))["type"] == "login_success"
+    joiners = []
     for index in (2, 3):
         joiner = RawClient(uri)
-        await joiner.open()
+        login = await _login(joiner, f"player{index}", f"password{index}")
+        assert login["type"] == "login_success"
         await joiner.send(type="join_room", room_code=code)
-        await joiner.recv_until({"room_joined"})
-        assert (await _login(joiner, f"player{index}", f"password{index}"))["type"] == "login_success"
-        if index == 2:
-            second = joiner
-        else:
-            third = joiner
+        _, joined = await joiner.recv_until({"room_joined"})
+        assert joined["type"] == "room_joined"
+        joiners.append(joiner)
     await host.send(type="start_game", player_id="player1")
     await host.recv_until({"game_state"})
-    return host, second, third, code
+    return host, joiners[0], joiners[1], code
 
 
 @pytest.mark.e2e
 async def test_relogin_from_new_socket_takes_over_and_closes_old(hub_server):
-    _, uri = hub_server
+    hub, uri = hub_server
     first = RawClient(uri)
-    await first.open()
-    await _login(first, "player2", "password2")
+    await _login(first)
 
     second = RawClient(uri)
-    await second.open()
-    message = await _login(second, "player2", "password2")
+    message = await _login(second)
     assert message["type"] == "login_success"
     assert message["reconnect_token"]
 
@@ -117,7 +113,6 @@ async def test_relogin_from_new_socket_takes_over_and_closes_old(hub_server):
     await first.expect_close()
 
     # The old socket no longer counts as a connected client of any room.
-    hub, _ = hub_server
     for entry in hub._rooms.values():
         assert first.ws not in entry.server.clients
 
@@ -127,9 +122,9 @@ async def test_same_socket_relogin_succeeds_idempotently(hub_server):
     _, uri = hub_server
     client = RawClient(uri)
     await client.open()
-    first = await _login(client, "player2", "password2")
+    first = await _login(client)
     assert first["type"] == "login_success"
-    second = await _login(client, "player2", "password2")
+    second = await _login(client)
     assert second["type"] == "login_success"
     # Tokens rotate on every success.
     assert second["reconnect_token"] != first["reconnect_token"]
@@ -140,7 +135,7 @@ async def test_reconnect_rotates_token_and_invalidates_previous(hub_server):
     _, uri = hub_server
     client = RawClient(uri)
     await client.open()
-    login = await _login(client, "player2", "password2")
+    login = await _login(client)
     token_one = login["reconnect_token"]
 
     await client.send(type="reconnect", username="player2", reconnect_token=token_one)
@@ -155,7 +150,7 @@ async def test_reconnect_rotates_token_and_invalidates_previous(hub_server):
     _, error = await challenger.recv_until({"error"})
     assert error["code"] == "invalid_reconnect_credentials"
 
-    # The current token still works.
+    # The current token still works and rotates again.
     await challenger.send(type="reconnect", username="player2", reconnect_token=token_two)
     _, again = await challenger.recv_until({"reconnect_success", "error"})
     assert again["type"] == "reconnect_success"
@@ -165,8 +160,7 @@ async def test_reconnect_rotates_token_and_invalidates_previous(hub_server):
 async def test_reconnect_displaces_live_session_with_notice(hub_server):
     _, uri = hub_server
     original = RawClient(uri)
-    await original.open()
-    login = await _login(original, "player2", "password2")
+    login = await _login(original)
 
     replacement = RawClient(uri)
     await replacement.open()
@@ -180,15 +174,14 @@ async def test_reconnect_displaces_live_session_with_notice(hub_server):
 
 
 @pytest.mark.e2e
-async def test_login_mid_game_non_member_returns_game_in_progress_code(hub_server):
+async def test_join_room_mid_game_non_member_returns_game_in_progress_code(hub_server):
     _, uri = hub_server
     host, second, third, code = await _start_three_player_game(uri)
     try:
         outsider = RawClient(uri)
-        await outsider.open()
+        assert (await _login(outsider, "player4", "password4"))["type"] == "login_success"
         await outsider.send(type="join_room", room_code=code)
-        await outsider.recv_until({"room_joined"})
-        message = await _login(outsider, "player4", "password4")
+        _, message = await outsider.recv_until({"error"})
         assert message == {
             "type": "error",
             "code": "game_in_progress",
@@ -196,6 +189,36 @@ async def test_login_mid_game_non_member_returns_game_in_progress_code(hub_serve
         }
     finally:
         for client in (host, second, third):
+            await client.close()
+
+
+@pytest.mark.e2e
+async def test_member_can_rejoin_a_running_game(hub_server):
+    _, uri = hub_server
+    host, second, third, code = await _start_three_player_game(uri)
+    try:
+        # Player 2 drops and comes back with a fresh hub session.
+        reconnector = RawClient(uri)
+        login = await _login(reconnector, "player2", "password2")
+        token = login["reconnect_token"]
+        await reconnector.close()
+        await asyncio.sleep(0.05)
+
+        back = RawClient(uri)
+        await back.open()
+        await back.send(type="reconnect", username="player2", reconnect_token=token)
+        _, success = await back.recv_until({"reconnect_success"})
+        assert success["type"] == "reconnect_success"
+
+        await back.send(type="join_room", room_code=code)
+        _, joined = await back.recv_until({"room_joined", "error"})
+        assert joined["type"] == "room_joined"
+
+        await back.send(type="get_game_state", player_id="player2")
+        _, state = await back.recv_until({"game_state"})
+        assert {p["id"] for p in state["game_state"]["players"]} >= {"player1", "player2", "player3"}
+    finally:
+        for client in (host, third):
             await client.close()
 
 
@@ -209,7 +232,7 @@ async def test_reconnect_errors_carry_stable_codes(hub_server):
     _, invalid = await client.recv_until({"error"})
     assert invalid["code"] == "invalid_reconnect_credentials"
 
-    # Valid credentials but never joined any game in this room.
+    # Password fallback authenticates without any prior session or game.
     await client.send(type="reconnect", username="player2", password="password2")
-    _, missing = await client.recv_until({"error"})
-    assert missing["code"] == "player_not_in_game"
+    _, success = await client.recv_until({"reconnect_success", "error"})
+    assert success["type"] == "reconnect_success"

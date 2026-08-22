@@ -73,14 +73,15 @@ class WebSocketService {
               socket.removeEventListener('message', errorCheck);
             }, 2000);
 
-            if (this.session.roomCode !== 'default') {
-              socket.send(JSON.stringify({ type: 'join_room', room_code: this.session.roomCode }));
-            }
+            // Reconnect restores the hub session first; join_room requires it.
             socket.send(JSON.stringify({
               type: 'reconnect',
               username: this.session.username,
               reconnect_token: this.session.reconnectToken,
             }));
+            if (this.session.roomCode !== 'default') {
+              socket.send(JSON.stringify({ type: 'join_room', room_code: this.session.roomCode }));
+            }
           }
           resolve();
         };
@@ -169,6 +170,13 @@ class WebSocketService {
 
   setSession(roomCode: string, username: string, reconnectToken: string): void {
     this.session = { roomCode, username, reconnectToken };
+    window.sessionStorage.setItem('card-game-session', JSON.stringify(this.session));
+  }
+
+  /** Track the room the player joined so a drop can replay back into it. */
+  updateSessionRoom(roomCode: string): void {
+    if (!this.session || this.session.roomCode === roomCode) return;
+    this.session = { ...this.session, roomCode };
     window.sessionStorage.setItem('card-game-session', JSON.stringify(this.session));
   }
 

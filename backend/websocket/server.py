@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import secrets
 import websockets
 from random import Random
 from typing import Set, Dict, Optional
@@ -41,7 +40,6 @@ class GameWebSocketServer:
         self.honor_student_actor_id: str | None = None  # 打出优等生的玩家，结束后需收到举手结果
         self.pending_infected: dict | None = None  # { player_id, card_id }
         self.resolved_infected_card_ids: set[str] = set()
-        self.reconnect_tokens: Dict[str, str] = {}
         # Optional async callback the hub sets to push live updates to admin subscribers.
         self.on_admin_push = None
 
@@ -138,11 +136,7 @@ class GameWebSocketServer:
             data = json.loads(message)
             message_type = data.get("type")
 
-            if message_type == "login":
-                await self._handle_login(websocket, data)
-            elif message_type == "reconnect":
-                await self._handle_reconnect(websocket, data)
-            elif message_type == "join_game":
+            if message_type == "join_game":
                 if self.allow_legacy_join_game:
                     await self._handle_join_game(websocket, data)
                 else:
@@ -190,97 +184,6 @@ class GameWebSocketServer:
                 "message": str(e)
             })
 
-    async def _handle_login(self, websocket: websockets.WebSocketServerProtocol, data: dict):
-        from auth.users import authenticate_user, get_user_name, get_user_role
-        
-        username = data.get("username")
-        password = data.get("password")
-        
-        if not username or not password:
-            await self.send_to_client(websocket, {
-                "type": "error",
-                "message": "Missing username or password"
-            })
-            return
-        
-        if not authenticate_user(username, password):
-            await self.send_to_client(websocket, {
-                "type": "error",
-                "message": "Invalid username or password"
-            })
-            return
-        
-        player_id = username
-
-        # Hub-level cross-room collision check. A claim already held by this
-        # room's live session is resolved below by displacing that session.
-        if self.hub and not self.hub.claim_username(player_id):
-            if player_id not in self.player_connections:
-                await self.send_to_client(websocket, {
-                    "type": "error",
-                    "code": "username_claimed_elsewhere",
-                    "message": "该玩家已在其他房间中登录"
-                })
-                return
-
-        existing_ws = self.player_connections.get(player_id)
-        if existing_ws is not None and existing_ws is not websocket:
-            # Authenticated re-login takes over the live session: notify and
-            # drop the old connection instead of stranding it as a ghost.
-            await self._displace_connection(player_id, existing_ws)
-        # Re-login on the very same socket falls through and succeeds idempotently.
-
-        player_name = get_user_name(username)
-        reconnect_token = secrets.token_urlsafe(32)
-        self.reconnect_tokens[player_id] = reconnect_token
-        
-        existing_player = None
-        if self.game_manager.game:
-            for player in self.game_manager.game.players:
-                if player.id == player_id:
-                    existing_player = player
-                    break
-        
-        if existing_player:
-            self.player_connections[player_id] = websocket
-            await self.send_to_client(websocket, {
-                "type": "login_success",
-                "player_id": player_id,
-                "player_name": existing_player.name,
-                "role": get_user_role(username),
-                "reconnect_token": reconnect_token,
-            })
-            await self._broadcast_game_state()
-        else:
-            if self.game_manager.game and self.game_manager.game.state != GameState.WAITING:
-                if self.hub:
-                    self.hub.release_username(player_id)
-                await self.send_to_client(websocket, {
-                    "type": "error",
-                    "code": "game_in_progress",
-                    "message": "游戏正在进行中，无法加入新玩家"
-                })
-                return
-            
-            success = self.game_manager.add_player(player_id, player_name)
-            if success:
-                self.player_connections[player_id] = websocket
-                await self.send_to_client(websocket, {
-                    "type": "login_success",
-                    "player_id": player_id,
-                    "player_name": player_name,
-                    "role": get_user_role(username),
-                    "reconnect_token": reconnect_token,
-                })
-                await self._broadcast_player_list()
-            else:
-                if self.hub:
-                    self.hub.release_username(player_id)
-                await self.send_to_client(websocket, {
-                    "type": "error",
-                    "message": "Failed to join game"
-                })
-
     async def _displace_connection(self, player_id: str, old_websocket) -> None:
         """Notify and drop a live connection that loses its session binding.
 
@@ -298,81 +201,6 @@ class GameWebSocketServer:
             await old_websocket.close(code=4001, reason="session taken over")
         except Exception:
             logger.debug("Failed to close displaced connection for %s", player_id, exc_info=True)
-
-    async def _handle_reconnect(self, websocket: websockets.WebSocketServerProtocol, data: dict):
-        from auth.users import authenticate_user
-            
-        username = data.get("username")
-        password = data.get("password")
-        reconnect_token = data.get("reconnect_token")
-            
-        if not username or (not password and not reconnect_token):
-            await self.send_to_client(websocket, {
-                "type": "error",
-                "code": "invalid_reconnect_credentials",
-                "message": "Missing reconnect credentials"
-            })
-            return
-            
-        token_is_valid = bool(
-            reconnect_token
-            and self.reconnect_tokens.get(username)
-            and secrets.compare_digest(self.reconnect_tokens[username], reconnect_token)
-        )
-        if not token_is_valid and not (password and authenticate_user(username, password)):
-            await self.send_to_client(websocket, {
-                "type": "error",
-                "code": "invalid_reconnect_credentials",
-                "message": "Invalid reconnect credentials"
-            })
-            return
-            
-        player_id = username
-            
-        existing_player = None
-        if self.game_manager.game:
-            for player in self.game_manager.game.players:
-                if player.id == player_id:
-                    existing_player = player
-                    break
-            
-        if not existing_player:
-            await self.send_to_client(websocket, {
-                "type": "error",
-                "code": "player_not_in_game",
-                "message": "Player not found in game"
-            })
-            return
-            
-        # Re-claim username in hub (idempotent if already claimed by this room).
-        if self.hub:
-            self.hub.release_username(player_id)
-            if not self.hub.claim_username(player_id):
-                await self.send_to_client(websocket, {
-                    "type": "error",
-                    "code": "username_claimed_elsewhere",
-                    "message": "该玩家已在其他房间中登录"
-                })
-                return
-
-        # Take over the session from any live connection, then rotate the
-        # token so the displaced connection cannot reconnect with its stale
-        # copy and start a takeover ping-pong.
-        old_ws = self.player_connections.get(player_id)
-        if old_ws is not None and old_ws is not websocket:
-            await self._displace_connection(player_id, old_ws)
-
-        reconnect_token = secrets.token_urlsafe(32)
-        self.reconnect_tokens[player_id] = reconnect_token
-        self.player_connections[player_id] = websocket
-        await self.send_to_client(websocket, {
-            "type": "reconnect_success",
-            "player_id": player_id,
-            "player_name": existing_player.name,
-            "reconnect_token": reconnect_token,
-        })
-        await self._broadcast_game_state()
-        await self._resume_pending_interaction(player_id, websocket)
 
     async def _resume_pending_interaction(self, player_id: str, websocket) -> None:
         """Re-send a private multi-step prompt after a player reconnects."""
