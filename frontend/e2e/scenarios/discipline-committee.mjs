@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { chooseVisibleCard, readState } from '../lib/players.mjs';
-import { readCardNamesIn, waitForLatestAction } from '../lib/scenarios.mjs';
+import { readCardNamesIn, waitForLatestAction } from './shared.mjs';
 
 export const name = 'discipline-committee';
 export const label = '风纪委员私下查看手牌';

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { chooseFirstVisibleCard, chooseVisibleCard, readState } from '../lib/players.mjs';
-import { waitForLatestAction } from '../lib/scenarios.mjs';
+import { waitForLatestAction } from './shared.mjs';
 
 export const name = 'student-council-president';
 export const label = '学生会长正面特技无效果';

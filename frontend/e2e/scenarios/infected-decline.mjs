@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { chooseFirstVisibleCard, chooseVisibleCard, readState, waitForState } from '../lib/players.mjs';
-import { waitForLatestAction } from '../lib/scenarios.mjs';
+import { waitForLatestAction } from './shared.mjs';
 
 const FOLLOWERS = ['player2', 'player3', 'player4'];
 

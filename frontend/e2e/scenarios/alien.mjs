@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { chooseFirstVisibleCard, chooseVisibleCard, readState } from '../lib/players.mjs';
-import { waitForLatestAction } from '../lib/scenarios.mjs';
+import { waitForLatestAction } from './shared.mjs';
 
 export const name = 'alien';
 export const label = '外星人正面特技无效果';

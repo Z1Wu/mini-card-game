@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { chooseVisibleCard, readState } from '../lib/players.mjs';
-import { ownHandNames, readLabeledCards, waitForLatestAction } from '../lib/scenarios.mjs';
+import { ownHandNames, readLabeledCards, waitForLatestAction } from './shared.mjs';
 
 export const name = 'rich-girl';
 export const label = '大小姐两阶段交换';

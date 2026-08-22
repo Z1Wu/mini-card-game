@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { chooseVisibleCard, readState } from '../lib/players.mjs';
-import { ownHandNames, waitForLatestAction } from '../lib/scenarios.mjs';
+import { ownHandNames, waitForLatestAction } from './shared.mjs';
 
 export const name = 'health-committee';
 export const label = '保健委员收回公开场牌';

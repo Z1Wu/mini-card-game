@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { chooseVisibleCard, readState } from '../lib/players.mjs';
-import { waitForLatestAction } from '../lib/scenarios.mjs';
+import { waitForLatestAction } from './shared.mjs';
 
 export const name = 'harmony';
 export const label = '调和与隐藏归属';

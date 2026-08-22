@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { chooseVisibleCard, readState } from '../lib/players.mjs';
-import { waitForLatestAction } from '../lib/scenarios.mjs';
+import { waitForLatestAction } from './shared.mjs';
 
 export const name = 'accomplice';
 export const label = '共犯移动质疑牌';

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { chooseVisibleCard } from '../lib/players.mjs';
-import { readLabeledCards, waitForLatestAction } from '../lib/scenarios.mjs';
+import { readLabeledCards, waitForLatestAction } from './shared.mjs';
 
 export const name = 'class-representative';
 export const label = '班长双方选牌交换';

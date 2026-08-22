@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { chooseVisibleCard, readState } from '../lib/players.mjs';
-import { ownHandNames, waitForLatestAction } from '../lib/scenarios.mjs';
+import { ownHandNames, waitForLatestAction } from './shared.mjs';
 
 export const name = 'home-club';
 export const label = '归宅部交换隐藏调和牌';

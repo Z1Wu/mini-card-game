@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { chooseVisibleCard } from '../lib/players.mjs';
-import { readCardNamesIn, waitForLatestAction } from '../lib/scenarios.mjs';
+import { readCardNamesIn, waitForLatestAction } from './shared.mjs';
 
 export const name = 'library-committee';
 export const label = '图书委员查看调和区';
