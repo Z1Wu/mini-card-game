@@ -1,0 +1,47 @@
+import assert from 'node:assert/strict';
+import { chooseVisibleCard, readState, waitForState } from '../lib/players.mjs';
+
+const CHOOSER_ORDER = ['player1', 'player2', 'player3', 'player4'];
+
+export const name = 'news-club';
+export const label = '新闻部逐人传牌';
+
+async function choosePass(page, cardName) {
+  const modal = page.locator('.game-modal').filter({ hasText: /新闻部：选择一张手牌递给/ });
+  await modal.waitFor({ state: 'visible' });
+  await modal.getByLabel(`卡牌：${cardName}`, { exact: true }).click();
+  await page.waitForTimeout(200);
+  await modal.getByRole('button', { name: '确认递给下家', exact: true }).click();
+}
+
+export async function run(ctx) {
+  await chooseVisibleCard(ctx.actorPage, '新闻部', '特技');
+  // Passes are applied immediately, so each chooser picks from: the actor
+  // holds two cards (the News Club itself went to the field), later choosers
+  // hold their three cards plus the card they just received.
+  const given = {};
+  for (const chooser of CHOOSER_ORDER) {
+    const page = ctx.pagesById.get(chooser);
+    const state = await readState(page);
+    const expectedSize = chooser === 'player1' ? 2 : 4;
+    assert.equal(state.game.own_hand.length, expectedSize, `${chooser} should choose with ${expectedSize} cards in hand`);
+    const handNames = state.game.own_hand.map((card) => card.name);
+    if (chooser !== 'player1') await ctx.showTitle(`新闻部传牌 · ${chooser} 正在选择`, chooser);
+    given[chooser] = handNames[0];
+    await choosePass(page, handNames[0]);
+  }
+  await waitForState(ctx.actorPage, () => JSON.parse(window.render_game_to_text()).game?.turn_count > 0, 'news club rotation to complete');
+  // Effect semantics: every passed identity shows up in the next seat's private
+  // hand; the actor ends one card short because playing News Club cost a card.
+  for (let index = 0; index < CHOOSER_ORDER.length; index += 1) {
+    const giver = CHOOSER_ORDER[index];
+    const receiver = CHOOSER_ORDER[(index + 1) % CHOOSER_ORDER.length];
+    const receiverHand = (await readState(ctx.pagesById.get(receiver))).game.own_hand.map((card) => card.name);
+    assert.ok(receiverHand.includes(given[giver]), `${receiver} should hold the card ${giver} passed (${given[giver]})`);
+    assert.equal(receiverHand.length, receiver === 'player1' ? 2 : 3, `${receiver} final hand size is conserved`);
+  }
+  return {
+    evidence: `四名玩家依次在各自页面选牌，牌按座次传给下家（${CHOOSER_ORDER.map((giver) => `${giver}→${given[giver]}`).join('，')}），最终手牌数守恒`,
+    actions: [{ action: 'skill', scenario: name, player_id: 'player1' }],
+  };
+}

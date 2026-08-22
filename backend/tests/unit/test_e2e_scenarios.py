@@ -45,7 +45,10 @@ def test_named_scenarios_are_valid_isolated_four_player_states(scenario_name):
     assert game.player_count == 4
     assert game.current_player_index == 0
     assert game.required_harmony_value == 6
-    assert all(player.current_hand_count == len(player.hand) == 3 for player in game.players)
+    spec = SCENARIOS[scenario_name]
+    for index, player in enumerate(game.players):
+        expected_size = spec.hand_sizes.get(index, 3)
+        assert player.current_hand_count == len(player.hand) == expected_size
     assert len({card.id for card in cards}) == len(cards)
 
 
@@ -61,6 +64,32 @@ def test_scenario_fixtures_include_required_private_and_public_prerequisites():
     initialize_e2e_scenario(game, "accomplice")
     assert any(card.name == CardType.ACCOMPLICE for card in game.players[0].hand)
     assert len(game.players[1].doubt_cards) == 1
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("scenario_name,card_type", [
+    ("criminal", CardType.CRIMINAL),
+    ("student-council-president", CardType.STUDENT_COUNCIL_PRESIDENT),
+    ("alien", CardType.ALIEN),
+    ("infected-decline", CardType.INFECTED),
+])
+def test_no_effect_and_decline_fixtures_place_their_card_in_the_actor_hand(scenario_name, card_type):
+    game = make_four_player_game()
+
+    initialize_e2e_scenario(game, scenario_name)
+
+    assert any(card.name == card_type for card in game.players[0].hand)
+
+
+@pytest.mark.unit
+def test_infected_decline_pads_only_the_actor_hand_for_two_turn_starts():
+    game = make_four_player_game()
+
+    initialize_e2e_scenario(game, "infected-decline")
+
+    assert len(game.players[0].hand) == 5
+    assert all(len(player.hand) == 3 for player in game.players[1:])
+    assert len(game.harmony_area) == 1
 
 
 @pytest.mark.unit
