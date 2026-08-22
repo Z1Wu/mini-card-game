@@ -100,7 +100,7 @@ async function initializeScenario(scenario, host, byId) {
     const expectedSize = index === 0 ? actorHandSize : 3;
     return waitForState(
       player.page,
-      ([size]) => { const state = JSON.parse(window.render_game_to_text()); return state.game?.state === 'playing' && state.game?.turn_count === 0 && state.game?.public_action_count === 0 && state.game?.own_hand?.length === size; },
+      (size) => { const state = JSON.parse(window.render_game_to_text()); return state.game?.state === 'playing' && state.game?.turn_count === 0 && state.game?.public_action_count === 0 && state.game?.own_hand?.length === size; },
       `${scenario.name} fixture to reach ${player.username}`,
       expectedSize,
     );
