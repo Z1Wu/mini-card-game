@@ -27,7 +27,7 @@ export async function run(ctx) {
   const giveOptions = await giveChoices.locator('[aria-label^="卡牌："]').evaluateAll((cards) => cards.map((card) => card.getAttribute('aria-label').replace(/^卡牌：/, '')));
   const givenAway = giveOptions.find((cardName) => cardName !== taken);
   assert.ok(givenAway, 'the actor should have an own hand card to give away');
-  await giveChoices.getByLabel(`卡牌：${givenAway}`, { exact: true }).click();
+  await giveChoices.getByLabel(`卡牌：${givenAway}`, { exact: true }).first().click();
   await ctx.screenshot('rich-girl-give', ctx.actorPage);
   await modal.getByRole('button', { name: '确认交换', exact: true }).click();
   await waitForLatestAction(ctx.actorPage, '特技', '大小姐', 'player2');

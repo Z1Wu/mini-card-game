@@ -9,7 +9,7 @@ export const label = '新闻部逐人传牌';
 async function choosePass(page, cardName) {
   const modal = page.locator('.game-modal').filter({ hasText: /新闻部：选择一张手牌递给/ });
   await modal.waitFor({ state: 'visible' });
-  await modal.getByLabel(`卡牌：${cardName}`, { exact: true }).click();
+  await modal.getByLabel(`卡牌：${cardName}`, { exact: true }).first().click();
   await page.waitForTimeout(200);
   await modal.getByRole('button', { name: '确认递给下家', exact: true }).click();
 }

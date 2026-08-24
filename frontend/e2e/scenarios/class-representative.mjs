@@ -19,13 +19,13 @@ export async function run(ctx) {
   await ctx.actorPage.getByRole('button', { name: '玩家2', exact: true }).click();
   let modal = ctx.actorPage.locator('.game-modal').filter({ hasText: /班长：选一张手牌与 玩家2 交换/ });
   await modal.waitFor({ state: 'visible' });
-  await modal.getByLabel(`卡牌：${giveName}`, { exact: true }).click();
+  await modal.getByLabel(`卡牌：${giveName}`, { exact: true }).first().click();
   await modal.getByRole('button', { name: '确认', exact: true }).click();
   await ctx.actorPage.getByText('正在等待 玩家2 选牌', { exact: true }).waitFor({ state: 'visible' });
   await ctx.screenshot('class-representative-waiting', ctx.actorPage);
   modal = targetPage.locator('.game-modal').filter({ hasText: /班长：选一张手牌与 玩家1 交换/ });
   await modal.waitFor({ state: 'visible' });
-  await modal.getByLabel(`卡牌：${receiveName}`, { exact: true }).click();
+  await modal.getByLabel(`卡牌：${receiveName}`, { exact: true }).first().click();
   await modal.getByRole('button', { name: '确认', exact: true }).click();
   await waitForLatestAction(ctx.actorPage, '特技', '班长', 'player2');
   const actorResult = ctx.actorPage.locator('.game-modal').filter({ hasText: '班长：交换结果' });
