@@ -36,10 +36,11 @@ export async function run(ctx) {
   await waitForLatestAction(ctx.actorPage, '特技', '大小姐', 'player2');
   const actorAfter = ownHandNames(await readState(ctx.actorPage));
   const targetAfter = ownHandNames(await readState(targetPage));
-  // Multiset comparison stays exact even when duplicate card names exist
-  // across hands: the actor ends with its give-phase options minus the card
-  // handed over; the target swaps the hidden take for the received card.
-  const expectedActorHand = [...giveOptions].sort();
+  // During the give phase the server has not moved the taken card yet — it
+  // sits in the target's hand and is only previewed privately. The atomic
+  // swap happens on confirmation, so the actor ends with its options minus
+  // the handed-over card plus the taken one.
+  const expectedActorHand = [...giveOptions, taken].sort();
   expectedActorHand.splice(expectedActorHand.indexOf(givenAway), 1);
   assert.deepEqual(
     [...actorAfter].sort(),
