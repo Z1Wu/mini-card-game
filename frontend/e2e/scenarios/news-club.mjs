@@ -33,7 +33,7 @@ export async function run(ctx) {
   }
   // Every page must have processed the terminal broadcast before we compare
   // hands across seats; waiting only on the actor leaves other pages stale.
-  await Promise.all(players.map((player) => waitForState(
+  await Promise.all(ctx.players.map((player) => waitForState(
     player.page,
     () => JSON.parse(window.render_game_to_text()).game?.turn_count > 0,
     `${player.username} to reach the post-rotation turn`,
