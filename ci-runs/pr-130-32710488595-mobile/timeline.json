@@ -1,6 +1,6 @@
 {
   "title": "844×390 关键场景（多视角）",
-  "recording_started_at": 1787306239186,
+  "recording_started_at": 1787563142685,
   "players": [
     {
       "name": "player1",
@@ -11,21 +11,32 @@
     {
       "name": "player2",
       "username": "player2",
-      "offset_ms": 107,
+      "offset_ms": 110,
       "video": "player2.webm"
     },
     {
       "name": "player3",
       "username": "player3",
-      "offset_ms": 250,
+      "offset_ms": 228,
       "video": "player3.webm"
     },
     {
       "name": "player4",
       "username": "player4",
-      "offset_ms": 364,
+      "offset_ms": 342,
       "video": "player4.webm"
     }
   ],
-  "events": []
+  "events": [
+    {
+      "at_ms": 1337,
+      "player_id": "player1",
+      "label": "1/4 · 归宅部交换隐藏调和牌"
+    },
+    {
+      "at_ms": 4548,
+      "player_id": "player1",
+      "label": "2/4 · 大小姐两阶段交换"
+    }
+  ]
 }
