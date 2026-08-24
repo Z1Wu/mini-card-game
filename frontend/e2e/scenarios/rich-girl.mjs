@@ -23,7 +23,10 @@ export async function run(ctx) {
   // The give phase privately reveals which hidden card was taken.
   const taken = (await readLabeledCards(modal, ['拿到的牌']))['拿到的牌'];
   assert.ok(taken && targetBefore.includes(taken), `taken card ${taken} must come from 玩家2's real hand`);
-  const giveChoices = modal.locator('.mb-4').filter({ hasText: '选择要交给对方的牌' });
+  // Scope via the choice-row heading's parent: a class-based container match
+  // also hits the outer wrapper and would double-count the taken-card preview
+  // as a give option.
+  const giveChoices = modal.getByText('选择要交给对方的牌', { exact: true }).locator('..');
   const giveOptions = await giveChoices.locator('[aria-label^="卡牌："]').evaluateAll((cards) => cards.map((card) => card.getAttribute('aria-label').replace(/^卡牌：/, '')));
   const givenAway = giveOptions.find((cardName) => cardName !== taken);
   assert.ok(givenAway, 'the actor should have an own hand card to give away');
