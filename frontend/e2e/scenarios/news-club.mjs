@@ -31,7 +31,13 @@ export async function run(ctx) {
     await modal.waitFor({ state: 'hidden' });
     afterConfirm[chooser] = (await readState(page)).game.own_hand.map((card) => card.name);
   }
-  await waitForState(ctx.actorPage, () => JSON.parse(window.render_game_to_text()).game?.turn_count > 0, 'news club rotation to complete');
+  // Every page must have processed the terminal broadcast before we compare
+  // hands across seats; waiting only on the actor leaves other pages stale.
+  await Promise.all(players.map((player) => waitForState(
+    player.page,
+    () => JSON.parse(window.render_game_to_text()).game?.turn_count > 0,
+    `${player.username} to reach the post-rotation turn`,
+  )));
   // Effect semantics: every passed identity shows up in the next seat's private
   // hand; the actor ends one card short because playing News Club cost a card.
   for (let index = 0; index < CHOOSER_ORDER.length; index += 1) {

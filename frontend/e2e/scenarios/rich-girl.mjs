@@ -44,11 +44,12 @@ export async function run(ctx) {
   expectedActorHand.splice(expectedActorHand.indexOf(givenAway), 1);
   assert.deepEqual(
     [...actorAfter].sort(),
-    expectedActorHand,
+    expectedActorHand.sort(),
     `actor hand mismatch: taken=${taken} given=${givenAway} options=${JSON.stringify(giveOptions)} after=${JSON.stringify(actorAfter)}`,
   );
   const expectedTargetHand = [...targetBefore].sort();
   expectedTargetHand.splice(expectedTargetHand.indexOf(taken), 1, givenAway);
+  expectedTargetHand.sort();
   assert.deepEqual(
     [...targetAfter].sort(),
     expectedTargetHand,
