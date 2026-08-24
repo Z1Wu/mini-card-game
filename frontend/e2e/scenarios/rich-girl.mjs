@@ -33,10 +33,15 @@ export async function run(ctx) {
   await waitForLatestAction(ctx.actorPage, '特技', '大小姐', 'player2');
   const actorAfter = ownHandNames(await readState(ctx.actorPage));
   const targetAfter = ownHandNames(await readState(targetPage));
-  assert.ok(actorAfter.includes(taken), `actor hand must gain the taken card ${taken}`);
-  assert.ok(!actorAfter.includes(givenAway), `actor hand must lose the given card ${givenAway}`);
-  assert.ok(targetAfter.includes(givenAway), `target hand must gain the given card ${givenAway}`);
-  assert.ok(!targetAfter.includes(taken), `target hand must lose the taken card ${taken}`);
+  // Multiset comparison stays exact even when duplicate card names exist
+  // across hands: the actor ends with its give-phase options minus the card
+  // handed over; the target swaps the hidden take for the received card.
+  const expectedActorHand = [...giveOptions].sort();
+  expectedActorHand.splice(expectedActorHand.indexOf(givenAway), 1);
+  assert.deepEqual([...actorAfter].sort(), expectedActorHand);
+  const expectedTargetHand = [...targetBefore].sort();
+  expectedTargetHand.splice(expectedTargetHand.indexOf(taken), 1, givenAway);
+  assert.deepEqual([...targetAfter].sort(), expectedTargetHand);
   return {
     evidence: `目标手牌先保持牌背；确认拿牌后私下看到 ${taken} 并交出 ${givenAway}，双方手牌身份按效果互换`,
     actions: [{ action: 'skill', scenario: name, player_id: 'player1' }],

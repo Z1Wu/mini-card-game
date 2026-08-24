@@ -24,8 +24,13 @@ export async function run(ctx) {
   await ctx.actorPage.getByRole('button', { name: '关闭', exact: true }).click();
   await waitForLatestAction(ctx.actorPage, '特技', '风纪委员', 'player2');
   const state = await readState(ctx.actorPage);
-  // View-only effect: nobody's hand size may change.
-  assert.ok(state.game.players.every((player) => player.hand_count === 3));
+  // View-only effect: playing the card costs the actor one hand card (face-up
+  // on the field), but nobody else's hand size may change.
+  assert.equal(state.game.players.find((player) => player.id === 'player1').hand_count, 2);
+  assert.equal(state.game.players.find((player) => player.id === 'player1').field_card_count, 1);
+  for (const id of ['player2', 'player3', 'player4']) {
+    assert.equal(state.game.players.find((player) => player.id === id).hand_count, 3);
+  }
   return {
     evidence: `仅行动者收到并渲染 player2 的真实手牌（${viewedNames.join('、')}），其余玩家不可见且不移动任何牌`,
     actions: [{ action: 'skill', scenario: name, player_id: 'player1' }],
