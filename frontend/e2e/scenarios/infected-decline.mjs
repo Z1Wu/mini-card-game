@@ -11,10 +11,10 @@ export const label = '感染者放弃拿牌';
 export const actorHandSize = 5;
 
 async function waitPlayingAt(page, playerId) {
-  await waitForState(page, () => {
+  await waitForState(page, (pid) => {
     const state = JSON.parse(window.render_game_to_text());
-    return state.game?.state === 'playing' && state.game?.current_player_id === playerId;
-  }, `${playerId} to act in the normal playing phase`);
+    return state.game?.state === 'playing' && state.game?.current_player_id === pid;
+  }, `${playerId} to act in the normal playing phase`, playerId);
 }
 
 export async function run(ctx) {
