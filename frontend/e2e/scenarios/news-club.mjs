@@ -6,29 +6,27 @@ const CHOOSER_ORDER = ['player1', 'player2', 'player3', 'player4'];
 export const name = 'news-club';
 export const label = '新闻部逐人传牌';
 
-async function choosePass(page, cardName) {
-  const modal = page.locator('.game-modal').filter({ hasText: /新闻部：选择一张手牌递给/ });
-  await modal.waitFor({ state: 'visible' });
-  await modal.getByLabel(`卡牌：${cardName}`, { exact: true }).first().click();
-  await page.waitForTimeout(200);
-  await modal.getByRole('button', { name: '确认递给下家', exact: true }).click();
-}
-
 export async function run(ctx) {
   await chooseVisibleCard(ctx.actorPage, '新闻部', '特技');
   // Passes are applied immediately, so each chooser picks from: the actor
   // holds two cards (the News Club itself went to the field), later choosers
-  // hold their three cards plus the card they just received.
+  // hold their three cards plus the card they just received. Wait for the
+  // choice modal first — it implies this page has received the pass before.
   const given = {};
   for (const chooser of CHOOSER_ORDER) {
     const page = ctx.pagesById.get(chooser);
+    const modal = page.locator('.game-modal').filter({ hasText: /新闻部：选择一张手牌递给/ });
+    await modal.waitFor({ state: 'visible' });
+    if (chooser !== 'player1') await ctx.showTitle(`新闻部传牌 · ${chooser} 正在选择`, chooser);
     const state = await readState(page);
     const expectedSize = chooser === 'player1' ? 2 : 4;
     assert.equal(state.game.own_hand.length, expectedSize, `${chooser} should choose with ${expectedSize} cards in hand`);
-    const handNames = state.game.own_hand.map((card) => card.name);
-    if (chooser !== 'player1') await ctx.showTitle(`新闻部传牌 · ${chooser} 正在选择`, chooser);
-    given[chooser] = handNames[0];
-    await choosePass(page, handNames[0]);
+    // The just-received card is appended last, so index 0 is always an own card.
+    const chosenName = state.game.own_hand[0].name;
+    given[chooser] = chosenName;
+    await modal.getByLabel(`卡牌：${chosenName}`, { exact: true }).first().click();
+    await page.waitForTimeout(200);
+    await modal.getByRole('button', { name: '确认递给下家', exact: true }).click();
   }
   await waitForState(ctx.actorPage, () => JSON.parse(window.render_game_to_text()).game?.turn_count > 0, 'news club rotation to complete');
   // Effect semantics: every passed identity shows up in the next seat's private
