@@ -41,10 +41,18 @@ export async function run(ctx) {
   // handed over; the target swaps the hidden take for the received card.
   const expectedActorHand = [...giveOptions].sort();
   expectedActorHand.splice(expectedActorHand.indexOf(givenAway), 1);
-  assert.deepEqual([...actorAfter].sort(), expectedActorHand);
+  assert.deepEqual(
+    [...actorAfter].sort(),
+    expectedActorHand,
+    `actor hand mismatch: taken=${taken} given=${givenAway} options=${JSON.stringify(giveOptions)} after=${JSON.stringify(actorAfter)}`,
+  );
   const expectedTargetHand = [...targetBefore].sort();
   expectedTargetHand.splice(expectedTargetHand.indexOf(taken), 1, givenAway);
-  assert.deepEqual([...targetAfter].sort(), expectedTargetHand);
+  assert.deepEqual(
+    [...targetAfter].sort(),
+    expectedTargetHand,
+    `target hand mismatch: before=${JSON.stringify(targetBefore)} taken=${taken} given=${givenAway} after=${JSON.stringify(targetAfter)}`,
+  );
   return {
     evidence: `目标手牌先保持牌背；确认拿牌后私下看到 ${taken} 并交出 ${givenAway}，双方手牌身份按效果互换`,
     actions: [{ action: 'skill', scenario: name, player_id: 'player1' }],

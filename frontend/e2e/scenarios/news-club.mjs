@@ -35,8 +35,8 @@ export async function run(ctx) {
     const giver = CHOOSER_ORDER[index];
     const receiver = CHOOSER_ORDER[(index + 1) % CHOOSER_ORDER.length];
     const receiverHand = (await readState(ctx.pagesById.get(receiver))).game.own_hand.map((card) => card.name);
-    assert.ok(receiverHand.includes(given[giver]), `${receiver} should hold the card ${giver} passed (${given[giver]})`);
-    assert.equal(receiverHand.length, receiver === 'player1' ? 2 : 3, `${receiver} final hand size is conserved`);
+    assert.ok(receiverHand.includes(given[giver]), `${receiver} should hold the card ${giver} passed (${given[giver]}); hands=${JSON.stringify(given)} receiver=${JSON.stringify(receiverHand)}`);
+    assert.equal(receiverHand.length, receiver === 'player1' ? 2 : 3, `${receiver} final hand size is conserved; hands=${JSON.stringify(given)} receiver=${JSON.stringify(receiverHand)}`);
   }
   return {
     evidence: `四名玩家依次在各自页面选牌，牌按座次传给下家（${CHOOSER_ORDER.map((giver) => `${giver}→${given[giver]}`).join('，')}），最终手牌数守恒`,
