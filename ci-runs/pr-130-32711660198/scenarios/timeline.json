@@ -1,0 +1,82 @@
+{
+  "title": "确定性玩法场景（多视角）",
+  "recording_started_at": 1787563835170,
+  "players": [
+    {
+      "name": "player1",
+      "username": "player1",
+      "offset_ms": 0,
+      "video": "player1.webm"
+    },
+    {
+      "name": "player2",
+      "username": "player2",
+      "offset_ms": 115,
+      "video": "player2.webm"
+    },
+    {
+      "name": "player3",
+      "username": "player3",
+      "offset_ms": 258,
+      "video": "player3.webm"
+    },
+    {
+      "name": "player4",
+      "username": "player4",
+      "offset_ms": 413,
+      "video": "player4.webm"
+    }
+  ],
+  "events": [
+    {
+      "at_ms": 2120,
+      "player_id": "player1",
+      "label": "1/16 · 调和与隐藏归属"
+    },
+    {
+      "at_ms": 4831,
+      "player_id": "player1",
+      "label": "2/16 · 质疑与目标归属"
+    },
+    {
+      "at_ms": 7975,
+      "player_id": "player1",
+      "label": "3/16 · 图书委员查看调和区"
+    },
+    {
+      "at_ms": 12724,
+      "player_id": "player1",
+      "label": "4/16 · 归宅部交换隐藏调和牌"
+    },
+    {
+      "at_ms": 16301,
+      "player_id": "player1",
+      "label": "5/16 · 保健委员收回公开场牌"
+    },
+    {
+      "at_ms": 19452,
+      "player_id": "player1",
+      "label": "6/16 · 风纪委员私下查看手牌"
+    },
+    {
+      "at_ms": 24492,
+      "player_id": "player1",
+      "label": "7/16 · 新闻部逐人传牌"
+    },
+    {
+      "at_ms": 27017,
+      "player_id": "player2",
+      "label": "新闻部传牌 · player2 正在选择"
+    },
+    {
+      "at_ms": 28002,
+      "player_id": "player3",
+      "label": "新闻部传牌 · player3 正在选择"
+    },
+    {
+      "at_ms": 28872,
+      "player_id": "player4",
+      "label": "新闻部传牌 · player4 正在选择"
+    }
+  ]
+}
