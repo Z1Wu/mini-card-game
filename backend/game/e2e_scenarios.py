@@ -39,7 +39,9 @@ SCENARIOS: Dict[str, ScenarioSpec] = {
     ),
     "health-committee": ScenarioSpec(
         hands={0: [CardType.HEALTH_COMMITTEE]},
-        fields={1: [CardType.LIBRARY_COMMITTEE]},
+        # Two opponents hold public field cards so the skill must pick one
+        # specific card across candidates instead of taking the only option.
+        fields={1: [CardType.LIBRARY_COMMITTEE], 2: [CardType.HOME_CLUB]},
     ),
     "discipline-committee": ScenarioSpec(
         hands={0: [CardType.DISCIPLINE_COMMITTEE]},

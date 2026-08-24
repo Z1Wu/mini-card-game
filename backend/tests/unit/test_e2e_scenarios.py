@@ -65,6 +65,10 @@ def test_scenario_fixtures_include_required_private_and_public_prerequisites():
     assert any(card.name == CardType.ACCOMPLICE for card in game.players[0].hand)
     assert len(game.players[1].doubt_cards) == 1
 
+    initialize_e2e_scenario(game, "health-committee")
+    assert [card.name for card in game.players[1].field_cards] == [CardType.LIBRARY_COMMITTEE]
+    assert [card.name for card in game.players[2].field_cards] == [CardType.HOME_CLUB]
+
 
 @pytest.mark.unit
 @pytest.mark.parametrize("scenario_name,card_type", [
