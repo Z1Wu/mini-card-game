@@ -19,6 +19,11 @@ class ScenarioSpec:
     harmony: List[CardType] = field(default_factory=list)
     fields: Dict[int, List[CardType]] = field(default_factory=dict)
     doubts: Dict[int, List[CardType]] = field(default_factory=dict)
+    # Optional per-player final hand size; players default to three cards so
+    # every interaction stays away from settlement.  Scenarios that need extra
+    # spare plays (for example re-reaching the Infected owner's next turn)
+    # override the size for specific seats only.
+    hand_sizes: Dict[int, int] = field(default_factory=dict)
 
 
 SCENARIOS: Dict[str, ScenarioSpec] = {
@@ -34,7 +39,9 @@ SCENARIOS: Dict[str, ScenarioSpec] = {
     ),
     "health-committee": ScenarioSpec(
         hands={0: [CardType.HEALTH_COMMITTEE]},
-        fields={1: [CardType.LIBRARY_COMMITTEE]},
+        # Two opponents hold public field cards so the skill must pick one
+        # specific card across candidates instead of taking the only option.
+        fields={1: [CardType.LIBRARY_COMMITTEE], 2: [CardType.HOME_CLUB]},
     ),
     "discipline-committee": ScenarioSpec(
         hands={0: [CardType.DISCIPLINE_COMMITTEE]},
@@ -49,6 +56,13 @@ SCENARIOS: Dict[str, ScenarioSpec] = {
         hands={0: [CardType.INFECTED]},
         harmony=[CardType.STUDENT_COUNCIL_PRESIDENT],
     ),
+    "infected-decline": ScenarioSpec(
+        hands={0: [CardType.INFECTED]},
+        harmony=[CardType.STUDENT_COUNCIL_PRESIDENT],
+        # The actor must survive two of its own turn starts to prove the
+        # declined effect never prompts again, so pad the actor's hand.
+        hand_sizes={0: 5},
+    ),
     "class-representative": ScenarioSpec(hands={0: [CardType.CLASS_REP]}),
     "honor-student": ScenarioSpec(
         hands={
@@ -57,6 +71,11 @@ SCENARIOS: Dict[str, ScenarioSpec] = {
             2: [CardType.ALIEN],
         },
     ),
+    "criminal": ScenarioSpec(hands={0: [CardType.CRIMINAL]}),
+    "student-council-president": ScenarioSpec(
+        hands={0: [CardType.STUDENT_COUNCIL_PRESIDENT]},
+    ),
+    "alien": ScenarioSpec(hands={0: [CardType.ALIEN]}),
 }
 
 
@@ -126,8 +145,9 @@ def initialize_e2e_scenario(game: Game, scenario_name: str) -> None:
 
     # Three cards per player keeps every interaction away from settlement while
     # retaining a compact, readable hand in desktop and 844x390 recordings.
-    for player in game.players:
-        while len(player.hand) < 3:
+    for player_index, player in enumerate(game.players):
+        target_size = spec.hand_sizes.get(player_index, 3)
+        while len(player.hand) < target_size:
             card = deck.pop(0)
             _put_in_hand(card, player.id)
             player.hand.append(card)
