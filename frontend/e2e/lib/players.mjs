@@ -7,8 +7,8 @@ function attachDiagnostics(page, player) {
   page.on('pageerror', (error) => player.pageErrors.push(error.message));
 }
 
-export async function openPlayers(accounts, { appUrl, rawVideoRoot, viewport = { width: 1280, height: 720 }, recordVideo = true }) {
-  const browser = await chromium.launch({ headless: true });
+export async function openPlayers(accounts, { appUrl, rawVideoRoot, viewport = { width: 1280, height: 720 }, recordVideo = true, browserArgs = [] }) {
+  const browser = await chromium.launch({ headless: true, ...(browserArgs.length ? { args: browserArgs } : {}) });
   const players = [];
   for (let index = 0; index < accounts.length; index += 1) {
     const context = await browser.newContext({ viewport, ...(recordVideo ? { recordVideo: { dir: rawVideoRoot, size: viewport } } : {}) });
