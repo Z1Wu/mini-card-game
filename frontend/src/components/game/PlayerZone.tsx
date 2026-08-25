@@ -5,6 +5,8 @@ import { Card as CardView } from './Card';
 interface PlayerZoneProps {
   player: Player;
   isCurrentTurn: boolean;
+  /** 该玩家正在播放语音（Issue #131）。 */
+  isSpeaking?: boolean;
 }
 
 const faceDownCard = (playerId: string, index: number): CardModel => ({
@@ -20,7 +22,7 @@ const faceDownCard = (playerId: string, index: number): CardModel => ({
   target_player_id: null,
 });
 
-export const PlayerZone: React.FC<PlayerZoneProps> = ({ player, isCurrentTurn }) => {
+export const PlayerZone: React.FC<PlayerZoneProps> = ({ player, isCurrentTurn, isSpeaking = false }) => {
   const isWaitingSettlement = player.current_hand_count === 1;
   const initial = player.name.charAt(0);
   const fieldCount = player.field_cards?.length ?? 0;
@@ -31,7 +33,7 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({ player, isCurrentTurn })
 
   return (
     <div
-      className={`table-seat${isCurrentTurn ? ' table-seat-current' : ''}${isWaitingSettlement ? ' table-seat-settlement' : ''}`}
+      className={`table-seat${isCurrentTurn ? ' table-seat-current' : ''}${isWaitingSettlement ? ' table-seat-settlement' : ''}${isSpeaking ? ' table-seat-speaking' : ''}`}
       aria-label={`${player.name}${isCurrentTurn ? ' (当前回合)' : ''}`}
       role="listitem"
     >
@@ -42,6 +44,9 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({ player, isCurrentTurn })
         </div>
         <div className="table-seat-body">
           <span className="table-seat-name">{player.name}</span>
+          {isSpeaking && (
+            <span className="table-seat-speaking-badge" role="status">🎙️ 正在说话</span>
+          )}
           <div className="table-seat-meta">
             <span className="table-seat-stat table-seat-stat-hand" aria-label={`手牌 ${player.current_hand_count} 张`}>
               <span className="table-seat-stat-label" aria-hidden="true">手牌</span>

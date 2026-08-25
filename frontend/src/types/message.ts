@@ -44,7 +44,8 @@ export type MessageType =
   | 'join_room'
   | 'room_joined'
   | 'list_rooms'
-  | 'room_list';
+  | 'room_list'
+  | 'voice_chunk';
 
 export interface BaseMessage {
   type: MessageType;
@@ -364,6 +365,20 @@ export interface NewsClubChoiceMessage extends BaseMessage {
   card_id: string;
 }
 
+/** 按住说话（Issue #131）：客户端上行的一条完整语音分片（base64 编码）。 */
+export interface VoiceChunkMessage extends BaseMessage {
+  type: 'voice_chunk';
+  data: string;
+}
+
+/** 服务端转发给同房间其他玩家的语音分片；身份以服务端绑定为准。 */
+export interface VoiceChunkBroadcastMessage extends BaseMessage {
+  type: 'voice_chunk';
+  from_player_id: string;
+  seq?: number;
+  data: string;
+}
+
 export type WebSocketMessage =
   | CreateRoomMessage
   | RoomCreatedMessage
@@ -406,4 +421,6 @@ export type WebSocketMessage =
   | ClassRepResultMessage
   | NewsClubInProgressMessage
   | NewsClubYouChoseMessage
-  | GameOverMessage;
+  | GameOverMessage
+  | VoiceChunkMessage
+  | VoiceChunkBroadcastMessage;

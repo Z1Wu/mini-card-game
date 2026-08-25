@@ -431,6 +431,25 @@ class RoomHubWebSocketServer:
                     await self._join_room(websocket, data)
                 elif message_type == "list_rooms":
                     await self._list_rooms(websocket)
+                elif message_type == "voice_chunk":
+                    # Issue #131: 语音只在已登录的正式房间内可用，大厅（default 房）
+                    # 一律拒绝；其余校验（身份绑定、牌局状态、大小与限流）在房间服务内。
+                    username = self._authenticated_users.get(websocket)
+                    room_code = self._connection_rooms.get(websocket, DEFAULT_ROOM_CODE)
+                    if not username:
+                        await self._send(websocket, {
+                            "type": "error",
+                            "code": "authentication_required",
+                            "message": "Please log in before using voice chat",
+                        })
+                    elif room_code == DEFAULT_ROOM_CODE:
+                        await self._send(websocket, {
+                            "type": "error",
+                            "code": "voice_unavailable",
+                            "message": "语音聊天仅可在游戏房间内使用",
+                        })
+                    else:
+                        await self._rooms[room_code].server.handle_message(websocket, message)
                 else:
                     room_code = self._connection_rooms.get(websocket, DEFAULT_ROOM_CODE)
                     await self._rooms[room_code].server.handle_message(websocket, message)

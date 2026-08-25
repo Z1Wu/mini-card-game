@@ -21,4 +21,13 @@ describe('PlayerZone', () => {
     expect(screen.getByLabelText('质疑牌 1 张')).toHaveClass('is-active');
     expect(screen.queryByText('被质疑')).not.toBeInTheDocument();
   });
+
+  it('shows a speaking badge only while that player is talking (Issue #131)', () => {
+    const { rerender } = render(<PlayerZone player={player} isCurrentTurn={false} />);
+    expect(screen.queryByText('🎙️ 正在说话')).not.toBeInTheDocument();
+
+    rerender(<PlayerZone player={player} isCurrentTurn={false} isSpeaking />);
+    expect(screen.getByText('🎙️ 正在说话')).toBeInTheDocument();
+    expect(screen.getByRole('listitem')).toHaveClass('table-seat-speaking');
+  });
 });
