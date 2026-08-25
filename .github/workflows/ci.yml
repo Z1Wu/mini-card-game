@@ -110,6 +110,7 @@ jobs:
           path: |
             frontend/test-results/full-game/
             frontend/test-results/scenarios/
+            frontend/test-results/voice-chat/
           if-no-files-found: error
           retention-days: 14
 

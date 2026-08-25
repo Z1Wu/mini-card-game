@@ -16,6 +16,8 @@ interface GameTableProps {
   onPlayCard: (card: Card, usage: CardUsageType) => void;
   newsClubMyChosenCard: Card | null;
   turnStatusText: string;
+  /** 正在播放语音的玩家 id（Issue #131），无则 null。 */
+  speakingPlayerId?: string | null;
 }
 
 /** Full-screen card-game table: opponents around an oval table, play area in center, hand fixed at bottom. */
@@ -40,6 +42,7 @@ export const GameTable: React.FC<GameTableProps> = (props) => {
             key={player.id}
             player={player}
             isCurrentTurn={props.players[props.currentPlayerIndex]?.id === player.id}
+            isSpeaking={props.speakingPlayerId === player.id}
           />
         ))}
       </div>

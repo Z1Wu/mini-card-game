@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/common/Button';
 import { Card } from '../components/game/Card';
@@ -7,9 +7,11 @@ import { GameTable } from '../components/game/GameTable';
 import { ActionHistory } from '../components/game/ActionHistory';
 import { GameMenu } from '../components/game/GameMenu';
 import { GameConfirmDialog } from '../components/game/GameConfirmDialog';
+import { PushToTalkButton } from '../components/game/PushToTalkButton';
 import { usePlayerStore } from '../stores/playerStore';
 import { useGameStore } from '../stores/gameStore';
 import { useWebSocket } from '../hooks/useWebSocket';
+import { useVoiceChat } from '../hooks/useVoiceChat';
 import { wsService } from '../services/websocket';
 import { GameStateMessage, GameOverMessage, PlayCardMessage, SkillChoiceRequiredMessage, ViewHandMessage, ViewHarmonyMessage, NewsClubChoiceRequiredMessage, RichGirlChooseGiveMessage, ClassRepChoiceRequiredMessage, HonorStudentChoiceRequiredMessage, HonorStudentResultMessage, HonorStudentPhaseMessage, ClassRepWaitingMessage, ClassRepPhaseMessage, ClassRepResultMessage, NewsClubInProgressMessage, NewsClubYouChoseMessage, SettlementSummary, InfectedChoiceRequiredMessage } from '../types/message';
 import { Card as CardType, CardUsageType, GameState as GameStateEnum, CardType as CardTypeEnum } from '../types/game';
@@ -99,6 +101,16 @@ export const Game: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [dangerAction, setDangerAction] = useState<'reset' | 'leave' | null>(null);
+  const isConnected = usePlayerStore(state => state.isConnected);
+
+  // ── 按住说话（Issue #131）：仅牌局内启用，大厅与等待阶段静默 ──
+  const handleSendVoiceChunk = useCallback((base64: string) => {
+    if (playerId) send({ type: 'voice_chunk', data: base64 });
+  }, [playerId, send]);
+  const voice = useVoiceChat({
+    enabled: !!gameState && gameState.state !== GameStateEnum.WAITING,
+    onSendChunk: handleSendVoiceChunk,
+  });
 
   useEffect(() => {
     if (!playerId) {
@@ -832,7 +844,7 @@ export const Game: React.FC = () => {
           </div>
         )}
 
-        {currentPlayer && <GameTable players={gameState.players} localPlayer={currentPlayer} localPlayerId={playerId ?? ''} currentPlayerIndex={gameState.current_player_index} harmonyArea={gameState.harmony_area} requiredHarmonyValue={gameState.required_harmony_value} selectedCard={selectedCard} onSelectCard={setSelectedCard} onPlayCard={handlePlayCard} newsClubMyChosenCard={newsClubMyChosenCard} turnStatusText={topBannerMessage?.text ?? '等待牌局状态'} />}
+        {currentPlayer && <GameTable players={gameState.players} localPlayer={currentPlayer} localPlayerId={playerId ?? ''} currentPlayerIndex={gameState.current_player_index} harmonyArea={gameState.harmony_area} requiredHarmonyValue={gameState.required_harmony_value} selectedCard={selectedCard} onSelectCard={setSelectedCard} onPlayCard={handlePlayCard} newsClubMyChosenCard={newsClubMyChosenCard} turnStatusText={topBannerMessage?.text ?? '等待牌局状态'} speakingPlayerId={voice.speakingPlayerId} />}
         {viewHandResult && (
           <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setViewHandResult(null)}>
             <div className="game-modal-wide bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl" onClick={e => e.stopPropagation()}>
@@ -910,6 +922,24 @@ export const Game: React.FC = () => {
                 <Button variant="secondary" size="sm" className="game-modal-cancel" onClick={() => { setPendingNewsClubChoice(null); setNewsClubSelectedCardId(null); }}>取消</Button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ── 按住说话（Issue #131）：不支持的环境隐藏入口 ── */}
+        {voice.supported && (
+          <div className="voice-chat-dock">
+            {voice.micError && (
+              <div className="voice-chat-error" role="alert">
+                <span>{voice.micError}</span>
+                <button type="button" className="voice-chat-error-close" aria-label="关闭语音提示" onClick={voice.clearMicError}>×</button>
+              </div>
+            )}
+            <PushToTalkButton
+              talking={voice.talking}
+              disabled={!isConnected}
+              onStart={voice.startTalking}
+              onStop={voice.stopTalking}
+            />
           </div>
         )}
 

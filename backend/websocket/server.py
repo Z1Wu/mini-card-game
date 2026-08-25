@@ -1,6 +1,9 @@
 import asyncio
+import base64
+import binascii
 import json
 import logging
+import time
 import websockets
 from random import Random
 from typing import Set, Dict, Optional
@@ -10,6 +13,11 @@ from game.victory import VictoryChecker
 from game.models import GameState, CardUsageType, CardType, PublicAction
 
 logger = logging.getLogger(__name__)
+
+# 语音分片上限：单条按住说话录音解码后不超过 256KB（Opus 16kbps 约可讲两分钟）。
+MAX_VOICE_CHUNK_BYTES = 256 * 1024
+# 同一玩家两条语音分片之间的最小间隔，防止刷屏式灌音频。
+MIN_VOICE_CHUNK_INTERVAL_SECONDS = 0.2
 
 
 class GameWebSocketServer:
@@ -40,6 +48,12 @@ class GameWebSocketServer:
         self.honor_student_actor_id: str | None = None  # 打出优等生的玩家，结束后需收到举手结果
         self.pending_infected: dict | None = None  # { player_id, card_id }
         self.resolved_infected_card_ids: set[str] = set()
+        # 按住说话（Issue #131）：每玩家上次语音分片时间与房间内递增序号。
+        self._last_voice_at: Dict[str, float] = {}
+        self._voice_seq = 0
+        # 实例属性便于测试按需收紧上限。
+        self.max_voice_chunk_bytes = MAX_VOICE_CHUNK_BYTES
+        self.min_voice_chunk_interval_seconds = MIN_VOICE_CHUNK_INTERVAL_SECONDS
         # Optional async callback the hub sets to push live updates to admin subscribers.
         self.on_admin_push = None
 
@@ -53,6 +67,8 @@ class GameWebSocketServer:
         player_id = self._get_player_id_by_websocket(websocket)
         if player_id:
             del self.player_connections[player_id]
+            # 断线玩家不再参与语音限流记账。
+            self._last_voice_at.pop(player_id, None)
         remaining = list(self.player_connections.keys())
         logger.info("Player %s disconnected. Total clients: %s, identified users: %s", player_id or "(unknown)", len(self.clients), remaining)
 
@@ -167,6 +183,8 @@ class GameWebSocketServer:
                 await self._handle_get_game_state(websocket, data)
             elif message_type == "query_game_status":
                 await self._handle_query_game_status(websocket)
+            elif message_type == "voice_chunk":
+                await self._handle_voice_chunk(websocket, data)
             else:
                 await self.send_to_client(websocket, {
                     "type": "error",
@@ -201,6 +219,77 @@ class GameWebSocketServer:
             await old_websocket.close(code=4001, reason="session taken over")
         except Exception:
             logger.debug("Failed to close displaced connection for %s", player_id, exc_info=True)
+
+    async def _handle_voice_chunk(self, websocket, data: dict) -> None:
+        """Relay one push-to-talk audio chunk to the other players in this room.
+
+        Issue #131: identity always comes from the socket binding (never the
+        payload), audio only flows inside a started game, and oversized or
+        flooded chunks are rejected without disturbing game-message handling.
+        """
+        actor_id = await self._authenticated_actor_id(websocket, data)
+        if not actor_id:
+            return
+
+        game = self.game_manager.game
+        if game is None or game.state == GameState.WAITING:
+            await self.send_to_client(websocket, {
+                "type": "error",
+                "code": "voice_unavailable",
+                "message": "语音聊天仅在牌局进行时可用",
+            })
+            return
+
+        payload = data.get("data")
+        if not isinstance(payload, str) or not payload:
+            await self.send_to_client(websocket, {
+                "type": "error",
+                "code": "invalid_voice_chunk",
+                "message": "语音分片格式无效",
+            })
+            return
+        try:
+            decoded = base64.b64decode(payload, validate=True)
+        except (binascii.Error, ValueError):
+            await self.send_to_client(websocket, {
+                "type": "error",
+                "code": "invalid_voice_chunk",
+                "message": "语音分片格式无效",
+            })
+            return
+        if len(decoded) > self.max_voice_chunk_bytes:
+            await self.send_to_client(websocket, {
+                "type": "error",
+                "code": "voice_too_large",
+                "message": "语音分片过大",
+            })
+            return
+
+        now = time.monotonic()
+        last_sent = self._last_voice_at.get(actor_id)
+        if last_sent is not None and now - last_sent < self.min_voice_chunk_interval_seconds:
+            await self.send_to_client(websocket, {
+                "type": "error",
+                "code": "voice_rate_limited",
+                "message": "说话太快，请稍后再试",
+            })
+            return
+        self._last_voice_at[actor_id] = now
+
+        self._voice_seq += 1
+        raw = json.dumps({
+            "type": "voice_chunk",
+            "from_player_id": actor_id,
+            "seq": self._voice_seq,
+            "data": payload,
+        })
+        # 只转发给同房间其他已登录玩家：不回发本人、不跨房间、未登录连接收不到。
+        targets = [ws for pid, ws in self.player_connections.items() if pid != actor_id]
+        if targets:
+            await asyncio.gather(
+                *[ws.send(raw) for ws in targets],
+                return_exceptions=True,
+            )
 
     async def _resume_pending_interaction(self, player_id: str, websocket) -> None:
         """Re-send a private multi-step prompt after a player reconnects."""
