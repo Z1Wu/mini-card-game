@@ -1,6 +1,6 @@
 {
   "title": "完整牌局冒烟测试（跟随实际行动玩家）",
-  "recording_started_at": 1787559293507,
+  "recording_started_at": 1787654168984,
   "players": [
     {
       "name": "player1",
@@ -11,89 +11,89 @@
     {
       "name": "player2",
       "username": "player2",
-      "offset_ms": 120,
+      "offset_ms": 128,
       "video": "player2.webm"
     },
     {
       "name": "player3",
       "username": "player3",
-      "offset_ms": 286,
+      "offset_ms": 263,
       "video": "player3.webm"
     }
   ],
   "events": [
     {
-      "at_ms": 3385,
+      "at_ms": 3180,
       "player_id": "player2",
       "label": "完整牌局：玩家2 第 1 次行动"
     },
     {
-      "at_ms": 9235,
+      "at_ms": 9059,
       "player_id": "player3",
       "label": "完整牌局：玩家3 第 2 次行动"
     },
     {
-      "at_ms": 11081,
+      "at_ms": 11313,
       "player_id": "player1",
       "label": "完整牌局：玩家1 第 3 次行动"
     },
     {
-      "at_ms": 12926,
+      "at_ms": 13355,
       "player_id": "player2",
       "label": "完整牌局：玩家2 第 4 次行动"
     },
     {
-      "at_ms": 14775,
+      "at_ms": 16318,
       "player_id": "player3",
       "label": "完整牌局：玩家3 第 5 次行动"
     },
     {
-      "at_ms": 17681,
+      "at_ms": 18278,
       "player_id": "player1",
       "label": "完整牌局：玩家1 第 6 次行动"
     },
     {
-      "at_ms": 19550,
+      "at_ms": 20049,
       "player_id": "player2",
       "label": "完整牌局：玩家2 第 7 次行动"
     },
     {
-      "at_ms": 21308,
+      "at_ms": 21790,
       "player_id": "player3",
       "label": "完整牌局：玩家3 第 8 次行动"
     },
     {
-      "at_ms": 23054,
+      "at_ms": 23623,
       "player_id": "player1",
       "label": "完整牌局：玩家1 第 9 次行动"
     },
     {
-      "at_ms": 24724,
+      "at_ms": 25577,
       "player_id": "player2",
       "label": "完整牌局：玩家2 第 10 次行动"
     },
     {
-      "at_ms": 26393,
+      "at_ms": 27272,
       "player_id": "player3",
       "label": "完整牌局：玩家3 第 11 次行动"
     },
     {
-      "at_ms": 28084,
+      "at_ms": 28951,
       "player_id": "player1",
       "label": "完整牌局：玩家1 第 12 次行动"
     },
     {
-      "at_ms": 29826,
+      "at_ms": 30639,
       "player_id": "player2",
       "label": "完整牌局：玩家2 第 13 次行动"
     },
     {
-      "at_ms": 31452,
+      "at_ms": 32422,
       "player_id": "player3",
       "label": "完整牌局：玩家3 第 14 次行动"
     },
     {
-      "at_ms": 33140,
+      "at_ms": 34110,
       "player_id": "player1",
       "label": "完整牌局：玩家1 第 15 次行动"
     }
