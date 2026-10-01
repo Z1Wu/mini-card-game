@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card as CardView } from './Card';
-import { Card, CardType, CardUsageType, Player } from '../../types/game';
+import { Card, CardType, Player } from '../../types/game';
 import { PlayerField } from './PlayerField';
 import { CardDecisionPanel } from './CardDecisionPanel';
 
@@ -9,22 +9,15 @@ interface PlayerHandProps {
   isCurrentTurn: boolean;
   selectedCard: Card | null;
   onSelect: (card: Card | null) => void;
-  onPlay: (card: Card, usage: CardUsageType) => void;
   harmonyIsEmpty: boolean;
   newsClubMyChosenCard: Card | null;
   turnStatusText: string;
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
-  player, isCurrentTurn, selectedCard, onSelect, onPlay, harmonyIsEmpty, newsClubMyChosenCard, turnStatusText,
+  player, isCurrentTurn, selectedCard, onSelect, harmonyIsEmpty, newsClubMyChosenCard, turnStatusText,
 }) => {
   const isSettlement = player.current_hand_count === 1;
-  const canShowActions =
-    isCurrentTurn &&
-    !isSettlement &&
-    selectedCard != null &&
-    selectedCard.name !== CardType.CRIMINAL;
-  const skillDisabled = selectedCard?.name === CardType.HOME_CLUB && harmonyIsEmpty;
   const isWaitingForInteraction = isCurrentTurn && /等待|正在选牌/.test(turnStatusText);
 
 
@@ -71,40 +64,6 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             );
           })}
         </div>
-        {canShowActions && selectedCard && (
-          <div className="table-hand-actions">
-            <button
-              className="table-hand-action-btn table-hand-action-harmony"
-              onClick={() => onPlay(selectedCard, CardUsageType.HARMONY)}
-              aria-label="调和"
-            >
-              <strong>调和</strong>
-            </button>
-            <button
-              className="table-hand-action-btn table-hand-action-doubt"
-              onClick={() => onPlay(selectedCard, CardUsageType.DOUBT)}
-              aria-label="质疑"
-            >
-              <strong>质疑</strong>
-            </button>
-            <button
-              className="table-hand-action-btn table-hand-action-skill"
-              disabled={skillDisabled}
-              onClick={() => !skillDisabled && onPlay(selectedCard, CardUsageType.SKILL)}
-              title={skillDisabled ? '调和区为空时无法使用该特技' : undefined}
-              aria-label={skillDisabled ? '特技（不可用）' : '特技'}
-            >
-              <strong>特技</strong>
-            </button>
-            <button
-              className="table-hand-action-btn table-hand-action-cancel"
-              onClick={() => onSelect(null)}
-              aria-label="取消选择"
-            >
-              ✕
-            </button>
-          </div>
-        )}
       </div>
       {isCurrentTurn && selectedCard?.name === CardType.CRIMINAL && !isSettlement && (
         <div className="table-hand-blocked">犯人不可主动打出，只能保留或被其他特技移动</div>

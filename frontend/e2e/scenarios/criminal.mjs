@@ -23,17 +23,17 @@ export async function run(ctx) {
   const blocked = ctx.actorPage.getByText(BLOCKED_TEXT, { exact: true });
   await blocked.waitFor({ state: 'visible' });
   await ctx.screenshot('criminal-blocked', ctx.actorPage);
-  assert.equal(await hand.getByRole('button', { name: '调和', exact: true }).count(), 0, 'the criminal must offer no harmony play');
-  assert.equal(await hand.getByRole('button', { name: '质疑', exact: true }).count(), 0, 'the criminal must offer no doubt play');
-  assert.equal(await hand.getByRole('button', { name: '特技', exact: true }).count(), 0, 'the criminal must offer no skill play');
+  assert.equal(await ctx.actorPage.locator('.table-hand-actions').getByRole('button', { name: '调和', exact: true }).count(), 0, 'the criminal must offer no harmony play');
+  assert.equal(await ctx.actorPage.locator('.table-hand-actions').getByRole('button', { name: '质疑', exact: true }).count(), 0, 'the criminal must offer no doubt play');
+  assert.equal(await ctx.actorPage.locator('.table-hand-actions').getByRole('button', { name: '特技', exact: true }).count(), 0, 'the criminal must offer no skill play');
   await assertUntouched(ctx, 'while the criminal is selected');
 
   // Contrast: any other card still offers the normal action bar.
   const filler = await ctx.actorPage.evaluate(() => JSON.parse(window.render_game_to_text()).game.own_hand.find((card) => card.name !== '犯人').name);
   await hand.getByLabel(`卡牌：${filler}`, { exact: true }).first().click();
-  await hand.getByRole('button', { name: '调和', exact: true }).waitFor({ state: 'visible' });
+  await ctx.actorPage.locator('.table-hand-actions').getByRole('button', { name: '调和', exact: true }).waitFor({ state: 'visible' });
   await ctx.actorPage.getByRole('button', { name: '取消选择', exact: true }).click();
-  await hand.getByRole('button', { name: '调和', exact: true }).waitFor({ state: 'hidden' });
+  await ctx.actorPage.locator('.table-hand-actions').getByRole('button', { name: '调和', exact: true }).waitFor({ state: 'hidden' });
   await assertUntouched(ctx, 'after deselecting');
   return {
     evidence: '选中犯人只出现「犯人不可主动打出」提示且无任何出牌按钮；普通卡照常给出动作条。回合、公开记录与手牌全程不变',

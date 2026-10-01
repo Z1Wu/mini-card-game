@@ -330,3 +330,15 @@
 .card-catalog p { font-size: 12px; line-height: 1.5; }
 .card-catalog-stats { color: #c4b5b0; }
 .game-table .table-seats { padding-right: 160px; }
+
+.table-center-controls { position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: auto; }
+.table-center-controls .table-objective-doubt { position: static; transform: none; }
+.game-table .table-center-controls .table-hand-actions { display: flex; flex-direction: row; width: 270px; gap: 6px; }
+.game-table .table-center-controls .table-hand-action-btn { min-height: 36px; }
+.game-table .table-center-controls .table-hand-action-cancel { position: static; width: 30px; flex: 0 0 30px; }
+.game-table .table-hand-playrow { grid-template-columns: minmax(0,1fr); }
+.game-table .table-decision { position: fixed; left: 12px; bottom: 170px; width: 280px; max-height: 180px; overflow: auto; }
+@media (orientation: landscape) and (max-height: 500px) {
+  .game-table .table-decision { left: 8px; bottom: 110px; width: 128px; max-height: 140px; }
+  .game-table .table-center-controls .table-hand-action-btn { min-height: 32px; }
+}

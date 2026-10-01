@@ -90,7 +90,7 @@ export async function chooseVisibleCard(page, cardName, action) {
   await page.waitForTimeout(350);
   // Action buttons live in a dedicated action bar (sibling of the card),
   // not inside the card element — scope to the hand container.
-  await hand.getByRole('button', { name: action, exact: true }).click();
+  await page.locator('.table-hand-actions').getByRole('button', { name: action, exact: true }).click();
   // Pause so the green play-feedback toast is captured in the video.
   await page.waitForTimeout(500);
 }
@@ -153,7 +153,7 @@ async function showcaseTurn(page, excludedNames) {
   await page.waitForTimeout(800);
 
   // 4. Cancel via ✕ button — shows card returning down + hint text reappearing
-  const cancelBtn = hand.getByRole('button', { name: '取消选择', exact: true });
+  const cancelBtn = page.locator('.table-hand-actions').getByRole('button', { name: '取消选择', exact: true });
   if (await cancelBtn.isVisible().catch(() => false)) {
     await cancelBtn.click();
     await page.waitForTimeout(600);
@@ -163,7 +163,7 @@ async function showcaseTurn(page, excludedNames) {
   }
 
   // 6. Play harmony — shows play-feedback toast
-  await hand.getByRole('button', { name: '调和', exact: true }).click();
+  await page.locator('.table-hand-actions').getByRole('button', { name: '调和', exact: true }).click();
   await page.waitForTimeout(600);
 
   return { action: 'harmony', card: cardName };
@@ -226,7 +226,7 @@ export async function playMixedTurn(page, state, step, showcase = false) {
           await locator.first().scrollIntoViewIfNeeded();
           await locator.first().click();
           await page.waitForTimeout(350);
-          await hand.getByRole('button', { name: '特技', exact: true }).click();
+          await page.locator('.table-hand-actions').getByRole('button', { name: '特技', exact: true }).click();
           // Pause so skill result modal is visible in the video.
           await page.waitForTimeout(700);
           const closeBtn = page.getByRole('button', { name: '关闭', exact: true });

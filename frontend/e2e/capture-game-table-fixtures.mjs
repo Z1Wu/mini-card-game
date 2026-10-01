@@ -40,10 +40,11 @@ try {
     assert.ok(Math.abs(objectiveBox.y + objectiveBox.height / 2 - viewport.height / 2) < 2, 'Harmony status is vertically centered');
     assert.equal(await page.locator('.table-hand-info').count(), 0, 'Own player information is omitted');
     const actionBoxes = await page.locator('.table-hand-actions button:not(.table-hand-action-cancel)').evaluateAll(nodes => nodes.map(node => { const b = node.getBoundingClientRect(); return { x: b.x, y: b.y, width: b.width, height: b.height }; }));
-    assert.ok(actionBoxes.every((b, index) => !index || (b.y >= actionBoxes[index - 1].y + actionBoxes[index - 1].height && Math.abs(b.x - actionBoxes[0].x) < 1)), 'Actions run vertically');
-    const handBox = await page.locator('.table-hand-scroll').boundingBox();
-    assert.ok(actionBoxes[0].x >= handBox.x + handBox.width, 'Actions are beside the hand');
-    assert.ok(actionBoxes[0].x + actionBoxes[0].width >= viewport.width - 20, 'Actions use the far right edge');
+    assert.equal(actionBoxes.length, 3);
+    assert.ok(actionBoxes.every((b, index) => !index || (b.x >= actionBoxes[index - 1].x + actionBoxes[index - 1].width && Math.abs(b.y - actionBoxes[0].y) < 1)), 'Actions run left to right');
+    const doubtBox = await page.locator('.table-objective-doubt').boundingBox();
+    assert.ok(actionBoxes[0].y >= doubtBox.y + doubtBox.height, 'Actions are below own doubt count');
+    for (const box of actionBoxes) assert.equal(overlaps(box, decisionBox), false, 'Preview does not cover actions');
     assert.equal(await page.locator('.table-seat-cards').count(), 0, 'Opponent hand backs must be absent');
     assert.equal(await page.locator('.player-field').count(), players, 'Every owner has a separate field');
     const exposedNames = await page.locator('.player-field').evaluateAll(fields => fields.every(field => {
@@ -60,6 +61,7 @@ try {
     }));
     for (const field of fieldBoxes) assert.equal(overlaps(field, objectiveBox), false, `Owner field must not cover objective ${viewport.width}x${viewport.height} ${players}: ${JSON.stringify(field)} objective ${JSON.stringify(objectiveBox)}`);
     for (let i = 0; i < fieldBoxes.length; i++) for (let j = i + 1; j < fieldBoxes.length; j++) assert.equal(overlaps(fieldBoxes[i], fieldBoxes[j]), false, 'Owner fields must not overlap');
+    await page.screenshot({ path: path.join(outputDirectory, `${viewport.width}x${viewport.height}-${players}-selected.png`) });
     const harmonyAction = page.getByRole('button', { name: '调和', exact: true });
     await harmonyAction.waitFor({ state: 'visible' });
     await harmonyAction.click();

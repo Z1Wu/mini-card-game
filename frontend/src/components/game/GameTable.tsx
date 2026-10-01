@@ -3,6 +3,7 @@ import { Card, CardUsageType, Player, PublicAction } from '../../types/game';
 import { usePlayPresentation } from './usePlayPresentation';
 import { SkillPlayReveal } from './SkillPlayReveal';
 import { Card as CardView } from './Card';
+import { PlayActions } from './PlayActions';
 import { PlayerHand } from './PlayerHand';
 import { PlayerZone } from './PlayerZone';
 
@@ -73,10 +74,12 @@ export const GameTable: React.FC<GameTableProps> = (props) => {
               )) : <span className="table-objective-empty">等待投入</span>}
             </div>
           </section>
+          <div className="table-center-controls">
           <div className="table-objective-doubt" aria-label={`被质疑数 ${localPlayer.doubt_cards?.length ?? 0}`}>
             被质疑数 <strong>{localPlayer.doubt_cards?.length ?? 0}</strong>
           </div>
-
+          <PlayActions selectedCard={props.selectedCard} isCurrentTurn={isMyTurn} handCount={localPlayer.current_hand_count} harmonyIsEmpty={!props.harmonyArea.length} onPlay={props.onPlayCard} onSelect={props.onSelectCard} />
+          </div>
 
         </div>
       </div>
@@ -87,7 +90,6 @@ export const GameTable: React.FC<GameTableProps> = (props) => {
         isCurrentTurn={isMyTurn}
         selectedCard={props.selectedCard}
         onSelect={props.onSelectCard}
-        onPlay={props.onPlayCard}
         harmonyIsEmpty={!props.harmonyArea.length}
         newsClubMyChosenCard={props.newsClubMyChosenCard}
         turnStatusText={props.turnStatusText}
