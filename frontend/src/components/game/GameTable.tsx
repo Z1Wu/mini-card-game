@@ -79,10 +79,14 @@ export const GameTable: React.FC<GameTableProps> = (props) => {
           <div className="table-objective-doubt" aria-label={`被质疑数 ${localPlayer.doubt_cards?.length ?? 0}`}>
             被质疑数 <strong>{localPlayer.doubt_cards?.length ?? 0}</strong>
           </div>
-          <PlayActions selectedCard={props.selectedCard} isCurrentTurn={isMyTurn} handCount={localPlayer.current_hand_count} harmonyIsEmpty={!props.harmonyArea.length} onPlay={props.onPlayCard} onSelect={props.onSelectCard} />
+
           </div>
 
         </div>
+      </div>
+
+      <div className="table-own-actions">
+          <PlayActions selectedCard={props.selectedCard} isCurrentTurn={isMyTurn} handCount={localPlayer.current_hand_count} harmonyIsEmpty={!props.harmonyArea.length} onPlay={props.onPlayCard} onSelect={props.onSelectCard} />
       </div>
 
       {/* ── Player hand (fixed bottom) ── */}
@@ -99,3 +103,4 @@ export const GameTable: React.FC<GameTableProps> = (props) => {
     </div>
   );
 };
+

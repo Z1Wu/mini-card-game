@@ -47,7 +47,11 @@ try {
     assert.ok(actionBoxes.every((b, index) => !index || (b.x >= actionBoxes[index - 1].x + actionBoxes[index - 1].width && Math.abs(b.y - actionBoxes[0].y) < 1)), 'Actions run left to right');
     const doubtBox = await page.locator('.table-objective-doubt').boundingBox();
     assert.ok(actionBoxes[0].y >= doubtBox.y + doubtBox.height, 'Actions are below own doubt count');
-    for (const box of actionBoxes) assert.equal(overlaps(box, decisionBox), false, 'Preview does not cover actions');
+    for (const box of actionBoxes) {
+      assert.equal(overlaps(box, decisionBox), false, 'Preview does not cover actions');
+      assert.ok(decisionBox.y + decisionBox.height <= box.y, 'Information sheet sits above actions');
+      assert.ok(box.y + box.height <= selectedBounds.y, 'Actions sit above the hand ' + JSON.stringify({ viewport, box, selectedBounds }));
+    }
     assert.equal(await page.locator('.table-seat-cards').count(), 0, 'Opponent hand backs must be absent');
     assert.equal(await page.locator('.player-field').count(), players, 'Every owner has a separate field');
     const exposedNames = await page.locator('.player-field').evaluateAll(fields => fields.every(field => {
@@ -79,3 +83,5 @@ try {
 
 await writeFile(path.join(outputDirectory, 'manifest.json'), `${JSON.stringify({ fixture: '/fixtures/game-table', results }, null, 2)}\n`);
 console.log(`Captured ${results.length} tabletop fixture screenshots in ${outputDirectory}`);
+
+
