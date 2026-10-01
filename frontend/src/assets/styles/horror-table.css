@@ -462,3 +462,5 @@ body:has(.skill-activation) .turn-announcement { visibility: hidden; }
  .settlement-winner-reason { flex-direction: column; }.settlement-winner-card { width: 124px; }.settlement-role-list { grid-template-columns: 1fr; }
 }
 .settlement-winner-name { font-size: clamp(24px,4vw,34px); }
+.settlement-stage-track span { justify-content: center; text-align: center; }
+.settlement-heading { text-align: center; }
