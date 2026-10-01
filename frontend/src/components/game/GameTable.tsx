@@ -73,6 +73,9 @@ export const GameTable: React.FC<GameTableProps> = (props) => {
               )) : <span className="table-objective-empty">等待投入</span>}
             </div>
           </section>
+          <div className="table-objective-doubt" aria-label={`被质疑数 ${localPlayer.doubt_cards?.length ?? 0}`}>
+            被质疑数 <strong>{localPlayer.doubt_cards?.length ?? 0}</strong>
+          </div>
 
 
         </div>

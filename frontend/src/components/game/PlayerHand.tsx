@@ -55,7 +55,6 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
         />
       )}
       <div className="table-hand-playrow">
-        <div className="table-hand-doubt-state" aria-label={`被质疑值 ${player.doubt_cards?.length ?? 0}`}>被质疑 {player.doubt_cards?.length ?? 0}</div>
         <div className="table-hand-scroll">
           {player.hand.map(card => {
             const playable = isCurrentTurn && card.name !== CardType.CRIMINAL && player.hand.length > 1;

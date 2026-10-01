@@ -42,7 +42,7 @@ describe('GameTable information hierarchy', () => {
     expect(screen.getByText('当前总值未知')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: '质疑牌' })).not.toBeInTheDocument();
     expect(screen.getByLabelText('质疑牌 1 张')).toHaveClass('is-active');
-    expect(screen.getByLabelText('被质疑值 1')).toBeInTheDocument();
+    expect(screen.getByLabelText('被质疑数 1')).toBeInTheDocument();
     expect(document.querySelector('.table-hand-info')).toBeNull();
     expect(screen.getByText('请选择一张手牌')).toBeInTheDocument();
     expect(screen.queryByText('场上暂无公开牌')).not.toBeInTheDocument();

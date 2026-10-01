@@ -311,3 +311,8 @@
 
 .fixture-play-controls { position: fixed; top: 8px; left: 8px; z-index: 80; display: flex; gap: 4px; }
 .fixture-play-controls button { background: #302326; border: 1px solid #79555a; padding: 6px; color: white; }
+
+.table-objective-doubt { align-self: center; padding: 3px 10px; border: 1px solid #79555a; border-radius: 8px; background: rgba(48,35,38,.92); color: #e1cdc6; font-size: 12px; }
+.table-objective-doubt strong { margin-left: 4px; color: #fff; }
+.game-table .table-center-inner { position: relative; }
+.table-objective-doubt { position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%); white-space: nowrap; }
