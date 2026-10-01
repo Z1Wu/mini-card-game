@@ -28,9 +28,12 @@ export const CardDecisionPanel: React.FC<CardDecisionPanelProps> = ({
         <span>优先级 {card.victory_priority}</span>
         <em>{stateCopy}</em>
       </div>
+      <p className="table-decision-skill table-decision-skill-preview" aria-label="特技效果预览" aria-live="polite">
+        <b>特技效果</b>{blocked ? decision.skill : card.description || decision.skill}
+        {decision.skillUnavailable && <span className="block text-amber-200">{decision.skill}</span>}
+      </p>
       <details className="table-decision-details">
         <summary>查看完整决策说明</summary>
-        <p className="table-decision-skill"><b>特技</b>{decision.skill}</p>
         <p className="table-decision-victory"><b>保留胜利</b>{decision.victory}</p>
         {!blocked && !isSettlement && (
           <div className="table-decision-previews" aria-label="出牌结果预览">
