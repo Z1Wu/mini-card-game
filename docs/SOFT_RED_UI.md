@@ -10,3 +10,5 @@
 - `TurnAnnouncement` 根据游戏 ID、回合计数与当前玩家 ID 去重；初始回合也提示，2.2 秒自动消失，快速切换会重启计时。提示不拦截鼠标/触摸，支持减少动态效果。
 - 预览：`/fixtures/card-art`；回合演示：`/fixtures/game-table?turns=1`。
 - 验证：Vitest、lint、build，九组桌面布局、全角色素材加载，以及 `e2e/capture-turn-announcement.mjs` 回合动画检查。
+
+卡名栏排列为「阿拉伯数字调和值｜名称｜罗马数字优先级（Ⅰ–Ⅴ）」，不再遮挡图片上方。调和卡仍隐藏右侧优先级；数值保留带含义的可访问标签与工具提示。

@@ -142,20 +142,11 @@ export const Card: React.FC<CardProps> = ({
               <div className="game-card-art-scrim" aria-hidden="true" />
             </>
           )}
-          <div className="game-card-corner game-card-corner-left" title="调和值">
-            <span className="game-card-corner-value">{card.harmony_value}</span>
-            <span className="game-card-corner-label">调和</span>
-          </div>
-          {displayPriority && (
-            <div className="game-card-corner game-card-corner-right" title="胜利优先级">
-              <span className="game-card-corner-value">{card.victory_priority}</span>
-              <span className="game-card-corner-label">优先</span>
-            </div>
-          )}
-
           <div className="game-card-title-wrap">
             <div className="game-card-ribbon" />
+            <span className="game-card-stat game-card-stat-harmony" title="调和值" aria-label={`调和值 ${card.harmony_value}`}>{card.harmony_value}</span>
             <span className="game-card-title" title={card.name}>{card.name}</span>
+            {displayPriority ? <span className="game-card-stat game-card-stat-priority" title="胜利优先级" aria-label={`胜利优先级 ${card.victory_priority}`}>{['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'][card.victory_priority] || card.victory_priority}</span> : <span aria-hidden="true" />}
           </div>
 
         </div>

@@ -104,3 +104,14 @@ it('does not expose faction color through hidden card backs', () => {
   view.rerender(<Card card={{ ...card, name: CardType.ALIEN }} showAsFaceDown />);
   expect(screen.getByLabelText('牌背').outerHTML).toBe(before);
 });
+
+it('places harmony left of the name and Roman priority on its right', () => {
+  render(<Card card={card} />);
+  const left = screen.getByTitle('调和值');
+  const title = screen.getByTitle(card.name);
+  const right = screen.getByTitle('胜利优先级');
+  expect(left.nextElementSibling).toBe(title);
+  expect(title.nextElementSibling).toBe(right);
+  expect(right).toHaveTextContent('Ⅱ');
+  expect(right).toHaveAccessibleName('胜利优先级 2');
+});

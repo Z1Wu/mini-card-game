@@ -174,3 +174,9 @@
   100% { opacity: 0; transform: translate(-50%,-54%); }
 }
 @media (prefers-reduced-motion: reduce) { .turn-announcement { animation: none; } }
+
+/* Stats share the name strip, leaving the portrait unobstructed. */
+.game-card-title-wrap { display: grid; grid-template-columns: 1em minmax(0,1fr) 1em; gap: .12em; padding: .18em .12em; align-items: center; font-size: clamp(.6rem, 12cqw, 1.4rem); }
+.game-card-title { font-size: clamp(.6rem, 12.5cqw, 1.4rem); white-space: normal; overflow-wrap: anywhere; line-height: 1.05; }
+.game-card-stat { position: relative; z-index: 1; font-weight: 900; line-height: 1; text-align: center; color: #302124; font-variant-numeric: tabular-nums; }
+.game-card-stat-priority { font-family: Georgia, 'Times New Roman', serif; font-size: .95em; }

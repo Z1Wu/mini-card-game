@@ -18,6 +18,14 @@ try {
   assert.equal(images.length, 13, 'Every role must have portrait art');
   assert.equal(new Set(images.map(image => image.src)).size, 13, 'Roles must use distinct portraits');
   assert.ok(images.every(image => image.loaded && image.src.includes('-soft-red-v3')), 'All new portrait assets must load');
+  const strips = await page.locator('.game-card-title-wrap').evaluateAll(nodes => nodes.map(node => {
+    const left = node.querySelector('.game-card-stat-harmony').getBoundingClientRect();
+    const title = node.querySelector('.game-card-title').getBoundingClientRect();
+    const right = node.querySelector('.game-card-stat-priority').getBoundingClientRect();
+    return { ordered: left.right <= title.left + 1 && title.right <= right.left + 1, priority: node.querySelector('.game-card-stat-priority').textContent };
+  }));
+  assert.ok(strips.every(strip => strip.ordered), 'Harmony/name/priority must not overlap');
+  assert.ok(strips.every(strip => /^[ⅠⅡⅢⅣⅤ]$/.test(strip.priority)), 'Priority uses Roman numerals');
   assert.deepEqual(errors, [], 'Gallery must not produce page errors');
   await page.screenshot({ path: path.join(output, 'all-roles.png'), fullPage: true });
   console.log('13 distinct role portraits loaded; gallery screenshot saved.');
