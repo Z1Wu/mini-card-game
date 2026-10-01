@@ -413,3 +413,54 @@ body:has(.skill-activation) .turn-announcement { visibility: hidden; }
 @media (max-width: 480px) { .avatar-options { gap: 8px; }.avatar-option .player-character-avatar { width: 56px; height: 56px; } }
 
 .honor-result-avatar .player-character-avatar { width: 100%; height: 100%; border: 0; }
+/* Settlement: an investigation dossier on the abandoned school desk. */
+.settlement-view { min-height: 100dvh; padding: 40px 24px; background: linear-gradient(rgba(16,6,9,.8),rgba(16,6,9,.92)), url('../art/tabletop-horror-v2.webp') center/cover fixed; color: #e8d9cd; }
+.settlement-shell { max-width: 980px; min-height: 0; padding: 32px 40px; border: 1px solid #755052; border-top: 4px solid #9c4c57; border-radius: 4px; background: repeating-linear-gradient(0deg,transparent 0 31px,rgba(220,190,155,.025) 32px),linear-gradient(135deg,#34252a,#21171d); box-shadow: 0 24px 70px #0d0408, inset 0 0 80px rgba(0,0,0,.2); }
+.settlement-archive-header { display: flex; justify-content: space-between; gap: 16px; padding-bottom: 16px; margin-bottom: 22px; border-bottom: 1px solid #6c464b; color: #bea09a; font-size: 11px; letter-spacing: .16em; }
+.settlement-progress { color: #d1aca4; font-size: 12px; letter-spacing: .08em; }
+.settlement-stage-track { gap: 10px; margin: 18px 0 28px; }
+.settlement-stage-track span { height: auto; min-height: 56px; border-radius: 2px; border: 1px solid #61454b; color: #a68c87; background: rgba(16,8,13,.4); display: flex; gap: 9px; box-shadow: none; }
+.settlement-stage-track span b { font-family: Georgia,serif; font-size: 20px; font-weight: 400; }
+.settlement-stage-track span small { font-size: 11px; }
+.settlement-stage-track span.is-reached { color: #f0dace; background: #66373f; border-color: #ac6b6f; box-shadow: none; }
+.settlement-heading { font-family: 'Yu Mincho','Songti SC','SimSun',serif; font-size: clamp(26px,4vw,38px); letter-spacing: .12em; color: #f0e1d4; margin-bottom: 24px; }
+.settlement-result { min-height: 280px; padding: 26px; border-radius: 3px; border-color: #725157; background: rgba(15,8,12,.35); }
+.settlement-lead { color: #d7beb4; font-size: 16px; line-height: 1.8; }
+.settlement-lead strong { color: #f3dfcc; font-size: 30px; padding: 0 6px; font-family: Georgia,serif; }
+.settlement-success,.settlement-failure { color: #e3bf93; }
+.settlement-failure { color: #e18b94; }
+.settlement-result > .settlement-success,.settlement-result > .settlement-failure { display: inline-block; padding: 6px 18px; border: 2px solid currentColor; margin: 8px 0 24px; letter-spacing: .18em; transform: rotate(-3deg); }
+.settlement-cards { gap: 16px; }
+.settlement-card { width: 104px; }
+.settlement-player,.settlement-role { border-color: #66474d; border-radius: 2px; background: rgba(72,44,48,.25); padding: 14px 16px; }
+.settlement-player.imprisoned { border-color: #aa5661; background: rgba(112,35,48,.3); }
+.settlement-player strong { font: 26px Georgia,serif; color: #f3d6ba; }
+.settlement-player.imprisoned > span:last-child { font-size: 12px; border: 1px solid #b86d76; padding: 3px 7px; color: #ecadb3; }
+.settlement-role-owner { display: flex; align-items: center; justify-content: flex-start !important; gap: 12px; margin-bottom: 16px; }
+.settlement-role-list { grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); }
+.settlement-role-card { width: 130px; }
+.settlement-role-card p { line-height: 1.65; color: #d2bdb3; font-size: 12px; }
+.settlement-role-card p.settlement-success { color: #e3bf93; }.settlement-role-card p.settlement-failure { color: #e18b94; }
+.settlement-winner { background: radial-gradient(ellipse at 50% 0,rgba(124,48,60,.3),transparent 65%),rgba(15,8,12,.35); }
+.settlement-winner-burst { display: none; }
+.settlement-winner-kicker { color: #b98d88; letter-spacing: .35em; border-bottom: 1px solid #80545b; padding-bottom: 10px; margin-bottom: 16px; }
+.settlement-winner > .player-character-avatar,.settlement-winner > .table-seat-icon { width: 64px; height: 64px; margin-bottom: 14px; border: 2px solid #c99683; }
+.settlement-winner-name { font-family: 'Yu Mincho','Songti SC','SimSun',serif; color: #f5dfcc; text-shadow: none; letter-spacing: .08em; }
+.settlement-winner-reason { width: min(100%,620px); border-radius: 3px; border-color: #93676c; background: rgba(54,31,37,.65); box-shadow: none; margin: 0 0 20px; }
+.settlement-winner-card { width: 110px; }
+.settlement-winner-reason p { color: #dcc6bb; line-height: 1.65; }.settlement-winner-reason strong { color: #f2dbc2; }
+.settlement-priority-explanation { color: #c5aaa0 !important; border-top-color: #6b464d; }
+.settlement-details { background: rgba(15,8,12,.45); border: 1px solid #69464e; border-radius: 2px; color: #dec7bc; }
+.settlement-navigation { justify-content: space-between; padding-top: 18px; border-top: 1px solid #614048; }
+.settlement-view button { border-radius: 4px; }
+.settlement-view .bg-slate-600,.settlement-view .bg-slate-700 { background: #52343d; color: #eddad0; }
+@media (max-width: 600px) {
+ .settlement-view { padding: 16px 12px; }.settlement-shell { padding: 20px 16px; }
+ .settlement-archive-header { font-size: 9px; gap: 8px; letter-spacing: .06em; }
+ .settlement-stage-track { gap: 5px; }.settlement-stage-track span { flex-direction: column; gap: 3px; padding: 7px 2px; }.settlement-stage-track span small { font-size: 9px; }
+ .settlement-result { padding: 18px 14px; min-height: 260px; }.settlement-player { gap: 8px; padding: 12px 8px; }.settlement-player .player-character-avatar { width: 32px; height: 32px; }
+ .settlement-winner-reason { flex-direction: column; }.settlement-winner-card { width: 124px; }.settlement-role-list { grid-template-columns: 1fr; }
+}
+.settlement-winner-name { font-size: clamp(24px,4vw,34px); }
+.settlement-stage-track span { justify-content: center; text-align: center; }
+.settlement-heading { text-align: center; }

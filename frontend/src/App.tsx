@@ -1,3 +1,4 @@
+import { SettlementFixture } from './pages/SettlementFixture';
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
@@ -55,6 +56,7 @@ function App() {
         <Route path="/rooms" element={<Rooms />} />
         <Route path="/lobby" element={<Lobby />} />
         <Route path="/game" element={<Game />} />
+        <Route path="/fixtures/settlement" element={<SettlementFixture />} />
         <Route path="/fixtures/game-table" element={<GameTableFixture />} />
         <Route path="/fixtures/card-art" element={<CardArtFixture />} />
         <Route path="/admin" element={<AdminLayout />}>
