@@ -198,6 +198,10 @@ class WebSocketService {
     return this.session?.roomCode ?? 'default';
   }
 
+  getSavedSession(): { roomCode: string; username: string; reconnectToken: string } | null {
+    return this.session ? { ...this.session } : null;
+  }
+
   private emitConnection(connected: boolean): void {
     this.connectionHandlers.forEach(handler => handler(connected));
   }

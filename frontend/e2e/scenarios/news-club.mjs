@@ -18,6 +18,15 @@ export async function run(ctx) {
     const page = ctx.pagesById.get(chooser);
     const modal = page.locator('.game-modal').filter({ hasText: /新闻部：选择一张手牌递给/ });
     await modal.waitFor({ state: 'visible' });
+    // This is a mandatory skill choice. Closing it would strand the room.
+    assert.equal(await modal.getByRole('button', { name: '取消', exact: true }).count(), 0);
+    await modal.click({ position: { x: 2, y: 2 } });
+    assert.ok(await modal.isVisible(), 'Backdrop clicks must retain the choice');
+    if (chooser === 'player2') {
+      await page.reload();
+      await modal.waitFor({ state: 'visible' });
+      await ctx.screenshot('news-club-restored-choice', page);
+    }
     if (chooser !== 'player1') await ctx.showTitle(`新闻部传牌 · ${chooser} 正在选择`, chooser);
     const state = await readState(page);
     const expectedSize = chooser === 'player1' ? 2 : 4;
@@ -25,7 +34,7 @@ export async function run(ctx) {
     // The just-received card is appended last, so index 0 is always an own card.
     const chosenName = state.game.own_hand[0].name;
     given[chooser] = chosenName;
-    await modal.getByLabel(`卡牌：${chosenName}`, { exact: true }).first().click();
+    await modal.locator(`[data-card-id="${state.game.own_hand[0].id}"]`).press('Enter');
     await page.waitForTimeout(200);
     await modal.getByRole('button', { name: '确认递给下家', exact: true }).click();
     await modal.waitFor({ state: 'hidden' });
