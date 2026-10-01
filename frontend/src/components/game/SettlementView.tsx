@@ -1,3 +1,4 @@
+import { PlayerAvatar } from '../common/PlayerAvatar';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../common/Button';
 import { Game } from '../../types/game';
@@ -69,7 +70,7 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
       <p className="settlement-lead">每位玩家的质疑总和</p>
       <div className="settlement-player-list">
         {gameState.players.map((player, index) => <div key={player.id} style={revealStyle(index)} className={`${imprisonedIds.includes(player.id) ? 'settlement-player imprisoned' : 'settlement-player'} settlement-reveal-item`}>
-          <span>{player.name}</span><strong>{doubtTotals[player.id] ?? 0}</strong>{imprisonedIds.includes(player.id) && <span>被监禁</span>}
+          <PlayerAvatar avatarId={player.avatar_id} name={player.name} /><span>{player.name}</span><strong>{doubtTotals[player.id] ?? 0}</strong>{imprisonedIds.includes(player.id) && <span>被监禁</span>}
         </div>)}
       </div>
       <p className="settlement-summary">{imprisonedPlayers.length ? `被监禁：${imprisonedPlayers.map((player) => player.name).join('、')}${imprisonedPlayers.length > 1 ? '（并列）' : ''}` : '无人被监禁'}</p>
@@ -80,7 +81,7 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
         {playersByPriority.map((player, index) => {
           const hand = player.hand ?? [];
           return <div className="settlement-role settlement-reveal-item" style={revealStyle(index)} key={player.id}>
-            <strong>{player.name}</strong>
+            <div className="settlement-role-owner"><PlayerAvatar avatarId={player.avatar_id} name={player.name} /><strong>{player.name}</strong></div>
             <div className="settlement-cards">{hand.length ? hand.map((card) => {
               const conditionMet = roleConditionResults?.[card.id];
               const conditionCopy = conditionMet === undefined
@@ -98,7 +99,8 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
     </section>,
     <section key="winner" className="settlement-result settlement-winner settlement-reveal-stage" aria-label="胜者结算">
       <div className="settlement-winner-burst" aria-hidden="true" />
-      <p className="settlement-winner-kicker">WINNER</p>
+      <p className="settlement-winner-kicker">结 案 记 录</p>
+      {winner && <PlayerAvatar avatarId={winner.avatar_id} name={winner.name} />}
       <p className="settlement-lead settlement-winner-name">{winner ? `${winner.name} 获胜！` : '本局没有可确认的胜者'}</p>
       {winnerReason && <div className="settlement-winner-reason settlement-reveal-item" style={revealStyle(1)}>
         {winnerCard && <div className="settlement-winner-card"><Card card={winnerCard} showVictoryPriority /></div>}
@@ -125,9 +127,10 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
 
   return <main className="settlement-view">
     <div className="settlement-shell">
+      <header className="settlement-archive-header"><span>旧校舍 · 封存档案</span><span>EMBALMING GIRL</span></header>
       <p className="settlement-progress" aria-live="polite">第 {stage + 1} / {stageTitles.length} 阶段：{stageTitles[stage]}</p>
       <div className="settlement-stage-track" aria-hidden="true">
-        {stageTitles.map((title, index) => <span key={title} className={index <= stage ? 'is-reached' : ''}>{index + 1}</span>)}
+        {stageTitles.map((title, index) => <span key={title} className={index <= stage ? 'is-reached' : ''}><b>{['I', 'II', 'III', 'IV'][index]}</b><small>{title}</small></span>)}
       </div>
       <h1 className="settlement-heading" tabIndex={-1} ref={headingRef}>{stageTitles[stage]}</h1>
       {stageContent[stage]}
