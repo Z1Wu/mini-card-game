@@ -287,3 +287,6 @@
 .game-table-fixture { padding: 0; }
 
 .game-table .table-hand-doubt-state { top: -26px; }
+
+/* Keep voice controls clear of the vertical play actions. */
+.voice-chat-dock { top: 56px; bottom: auto; left: 10px; right: auto; align-items: flex-start; }
