@@ -32,6 +32,9 @@ try {
     }
     await page.getByLabel('我的手牌').getByLabel(/^卡牌：/).first().focus();
     await page.keyboard.press('Enter');
+    const skillPreview = page.getByLabel('特技效果预览');
+    await skillPreview.waitFor({ state: 'visible' });
+    assert.match(await skillPreview.innerText(), /班长 的测试说明/);
     const objectiveBox = await page.locator('.table-objective').boundingBox();
     const decisionBox = await page.locator('.table-decision').boundingBox();
     assert.ok(objectiveBox && decisionBox, `${viewport.width}×${viewport.height}, ${players} players is missing objective or decision bounds`);
