@@ -2,7 +2,7 @@
 .campus-shell { background: radial-gradient(ellipse at 20% 0, #3a443c, transparent 65%), #1b2422; }
 .campus-panel { background: #d4d3c4; border-color: #969f91; box-shadow: 0 12px 32px rgba(0,0,0,.3); }
 .game-table {
-  background: linear-gradient(rgba(13,18,20,.12), rgba(13,18,20,.3)), url('../art/tabletop-soft-red-v3.webp') center / cover no-repeat #333632;
+  background: linear-gradient(rgba(13,18,20,.12), rgba(13,18,20,.3)), url('../art/tabletop-horror-v2.webp') center / cover no-repeat #333632;
   box-shadow: inset 0 0 90px rgba(10,14,16,.4);
 }
 .game-table::before { display: none; }
@@ -147,7 +147,7 @@
 /* Issue #141: readable faction-colored faces and restrained warm-red mood. */
 .campus-shell { background: radial-gradient(ellipse at 20% 0, #52373a, transparent 70%), #251f22; }
 .horror-art-review { background: #291f23; }
-.game-table { background-image: linear-gradient(rgba(90,29,40,.17), rgba(51,20,27,.24)), url('../art/tabletop-soft-red-v3.webp'); }
+.game-table { background-image: linear-gradient(rgba(90,29,40,.17), rgba(51,20,27,.24)), url('../art/tabletop-horror-v2.webp'); }
 .game-card:not(.game-card-back), .game-card-face, .game-card-ribbon { background: var(--faction-color, #aebdac); }
 .game-card-art-scrim { background: linear-gradient(180deg, rgba(97,33,43,.08), transparent 65%, var(--faction-color) 81%); }
 .game-card-title { font-size: clamp(.75rem, 13cqw, 1.6rem); line-height: 1.1; color: #211b1d; }
@@ -414,7 +414,7 @@ body:has(.skill-activation) .turn-announcement { visibility: hidden; }
 
 .honor-result-avatar .player-character-avatar { width: 100%; height: 100%; border: 0; }
 /* Settlement: an investigation dossier on the abandoned school desk. */
-.settlement-view { min-height: 100dvh; padding: 40px 24px; background: linear-gradient(rgba(16,6,9,.8),rgba(16,6,9,.92)), url('../art/tabletop-soft-red-v3.webp') center/cover fixed; color: #e8d9cd; }
+.settlement-view { min-height: 100dvh; padding: 40px 24px; background: linear-gradient(rgba(16,6,9,.8),rgba(16,6,9,.92)), url('../art/tabletop-horror-v2.webp') center/cover fixed; color: #e8d9cd; }
 .settlement-shell { max-width: 980px; min-height: 0; padding: 32px 40px; border: 1px solid #755052; border-top: 4px solid #9c4c57; border-radius: 4px; background: repeating-linear-gradient(0deg,transparent 0 31px,rgba(220,190,155,.025) 32px),linear-gradient(135deg,#34252a,#21171d); box-shadow: 0 24px 70px #0d0408, inset 0 0 80px rgba(0,0,0,.2); }
 .settlement-archive-header { display: flex; justify-content: space-between; gap: 16px; padding-bottom: 16px; margin-bottom: 22px; border-bottom: 1px solid #6c464b; color: #bea09a; font-size: 11px; letter-spacing: .16em; }
 .settlement-progress { color: #d1aca4; font-size: 12px; letter-spacing: .08em; }
