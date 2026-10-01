@@ -1,6 +1,6 @@
 {
   "title": "确定性玩法场景（多视角）",
-  "recording_started_at": 1790842667887,
+  "recording_started_at": 1790848130727,
   "players": [
     {
       "name": "player1",
@@ -11,145 +11,145 @@
     {
       "name": "player2",
       "username": "player2",
-      "offset_ms": 127,
+      "offset_ms": 115,
       "video": "player2.webm"
     },
     {
       "name": "player3",
       "username": "player3",
-      "offset_ms": 283,
+      "offset_ms": 249,
       "video": "player3.webm"
     },
     {
       "name": "player4",
       "username": "player4",
-      "offset_ms": 428,
+      "offset_ms": 412,
       "video": "player4.webm"
     }
   ],
   "events": [
     {
-      "at_ms": 2011,
+      "at_ms": 2181,
       "player_id": "player1",
       "label": "1/16 · 调和与隐藏归属"
     },
     {
-      "at_ms": 4616,
+      "at_ms": 5078,
       "player_id": "player1",
       "label": "2/16 · 质疑与目标归属"
     },
     {
-      "at_ms": 7395,
+      "at_ms": 8277,
       "player_id": "player1",
       "label": "3/16 · 图书委员查看调和区"
     },
     {
-      "at_ms": 11822,
+      "at_ms": 14750,
       "player_id": "player1",
       "label": "4/16 · 归宅部交换隐藏调和牌"
     },
     {
-      "at_ms": 15298,
+      "at_ms": 20636,
       "player_id": "player1",
       "label": "5/16 · 保健委员收回公开场牌"
     },
     {
-      "at_ms": 18379,
+      "at_ms": 25535,
       "player_id": "player1",
       "label": "6/16 · 风纪委员私下查看手牌"
     },
     {
-      "at_ms": 23535,
+      "at_ms": 32691,
       "player_id": "player1",
       "label": "7/16 · 新闻部逐人传牌"
     },
     {
-      "at_ms": 26182,
+      "at_ms": 40836,
       "player_id": "player2",
       "label": "新闻部传牌 · player2 正在选择"
     },
     {
-      "at_ms": 27102,
+      "at_ms": 44107,
       "player_id": "player3",
       "label": "新闻部传牌 · player3 正在选择"
     },
     {
-      "at_ms": 27995,
+      "at_ms": 47248,
       "player_id": "player4",
       "label": "新闻部传牌 · player4 正在选择"
     },
     {
-      "at_ms": 29180,
+      "at_ms": 48648,
       "player_id": "player1",
       "label": "8/16 · 大小姐两阶段交换"
     },
     {
-      "at_ms": 35418,
+      "at_ms": 59536,
       "player_id": "player1",
       "label": "9/16 · 共犯移动质疑牌"
     },
     {
-      "at_ms": 38724,
+      "at_ms": 64991,
       "player_id": "player1",
       "label": "10/16 · 感染者下回合拿牌"
     },
     {
-      "at_ms": 40627,
+      "at_ms": 68651,
       "player_id": "player2",
       "label": "感染者等待下回合 · player2 调和"
     },
     {
-      "at_ms": 42353,
+      "at_ms": 70390,
       "player_id": "player3",
       "label": "感染者等待下回合 · player3 调和"
     },
     {
-      "at_ms": 44021,
+      "at_ms": 72135,
       "player_id": "player4",
       "label": "感染者等待下回合 · player4 调和"
     },
     {
-      "at_ms": 53176,
+      "at_ms": 82762,
       "player_id": "player1",
       "label": "11/16 · 感染者放弃拿牌"
     },
     {
-      "at_ms": 55016,
+      "at_ms": 86508,
       "player_id": "player2",
       "label": "感染者等待下回合 · player2 调和"
     },
     {
-      "at_ms": 56634,
+      "at_ms": 88151,
       "player_id": "player3",
       "label": "感染者等待下回合 · player3 调和"
     },
     {
-      "at_ms": 58267,
+      "at_ms": 89945,
       "player_id": "player4",
       "label": "感染者等待下回合 · player4 调和"
     },
     {
-      "at_ms": 66992,
+      "at_ms": 99607,
       "player_id": "player1",
       "label": "12/16 · 班长双方选牌交换"
     },
     {
-      "at_ms": 74531,
+      "at_ms": 109993,
       "player_id": "player1",
       "label": "13/16 · 优等生等待举手与结果"
     },
     {
-      "at_ms": 80771,
+      "at_ms": 117391,
       "player_id": "player1",
       "label": "14/16 · 犯人不可打出"
     },
     {
-      "at_ms": 83284,
+      "at_ms": 119959,
       "player_id": "player1",
       "label": "15/16 · 学生会长正面特技无效果"
     },
     {
-      "at_ms": 87101,
+      "at_ms": 126079,
       "player_id": "player1",
       "label": "16/16 · 外星人正面特技无效果"
     }
