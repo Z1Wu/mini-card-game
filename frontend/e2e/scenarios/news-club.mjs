@@ -29,7 +29,7 @@ export async function run(ctx) {
     // The just-received card is appended last, so index 0 is always an own card.
     const chosenName = state.game.own_hand[0].name;
     given[chooser] = chosenName;
-    await modal.getByLabel(`卡牌：${chosenName}`, { exact: true }).first().click();
+    await modal.locator(`[data-card-id="${state.game.own_hand[0].id}"]`).press('Enter');
     await page.waitForTimeout(200);
     await modal.getByRole('button', { name: '确认递给下家', exact: true }).click();
     await modal.waitFor({ state: 'hidden' });
