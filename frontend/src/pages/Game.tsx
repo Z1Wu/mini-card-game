@@ -815,6 +815,12 @@ export const Game: React.FC = () => {
               <p className="text-slate-300 mb-4">
                 {honorStudentResult.length > 0 ? `举手的人：${honorStudentResult.join('、')}` : '无人举手'}
               </p>
+              {honorStudentResult.length > 0 && <div className="honor-result-players" aria-label="举手玩家">
+                {honorStudentResult.map((name, index) => <div className="honor-result-player" key={`${name}-${index}`}>
+                  <div className="table-seat-icon honor-result-avatar" role="img" aria-label={`${name}的头像`}>{name.match(/^玩家(\d+)$/)?.[1] ?? name.charAt(0)}</div>
+                  <strong>{name}</strong>
+                </div>)}
+              </div>}
               <Button variant="secondary" className="game-modal-dismiss" onClick={() => setHonorStudentResult(null)}>关闭</Button>
             </div>
           </div>

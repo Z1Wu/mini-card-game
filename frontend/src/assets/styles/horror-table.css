@@ -375,3 +375,7 @@ body:has(.skill-activation) .turn-announcement { visibility: hidden; }
   background-color: rgba(156,116,35,.25) !important;
   box-shadow: 0 0 0 2px #ffe08a, 0 0 14px rgba(255,208,107,.45);
 }
+.honor-result-players { display: flex; flex-wrap: wrap; gap: 16px; margin: 12px 0 18px; justify-content: flex-end; }
+.honor-result-player { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.honor-result-avatar { width: 54px; height: 54px; font-size: 22px; border: 2px solid #c28d93; background: #583b43; color: #fff; }
+.honor-result-player strong { font-size: 14px; color: #f2e3e5; }
