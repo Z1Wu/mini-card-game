@@ -36,6 +36,13 @@ try {
     const decisionBox = await page.locator('.table-decision').boundingBox();
     assert.ok(objectiveBox && decisionBox, `${viewport.width}×${viewport.height}, ${players} players is missing objective or decision bounds`);
     assert.equal(overlaps(objectiveBox, decisionBox), false, `${viewport.width}×${viewport.height}, ${players} players has decision sheet covering the harmony objective ${JSON.stringify(objectiveBox)} ${JSON.stringify(decisionBox)}`);
+    assert.ok(Math.abs(objectiveBox.x + objectiveBox.width / 2 - viewport.width / 2) < 2, 'Harmony status is horizontally centered');
+    assert.ok(Math.abs(objectiveBox.y + objectiveBox.height / 2 - viewport.height / 2) < 2, 'Harmony status is vertically centered');
+    assert.equal(await page.locator('.table-hand-info').count(), 0, 'Own player information is omitted');
+    const actionBoxes = await page.locator('.table-hand-actions button:not(.table-hand-action-cancel)').evaluateAll(nodes => nodes.map(node => { const b = node.getBoundingClientRect(); return { x: b.x, y: b.y, width: b.width, height: b.height }; }));
+    assert.ok(actionBoxes.every((b, index) => !index || (b.y >= actionBoxes[index - 1].y + actionBoxes[index - 1].height && Math.abs(b.x - actionBoxes[0].x) < 1)), 'Actions run vertically');
+    const handBox = await page.locator('.table-hand-scroll').boundingBox();
+    assert.ok(actionBoxes[0].x >= handBox.x + handBox.width, 'Actions are beside the hand');
     assert.equal(await page.locator('.table-seat-cards').count(), 0, 'Opponent hand backs must be absent');
     assert.equal(await page.locator('.player-field').count(), players, 'Every owner has a separate field');
     const exposedNames = await page.locator('.player-field').evaluateAll(fields => fields.every(field => {

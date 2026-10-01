@@ -131,7 +131,9 @@ try {
     assert.equal(initial.game.public_actions.length, 0);
     if (isMobile && !mobileChromeCaptured) {
       const playerView = pagesById.get('player1');
-      await playerView.getByLabel(/我的视角：/).waitFor({ state: 'visible' });
+      await playerView.getByRole('button', { name: '游戏记录', exact: true }).click();
+      await playerView.getByText('尚无公开行动', { exact: true }).waitFor({ state: 'visible' });
+      await playerView.getByRole('button', { name: '关闭行动记录' }).click();
       const menuOverlapsSeat = await playerView.evaluate(() => {
         const menu = document.querySelector('.game-menu-trigger')?.getBoundingClientRect();
         if (!menu) return true;

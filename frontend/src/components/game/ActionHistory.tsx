@@ -46,7 +46,7 @@ export const ActionHistory: React.FC<ActionHistoryProps> = ({ actions, open: con
             <ol>
               {recent.map(action => (
                 <li key={action.sequence} className={`action-history-${action.usage_type}`}>
-                  <span>#{action.sequence}</span>
+                  <span>第 {action.sequence} 手</span>
                   <p><b>{action.actor_name}</b>{actionCopy(action)}</p>
                 </li>
               ))}

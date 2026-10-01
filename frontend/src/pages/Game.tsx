@@ -31,7 +31,7 @@ function skillNeedsTarget(card: CardType): boolean {
 
 export const Game: React.FC = () => {
   const navigate = useNavigate();
-  const { playerId, playerName, reset: resetPlayer } = usePlayerStore();
+  const { playerId, reset: resetPlayer } = usePlayerStore();
   const { gameState, setGameState, resetGame } = useGameStore();
   const { send } = useWebSocket();
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null);
@@ -502,10 +502,7 @@ export const Game: React.FC = () => {
       {/* ── Floating HUD: turn pill + action buttons (overlay, zero layout cost) ── */}
       <div className="game-hud">
         <div className="game-hud-left">
-          <span className="game-hud-view" aria-label={`我的视角：${playerName}`}>
-            <span className="game-hud-view-mark" aria-hidden="true">我</span>
-            <span className="game-hud-name">{playerName}</span>
-          </span>
+          <button type="button" className="game-records-trigger" onClick={() => setHistoryOpen(value => !value)} aria-expanded={historyOpen}>游戏记录</button>
           <span className="game-hud-round">第 {gameState.turn_count + 1} 手</span>
         </div>
         <div className="game-hud-right">

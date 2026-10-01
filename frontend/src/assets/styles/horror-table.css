@@ -256,3 +256,34 @@
 @media (max-height: 600px) and (orientation: landscape) {
   .game-table .table-seats { padding-right: 80px; }
 }
+
+/* Compact own-hand controls and a central harmony status. */
+.game-card-stat-harmony b { transform: translate(8%, -6%); }
+.game-table .table-center { position: fixed; inset: 0; padding: 0; justify-content: center; pointer-events: none; }
+.game-table .table-center-inner { width: fit-content; max-width: calc(100% - 20px); }
+.game-table .table-objective { margin: 0 auto; pointer-events: auto; }
+.table-hand-playrow { position: relative; display: grid; grid-template-columns: minmax(0,1fr) 80px; align-items: center; gap: 12px; padding-left: 300px; }
+.game-table .table-hand-scroll { min-width: 0; }
+.game-table .table-hand-actions { position: relative; display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; }
+.game-table .table-hand-action-btn { min-height: 44px; width: 100%; }
+.game-table .table-hand-action-cancel { position: absolute; right: 0; top: -34px; width: 30px; min-height: 28px; }
+.game-table .table-hand-doubt-state { position: absolute; left: 8px; top: 0; margin: 0; }
+.table-local-field { bottom: 8px; }
+.game-records-trigger { min-height: 36px; padding: 4px 10px; border: 1px solid #79555a; border-radius: 9px; background: #302326; color: #fff; font-size: 12px; }
+.game-table .table-seats { padding-left: 170px; padding-right: 80px; }
+.action-history-panel li { grid-template-columns: 3.5rem 1fr; }
+@media (orientation: landscape) and (max-height: 500px) {
+  .table-hand-playrow { padding-left: 140px; grid-template-columns: minmax(0,1fr) 64px; gap: 6px; }
+  .game-table .table-hand-action-btn { min-height: 32px; }
+  .game-table .table-hand-action-cancel { width: 28px; min-height: 26px; top: -30px; }
+  .game-table .table-hand-doubt-state { min-height: 22px; padding: 2px 5px; font-size: 10px; }
+  .table-local-field { bottom: 8px; }
+  .game-table .table-seats { padding-left: 135px; padding-right: 80px; }
+}
+
+
+
+.game-table-fixture-header { display: none; }
+.game-table-fixture { padding: 0; }
+
+.game-table .table-hand-doubt-state { top: -26px; }
