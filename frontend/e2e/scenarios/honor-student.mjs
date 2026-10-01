@@ -16,8 +16,8 @@ export async function run(ctx) {
   await ctx.pagesById.get('player3').getByRole('button', { name: '举手（假装犯人）', exact: true }).click();
   await ctx.actorPage.getByRole('heading', { name: '优等生：举手结果' }).waitFor({ state: 'visible' });
   await ctx.actorPage.getByText('举手的人：玩家2、玩家3', { exact: true }).waitFor({ state: 'visible' });
-  assert.equal(await ctx.actorPage.getByRole('img', { name: '玩家2的头像', exact: true }).count(), 1);
-  assert.equal(await ctx.actorPage.getByRole('img', { name: '玩家3的头像', exact: true }).count(), 1);
+  assert.equal(await ctx.actorPage.locator('.honor-result-players').getByRole('img', { name: '玩家2的头像', exact: true }).count(), 1);
+  assert.equal(await ctx.actorPage.locator('.honor-result-players').getByRole('img', { name: '玩家3的头像', exact: true }).count(), 1);
   await ctx.screenshot('honor-student-result', ctx.actorPage);
   await ctx.actorPage.getByRole('button', { name: '关闭', exact: true }).click();
   await waitForLatestAction(ctx.actorPage, '特技', '优等生');
@@ -27,3 +27,4 @@ export async function run(ctx) {
     extraCoverage: ['waiting-panel', 'result-panel'],
   };
 }
+
