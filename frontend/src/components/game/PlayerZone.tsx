@@ -42,7 +42,7 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({ player, isCurrentTurn, i
               <strong>{fieldCount}</strong>
             </span>
             <span className={`table-seat-stat table-seat-stat-doubt${doubtCount > 0 ? ' is-active' : ' is-zero'}`} aria-label={`质疑牌 ${doubtCount} 张`}>
-              <span className="table-seat-stat-label" aria-hidden="true">质疑</span>
+              <span className="table-seat-stat-label" aria-hidden="true">质疑牌</span>
               <strong>{doubtCount}</strong>
             </span>
           </div>
