@@ -17,7 +17,7 @@ try {
   })));
   assert.equal(images.length, 13, 'Every role must have portrait art');
   assert.equal(new Set(images.map(image => image.src)).size, 13, 'Roles must use distinct portraits');
-  assert.ok(images.every(image => image.loaded && image.src.includes('-soft-red-v3')), 'All new portrait assets must load');
+  assert.ok(images.every(image => image.loaded && image.src.includes('-horror-v2')), 'All new portrait assets must load');
   const strips = await page.locator('.game-card-title-wrap').evaluateAll(nodes => nodes.map(node => {
     const left = node.querySelector('.game-card-stat-harmony').getBoundingClientRect();
     const title = node.querySelector('.game-card-title').getBoundingClientRect();
