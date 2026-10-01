@@ -127,8 +127,8 @@
 .game-menu-panel { border-color: #758176; background: #263630; box-shadow: 0 8px 24px rgba(0,0,0,.45); }
 .game-menu-panel b { color: #18221f; background: #c4d7b8; }
 .game-action-panel,
-.game-modal > div { border-color: #84907e !important; background: #27332e !important; box-shadow: 0 8px 24px rgba(0,0,0,.5) !important; }
-.game-modal { background: rgba(9,15,13,.8) !important; }
+.game-modal > div { border-color: #a65059 !important; background: #382126 !important; box-shadow: 0 8px 24px rgba(20,0,5,.6) !important; }
+.game-modal { background: rgba(18,5,9,.8) !important; }
 .turn-toast { color: #efe7dc; background: #7b4148; }
 .play-feedback-toast { color: #e4e8dc; background: #496962; }
 @media (orientation: landscape) and (max-height: 500px) {
@@ -359,3 +359,6 @@
 @keyframes skill-activation-show { 0% { opacity: 0; transform: scale(.8); } 15%,85% { opacity: 1; transform: scale(1); } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .skill-activation-card { animation: none; } }
 body:has(.skill-activation) .turn-announcement { visibility: hidden; }
+.game-modal [class*="border-emerald"] { border-color: #b95c68 !important; }
+.game-modal [class*="bg-emerald"] { background-color: rgba(113,35,47,.5) !important; }
+.game-modal [class*="text-emerald"] { color: #f0bcc2 !important; }
