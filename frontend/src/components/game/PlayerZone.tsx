@@ -1,4 +1,5 @@
 import React from 'react';
+import { PlayerAvatar } from '../common/PlayerAvatar';
 import { Player } from '../../types/game';
 import { PlayerField } from './PlayerField';
 
@@ -11,7 +12,6 @@ interface PlayerZoneProps {
 
 export const PlayerZone: React.FC<PlayerZoneProps> = ({ player, isCurrentTurn, isSpeaking = false }) => {
   const isWaitingSettlement = player.current_hand_count === 1;
-  const initial = player.name.charAt(0);
   const fieldCount = player.field_cards?.length ?? 0;
   const doubtCount = player.doubt_cards?.length ?? 0;
 
@@ -24,7 +24,7 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({ player, isCurrentTurn, i
     >
       <div className="table-seat-main">
         <div className="table-seat-avatar">
-          <div className="table-seat-icon">{initial}</div>
+          <PlayerAvatar avatarId={player.avatar_id} name={player.name} />
           {isCurrentTurn && <span className="table-seat-turn-dot" aria-hidden="true" />}
         </div>
         <div className="table-seat-body">

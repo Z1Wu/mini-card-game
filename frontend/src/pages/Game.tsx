@@ -1,3 +1,4 @@
+import { PlayerAvatar } from '../components/common/PlayerAvatar';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/common/Button';
@@ -817,7 +818,7 @@ export const Game: React.FC = () => {
               </p>
               {honorStudentResult.length > 0 && <div className="honor-result-players" aria-label="举手玩家">
                 {honorStudentResult.map((name, index) => <div className="honor-result-player" key={`${name}-${index}`}>
-                  <div className="table-seat-icon honor-result-avatar" role="img" aria-label={`${name}的头像`}>{name.match(/^玩家(\d+)$/)?.[1] ?? name.charAt(0)}</div>
+                  <div className="honor-result-avatar"><PlayerAvatar name={name} avatarId={gameState?.players.find(player => player.name === name)?.avatar_id} /></div>
                   <strong>{name}</strong>
                 </div>)}
               </div>}

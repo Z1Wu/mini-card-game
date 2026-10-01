@@ -1,3 +1,4 @@
+import { PlayerAvatar } from '../components/common/PlayerAvatar';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/common/Button';
@@ -15,7 +16,7 @@ const ROOM_STATE_LABELS: Record<string, string> = {
 
 export const Rooms: React.FC = () => {
   const navigate = useNavigate();
-  const { username, playerName, setRoomCode, reset: resetPlayer } = usePlayerStore();
+  const { username, playerName, avatarId, setRoomCode, reset: resetPlayer } = usePlayerStore();
   const { connect, send } = useWebSocket();
   const [rooms, setRooms] = useState<RoomInfo[]>([]);
   const [joinCode, setJoinCode] = useState('');
@@ -119,7 +120,7 @@ export const Rooms: React.FC = () => {
             <p className="campus-kicker mb-1">Game Rooms</p>
             <h1 className="campus-title text-3xl font-bold">房间大厅</h1>
           </div>
-          <div className="text-slate-600">{playerName && <span>{playerName}</span>}</div>
+          <div className="text-slate-600 flex items-center gap-2"><PlayerAvatar avatarId={avatarId} name={playerName ?? "玩家"} />{playerName}<Button size="sm" onClick={() => navigate("/avatar")}>更换头像</Button></div>
         </div>
 
         {expiredMsg && (

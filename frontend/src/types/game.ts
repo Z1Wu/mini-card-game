@@ -45,6 +45,7 @@ export interface Card {
 }
 
 export interface Player {
+  avatar_id?: string | null;
   id: string;
   name: string;
   hand: Card[];
