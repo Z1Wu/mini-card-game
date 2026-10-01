@@ -105,13 +105,13 @@ it('does not expose faction color through hidden card backs', () => {
   expect(screen.getByLabelText('牌背').outerHTML).toBe(before);
 });
 
-it('places harmony left of the name and Roman priority on its right', () => {
+it('keeps accessible harmony and Roman priority with the vertical title', () => {
   render(<Card card={card} />);
   const left = screen.getByTitle('调和值');
   const title = screen.getByTitle(card.name);
   const right = screen.getByTitle('胜利优先级');
-  expect(left.nextElementSibling).toBe(title);
-  expect(title.nextElementSibling).toBe(right);
+  expect(left.querySelector('svg')).not.toBeNull();
+  expect(title).toHaveTextContent(card.name);
   expect(right).toHaveTextContent('Ⅱ');
   expect(right).toHaveAccessibleName('胜利优先级 2');
 });

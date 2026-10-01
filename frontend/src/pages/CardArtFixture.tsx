@@ -29,6 +29,7 @@ export function CardArtFixture() {
           return <figure key={name}><div style={width ? { width } : undefined}><CardView card={card} /></div><figcaption>{name}</figcaption></figure>;
         })}
       </div>
+      <div style={{ width: 150, margin: '24px auto' }}><CardView card={{ id: 'back', name: CardType.HOME_CLUB, description: '', harmony_value: 0, victory_priority: 5, victory_condition: '', owner_id: null, location: 'hand', is_face_up: false, target_player_id: null }} showAsFaceDown /></div>
     </main>
   );
 }

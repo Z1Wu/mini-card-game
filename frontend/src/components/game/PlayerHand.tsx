@@ -92,14 +92,14 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             onClick={() => onPlay(selectedCard, CardUsageType.HARMONY)}
             aria-label="调和"
           >
-            <strong>调和</strong><small>秘密投入 {selectedCard.harmony_value > 0 ? '+' : ''}{selectedCard.harmony_value}</small>
+            <strong>调和</strong>
           </button>
           <button
             className="table-hand-action-btn table-hand-action-doubt"
             onClick={() => onPlay(selectedCard, CardUsageType.DOUBT)}
             aria-label="质疑"
           >
-            <strong>质疑</strong><small>选择目标玩家</small>
+            <strong>质疑</strong>
           </button>
           <button
             className="table-hand-action-btn table-hand-action-skill"
@@ -108,7 +108,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             title={skillDisabled ? '调和区为空时无法使用该特技' : undefined}
             aria-label={skillDisabled ? '特技（不可用）' : '特技'}
           >
-            <strong>特技</strong><small>{skillDisabled ? '调和区为空' : '正面发动效果'}</small>
+            <strong>特技</strong>
           </button>
           <button
             className="table-hand-action-btn table-hand-action-cancel"

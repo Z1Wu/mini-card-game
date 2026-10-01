@@ -22,19 +22,24 @@ try {
     const left = node.querySelector('.game-card-stat-harmony').getBoundingClientRect();
     const title = node.querySelector('.game-card-title').getBoundingClientRect();
     const right = node.querySelector('.game-card-stat-priority').getBoundingClientRect();
-    return { ordered: left.right <= title.left + 1 && title.right <= right.left + 1, priority: node.querySelector('.game-card-stat-priority').textContent };
+    return { ordered: title.right <= left.left + 1 && left.bottom <= right.top + 1, priority: node.querySelector('.game-card-stat-priority').textContent };
   }));
-  assert.ok(strips.every(strip => strip.ordered), 'Harmony/name/priority must not overlap');
+  assert.ok(strips.every(strip => strip.ordered), 'Vertical name and right-side symbols must not overlap');
   assert.ok(strips.every(strip => /^[ⅠⅡⅢⅣⅤ]$/.test(strip.priority)), 'Priority uses Roman numerals');
   assert.deepEqual(errors, [], 'Gallery must not produce page errors');
+  assert.ok(await page.locator('.game-card-back').evaluate(node => getComputedStyle(node).backgroundImage.includes('card-back-classroom-v1')), 'Back uses the abandoned classroom asset');
+  assert.equal(await page.locator('.game-card-back-title span').textContent(), '冰冷的她醒来前');
+  assert.equal(await page.locator('.game-card-back-title small').textContent(), 'Embalming Girl');
   await page.screenshot({ path: path.join(output, 'all-roles.png'), fullPage: true });
   for (const width of [40, 48, 96]) for (const harmony of [false, true]) {
     await page.goto(`${baseUrl}/fixtures/card-art?width=${width}${harmony ? '&harmony=1' : ''}`, { waitUntil: 'networkidle' });
-    const titles = await page.locator('.game-card-title').evaluateAll(nodes => nodes.map(node => ({
-      name: node.textContent, fits: node.scrollWidth <= node.clientWidth + 1,
-      singleLine: node.getBoundingClientRect().height <= parseFloat(getComputedStyle(node).lineHeight) + 1,
-    })));
-    assert.ok(titles.every(title => title.fits && title.singleLine), `${width}px ${harmony ? 'harmony' : 'hand'} names must fit one line: ${JSON.stringify(titles.filter(title => !title.fits || !title.singleLine))}`);
+    const titles = await page.locator('.game-card-title').evaluateAll(nodes => nodes.map(node => {
+      const range = document.createRange(); range.selectNodeContents(node);
+      const text = range.getBoundingClientRect(); const card = node.closest('.game-card').getBoundingClientRect();
+      return { name: node.textContent, fits: text.left >= card.left && text.right <= card.right && text.top >= card.top && text.bottom <= card.bottom,
+        singleLine: getComputedStyle(node).writingMode === 'vertical-rl' && getComputedStyle(node).whiteSpace === 'nowrap' };
+    }));
+    assert.ok(titles.every(title => title.fits && title.singleLine), `${width}px ${harmony ? 'harmony' : 'hand'} names must fit one vertical column: ${JSON.stringify(titles.filter(title => !title.fits || !title.singleLine))}`);
     assert.equal(await page.locator('.game-card-stat-priority').count(), harmony ? 0 : 13);
     if (width === 96 && harmony) await page.screenshot({ path: path.join(output, 'harmony-names.png'), fullPage: true });
   }

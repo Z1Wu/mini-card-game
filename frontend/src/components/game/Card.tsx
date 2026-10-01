@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Card as CardModel, CardType as RoleType, CardUsageType } from '../../types/game';
 import { cn } from '../../utils/helpers';
-import { roleArt, roleGradeColor, roleFactionColor } from './cardArt';
+import { roleArt, roleFactionColor } from './cardArt';
 
 interface CardProps {
   card: CardModel;
@@ -52,7 +52,6 @@ export const Card: React.FC<CardProps> = ({
   const visual = roleVisuals[card.name] ?? roleVisuals[RoleType.HOME_CLUB];
   const cardStyle = {
     '--faction-color': roleFactionColor(card.name),
-    '--grade-color': roleGradeColor[card.name] ?? '#354b70',
     '--card-tone': visual.tone,
     '--card-accent': visual.accent,
     '--card-glow': visual.glow,
@@ -98,7 +97,7 @@ export const Card: React.FC<CardProps> = ({
         )}
         aria-label="牌背"
       >
-        <div className="game-card-back-emblem" aria-hidden="true" />
+        <div className="game-card-back-title" aria-hidden="true"><span>冰冷的她醒来前</span><small>Embalming Girl</small></div>
       </div>
     );
   }
@@ -143,8 +142,8 @@ export const Card: React.FC<CardProps> = ({
             </>
           )}
           <div className={cn('game-card-title-wrap', { 'game-card-title-harmony-only': !displayPriority })}>
-            <div className="game-card-ribbon" />
-            <span className="game-card-stat game-card-stat-harmony" title="调和值" aria-label={`调和值 ${card.harmony_value}`}>{card.harmony_value}</span>
+
+            <span className="game-card-stat game-card-stat-harmony" title="调和值" aria-label={`调和值 ${card.harmony_value}`}><svg className="game-card-handprint" viewBox="0 0 64 64" aria-hidden="true"><path fill="white" d="M20 34V17a4 4 0 0 1 8 0v12V10a4 4 0 0 1 8 0v19V13a4 4 0 0 1 8 0v19V21a4 4 0 0 1 8 0v22c0 13-8 18-18 18-9 0-13-5-17-12L8 34a4 4 0 0 1 6-5z" /></svg><b>{card.harmony_value}</b></span>
             <span className="game-card-title" title={card.name}>{card.name}</span>
             {displayPriority && <span className="game-card-stat game-card-stat-priority" title="胜利优先级" aria-label={`胜利优先级 ${card.victory_priority}`}>{['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'][card.victory_priority] || card.victory_priority}</span>}
           </div>

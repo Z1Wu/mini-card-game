@@ -14,22 +14,6 @@ import studentCouncilPresidentArt from '../../assets/art/cards/student-council-p
 import { CardType as RoleType } from '../../types/game';
 
 /** Match the illustrated grade neckerchief: first blue, second green, third red. */
-export const roleGradeColor: Record<RoleType, string> = {
-  [RoleType.CLASS_REP]: '#803941',
-  [RoleType.LIBRARY_COMMITTEE]: '#405e48',
-  [RoleType.ALIEN]: '#354b70',
-  [RoleType.HOME_CLUB]: '#354b70',
-  [RoleType.HEALTH_COMMITTEE]: '#405e48',
-  [RoleType.DISCIPLINE_COMMITTEE]: '#803941',
-  [RoleType.NEWS_CLUB]: '#405e48',
-  [RoleType.RICH_GIRL]: '#803941',
-  [RoleType.ACCOMPLICE]: '#405e48',
-  [RoleType.INFECTED]: '#354b70',
-  [RoleType.CRIMINAL]: '#803941',
-  [RoleType.STUDENT_COUNCIL_PRESIDENT]: '#803941',
-  [RoleType.HONOR_STUDENT]: '#354b70',
-};
-
 /** Decorative art for each role displayed on the card face. */
 export const roleArt: Partial<Record<RoleType, string>> = {
   [RoleType.CLASS_REP]: classRepresentativeArt,

@@ -38,6 +38,15 @@ try {
     assert.equal(overlaps(objectiveBox, decisionBox), false, `${viewport.width}×${viewport.height}, ${players} players has decision sheet covering the harmony objective ${JSON.stringify(objectiveBox)} ${JSON.stringify(decisionBox)}`);
     assert.equal(await page.locator('.table-seat-cards').count(), 0, 'Opponent hand backs must be absent');
     assert.equal(await page.locator('.player-field').count(), players, 'Every owner has a separate field');
+    const exposedNames = await page.locator('.player-field').evaluateAll(fields => fields.every(field => {
+      const cards = [...field.querySelectorAll('.player-field-card')];
+      return cards.slice(0, -1).every((card, index) => {
+        const title = card.querySelector('.game-card-title').getBoundingClientRect();
+        const next = cards[index + 1].getBoundingClientRect();
+        return title.right <= next.left + 1;
+      });
+    }));
+    assert.ok(exposedNames, 'Stacked cards must leave each vertical name exposed');
     const fieldBoxes = await page.locator('.player-field').evaluateAll(nodes => nodes.map(node => {
       const b = node.getBoundingClientRect(); return { x: b.x, y: b.y, width: b.width, height: b.height };
     }));

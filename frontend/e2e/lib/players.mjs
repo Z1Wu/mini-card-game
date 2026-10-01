@@ -82,7 +82,7 @@ export async function waitForState(page, predicate, description, argument, timeo
 export async function chooseVisibleCard(page, cardName, action) {
   // Scope to hand area — field/doubt cards share the same aria-label
   const hand = page.locator('.table-hand');
-  const card = hand.getByLabel(`卡牌：${cardName}`, { exact: true }).first();
+  const card = hand.locator('.table-hand-scroll').getByLabel(`卡牌：${cardName}`, { exact: true }).first();
   await card.waitFor({ state: 'visible' });
   await card.scrollIntoViewIfNeeded();
   await card.click();
@@ -97,7 +97,7 @@ export async function chooseVisibleCard(page, cardName, action) {
 
 export async function chooseFirstVisibleCard(page, action, excludedNames = []) {
   // Only enumerate cards inside the hand area (not field/doubt copies)
-  const labels = await page.locator('.table-hand [aria-label^="卡牌："]').evaluateAll((cards, names) => cards
+  const labels = await page.locator('.table-hand-scroll [aria-label^="卡牌："]').evaluateAll((cards, names) => cards
     .filter((card) => card instanceof HTMLElement && card.offsetParent !== null)
     .map((card) => card.getAttribute('aria-label'))
     .filter((label) => label && !names.includes(label.replace(/^卡牌：/, ''))), excludedNames);
@@ -117,7 +117,7 @@ export async function chooseFirstVisibleCard(page, action, excludedNames = []) {
  */
 async function showcaseTurn(page, excludedNames) {
   // Enumerate visible non-criminal cards in the hand
-  const labels = await page.locator('.table-hand [aria-label^="卡牌："]')
+  const labels = await page.locator('.table-hand-scroll [aria-label^="卡牌："]')
     .evaluateAll((cards, names) => cards
       .filter((card) => card instanceof HTMLElement && card.offsetParent !== null)
       .map((card) => card.getAttribute('aria-label'))
@@ -127,7 +127,7 @@ async function showcaseTurn(page, excludedNames) {
   const cardName = label.replace(/^卡牌：/, '');
 
   const hand = page.locator('.table-hand');
-  const card = hand.getByLabel(`卡牌：${cardName}`, { exact: true }).first();
+  const card = hand.locator('.table-hand-scroll').getByLabel(`卡牌：${cardName}`, { exact: true }).first();
   await card.waitFor({ state: 'visible' });
   await card.scrollIntoViewIfNeeded();
 
@@ -220,7 +220,7 @@ export async function playMixedTurn(page, state, step, showcase = false) {
     for (const name of simpleSkills) {
       // Scope to hand area to avoid matching field/doubt cards
       const hand = page.locator('.table-hand');
-      const locator = hand.getByLabel(`卡牌：${name}`, { exact: true });
+      const locator = hand.locator('.table-hand-scroll').getByLabel(`卡牌：${name}`, { exact: true });
       if (await locator.first().isVisible().catch(() => false)) {
         try {
           await locator.first().scrollIntoViewIfNeeded();
