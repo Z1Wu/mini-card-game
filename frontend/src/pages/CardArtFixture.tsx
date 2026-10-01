@@ -9,6 +9,9 @@ const stats: Record<CardType, [number, number]> = {
 
 /** Transport-free art review; never uses player or room state. */
 export function CardArtFixture() {
+  const query = new URLSearchParams(window.location.search);
+  const harmony = query.has('harmony');
+  const width = query.has('width') ? Math.max(40, Math.min(160, Number(query.get('width')) || 96)) : undefined;
   return (
     <main className="horror-art-review">
       <header>
@@ -21,9 +24,9 @@ export function CardArtFixture() {
           const card: Card = {
             id: `art-${index}`, name, description: '', harmony_value: stats[name][0],
             victory_priority: stats[name][1], victory_condition: '', owner_id: null,
-            is_face_up: true, location: 'hand', target_player_id: null,
+            is_face_up: true, location: harmony ? 'harmony' : 'hand', target_player_id: null,
           };
-          return <figure key={name}><CardView card={card} /><figcaption>{name}</figcaption></figure>;
+          return <figure key={name}><div style={width ? { width } : undefined}><CardView card={card} /></div><figcaption>{name}</figcaption></figure>;
         })}
       </div>
     </main>
