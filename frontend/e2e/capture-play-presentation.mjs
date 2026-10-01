@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { chromium } from 'playwright';
-const root = process.env.PLAY_OUTPUT_DIR ?? 'C:/Users/wuziyi/AppData/Local/Temp/mini-card-game-local/play-presentation';
+const root = process.env.PLAY_OUTPUT_DIR ?? path.join(tmpdir(), 'mini-card-game-play-presentation');
 await mkdir(root, { recursive: true });
 const browser = await chromium.launch();
 try {
