@@ -851,7 +851,7 @@ export const Game: React.FC = () => {
                   </div>
                 ))}
               </div>
-              <Button variant="primary" onClick={() => setViewHandResult(null)}>关闭</Button>
+              <Button variant="primary" onClick={() => { send({ type: 'view_hand_confirm', player_id: playerId! }); setViewHandResult(null); }}>确认完成</Button>
             </div>
           </div>
         )}

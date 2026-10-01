@@ -21,7 +21,12 @@ export async function run(ctx) {
     assert.equal(await ctx.pagesById.get(id).getByRole('heading', { name: '风纪委员：玩家2 的手牌' }).count(), 0);
   }
   await ctx.screenshot('discipline-private-result', ctx.actorPage);
-  await ctx.actorPage.getByRole('button', { name: '关闭', exact: true }).click();
+  assert.equal((await readState(ctx.actorPage)).game.current_player_id, 'player1', 'Viewing keeps the actor turn');
+  const before = (await readState(ctx.actorPage)).game.turn_count;
+  await targetPage.evaluate(() => {});
+  await ctx.actorPage.getByRole('button', { name: '确认完成', exact: true }).click();
+  await ctx.actorPage.waitForFunction(() => JSON.parse(window.render_game_to_text()).game.current_player_id !== 'player1');
+  assert.equal((await readState(ctx.actorPage)).game.turn_count, before + 1);
   await waitForLatestAction(ctx.actorPage, '特技', '风纪委员', 'player2');
   const state = await readState(ctx.actorPage);
   // View-only effect: playing the card costs the actor one hand card (face-up
