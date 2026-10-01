@@ -6,6 +6,7 @@ import { Rooms } from './pages/Rooms';
 import { Lobby } from './pages/Lobby';
 import { Game } from './pages/Game';
 import { GameTableFixture } from './pages/GameTableFixture';
+import { CardArtFixture } from './pages/CardArtFixture';
 import { AdminLayout } from './pages/admin/AdminLayout';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { UserManagement } from './pages/admin/UserManagement';
@@ -53,6 +54,7 @@ function App() {
         <Route path="/lobby" element={<Lobby />} />
         <Route path="/game" element={<Game />} />
         <Route path="/fixtures/game-table" element={<GameTableFixture />} />
+        <Route path="/fixtures/card-art" element={<CardArtFixture />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<UserManagement />} />
