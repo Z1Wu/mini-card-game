@@ -337,9 +337,9 @@
 .game-table .table-center-controls .table-hand-action-btn { min-height: 36px; }
 .game-table .table-center-controls .table-hand-action-cancel { position: static; width: 30px; flex: 0 0 30px; }
 .game-table .table-hand-playrow { grid-template-columns: minmax(0,1fr); }
-.game-table .table-decision { position: fixed; left: 50%; bottom: 170px; transform: translateX(-50%); width: min(520px, calc(100vw - 24px)); max-height: 80px; overflow: auto; }
+.game-table .table-decision { position: fixed; left: 50%; bottom: 160px; transform: translateX(-50%); width: min(720px, calc(100vw - 24px)); max-height: 90px; overflow: auto; }
 @media (orientation: landscape) and (max-height: 500px) {
-  .game-table .table-decision { left: auto; right: 12px; bottom: 110px; transform: none; width: min(240px, calc(50vw - 155px)); max-height: 80px; }
+  .game-table .table-decision { left: auto; right: 12px; bottom: 110px; transform: none; width: min(360px, calc(50vw - 155px)); max-height: 120px; }
   .game-table .table-center-controls .table-hand-action-btn { min-height: 32px; }
 }
 
