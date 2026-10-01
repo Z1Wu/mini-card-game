@@ -383,7 +383,11 @@ button:focus-visible,
   min-height: 100vh;
   background:
     linear-gradient(rgba(3, 5, 16, .12), rgba(3, 5, 16, .26)),
+<<<<<<< HEAD
     url('../art/tabletop-apocalypse-v1.webp') center / cover no-repeat,
+=======
+    url('../art/tabletop-campus-v1.webp') center / cover no-repeat,
+>>>>>>> origin/main
     #070b18;
   border: none;
   border-radius: 0;
@@ -1518,7 +1522,25 @@ button:focus-visible,
 .table-hand-card, .table-hand-card:first-child { width: 5.25rem; margin-left: 0; }
 .table-hand-card-lifted { transform: translateY(-.85rem) scale(1.05); }
 .table-hand-card-lifted .game-card { outline: 3px solid rgba(255, 211, 128, .92); outline-offset: 2px; }
+.table-decision .table-decision-skill-preview {
+  display: block;
+  max-width: none;
+  margin: .3rem 0 0;
+  overflow: visible;
+  white-space: normal;
+  font-size: .72rem;
+  line-height: 1.45;
+}
 .table-decision-details { margin-top: .25rem; }
+@media (orientation: landscape) and (max-height: 500px) {
+  .table-decision .table-decision-skill-preview {
+    max-height: 2.6rem;
+    overflow-y: auto;
+    font-size: .62rem;
+  }
+  .table-hand:has(.table-decision) .table-hand-card,
+  .table-hand:has(.table-decision) .table-hand-card:first-child { width: 3.5rem; }
+}
 .table-decision-details summary { width: fit-content; cursor: pointer; color: #93c5fd; font-size: .62rem; font-weight: 800; }
 .table-decision-details[open] summary { margin-bottom: .2rem; }
 
@@ -1976,3 +1998,4 @@ button:focus-visible,
   .voice-chat-dock { right: .5rem; bottom: 6.4rem; }
   .voice-ptt { min-height: 34px; padding: .3rem .62rem; font-size: .68rem; }
 }
+
