@@ -316,3 +316,17 @@
 .table-objective-doubt strong { margin-left: 4px; color: #fff; }
 .game-table .table-center-inner { position: relative; }
 .table-objective-doubt { position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+.card-catalog { width: min(950px,calc(100vw - 24px)); max-height: calc(100dvh - 24px); padding: 16px; border: 1px solid #79555a; border-radius: 12px; background: #241b1e; color: #e9deda; }
+.card-catalog::backdrop { background: rgba(0,0,0,.75); }
+.card-catalog header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.card-catalog h2 { font-size: 20px; font-weight: 800; }
+.card-catalog header button { width: 40px; height: 40px; border-radius: 8px; background: #50373c; font-size: 24px; }
+.card-catalog-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); gap: 14px; }
+.card-catalog article { display: flex; gap: 12px; padding: 12px; border: 1px solid #594248; border-radius: 8px; }
+.card-catalog-art { width: 85px; flex-shrink: 0; }
+.card-catalog h3 { color: #fff; font-size: 17px; font-weight: 800; }
+.card-catalog h4 { margin-top: 8px; color: #c5a18e; font-size: 12px; }
+.card-catalog p { font-size: 12px; line-height: 1.5; }
+.card-catalog-stats { color: #c4b5b0; }
+.game-table .table-seats { padding-right: 160px; }

@@ -6,6 +6,7 @@ import { SettlementView } from '../components/game/SettlementView';
 import { TurnAnnouncement } from '../components/game/TurnAnnouncement';
 import { GameTable } from '../components/game/GameTable';
 import { ActionHistory } from '../components/game/ActionHistory';
+import { CardCatalog } from '../components/game/CardCatalog';
 import { GameMenu } from '../components/game/GameMenu';
 import { GameConfirmDialog } from '../components/game/GameConfirmDialog';
 import { PushToTalkButton } from '../components/game/PushToTalkButton';
@@ -506,6 +507,7 @@ export const Game: React.FC = () => {
           <span className="game-hud-round">第 {gameState.turn_count + 1} 手</span>
         </div>
         <div className="game-hud-right">
+          <CardCatalog />
           <GameMenu
             open={menuOpen}
             isHost={isHost}
