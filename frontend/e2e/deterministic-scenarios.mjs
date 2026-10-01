@@ -107,8 +107,9 @@ async function initializeScenario(scenario, host, byId) {
   }));
   for (const [index, player] of players.entries()) {
     const expectedSize = index === 0 ? actorHandSize : 3;
-    assert.equal(await player.page.locator('.table-hand [aria-label^="卡牌："]').count(), expectedSize, `${scenario.name}: ${player.username} should see exactly its own cards`);
-    assert.ok(await player.page.locator('.table-seat-cards [aria-label="牌背"]').count() > 0, `${scenario.name}: opponent hands should render only as card backs`);
+    assert.equal(await player.page.locator('.table-hand-scroll [aria-label^="卡牌："]').count(), expectedSize, `${scenario.name}: ${player.username} should see exactly its own cards`);
+    assert.equal(await player.page.locator('.table-seat-cards').count(), 0, `${scenario.name}: opponent hand backs are omitted`);
+    assert.ok(await player.page.locator('.table-seat-stat-hand').count() > 0, `${scenario.name}: opponent hand counts remain visible`);
   }
   const state = await readState(host.page);
   assert.equal(state.game.current_player_id, 'player1', `${scenario.name}: player1 must be the deterministic actor`);
@@ -130,7 +131,9 @@ try {
     assert.equal(initial.game.public_actions.length, 0);
     if (isMobile && !mobileChromeCaptured) {
       const playerView = pagesById.get('player1');
-      await playerView.getByLabel(/我的视角：/).waitFor({ state: 'visible' });
+      await playerView.getByRole('button', { name: '游戏记录', exact: true }).click();
+      await playerView.getByText('尚无公开行动', { exact: true }).waitFor({ state: 'visible' });
+      await playerView.getByRole('button', { name: '关闭行动记录' }).click();
       const menuOverlapsSeat = await playerView.evaluate(() => {
         const menu = document.querySelector('.game-menu-trigger')?.getBoundingClientRect();
         if (!menu) return true;

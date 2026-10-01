@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Card as CardModel, CardType as RoleType, CardUsageType } from '../../types/game';
 import { cn } from '../../utils/helpers';
-import { roleArt, roleGradeColor } from './cardArt';
+import { roleArt, roleFactionColor } from './cardArt';
 
 interface CardProps {
   card: CardModel;
@@ -35,6 +35,13 @@ const roleVisuals: Record<RoleType, { mark: string; tone: string; accent: string
   [RoleType.HONOR_STUDENT]: { mark: '优', tone: '#38bdf8', accent: '#f0f9ff', glow: 'rgba(56, 189, 248, 0.25)' },
 };
 
+/** Shared back also works for opaque, ID-only choice cards. */
+export function CardBack() {
+  return <div className="game-card game-card-back relative aspect-[2/3] min-h-0 w-full overflow-hidden rounded-xl shadow-lg transition-all duration-200" aria-label="牌背">
+    <div className="game-card-back-title" aria-hidden="true"><span>冰冷的她醒来前</span><small>Embalming Girl</small></div>
+  </div>;
+}
+
 export const Card: React.FC<CardProps> = ({
   card,
   onPlay,
@@ -51,7 +58,7 @@ export const Card: React.FC<CardProps> = ({
   const [showDescriptionPopover, setShowDescriptionPopover] = useState(false);
   const visual = roleVisuals[card.name] ?? roleVisuals[RoleType.HOME_CLUB];
   const cardStyle = {
-    '--grade-color': roleGradeColor[card.name] ?? '#354b70',
+    '--faction-color': roleFactionColor(card.name),
     '--card-tone': visual.tone,
     '--card-accent': visual.accent,
     '--card-glow': visual.glow,
@@ -89,20 +96,11 @@ export const Card: React.FC<CardProps> = ({
   };
 
   if (showAsFaceDown) {
-    return (
-      <div
-        className={cn(
-          'game-card game-card-back relative aspect-[2/3] min-h-0 w-full overflow-hidden rounded-xl',
-          'shadow-lg transition-all duration-200'
-        )}
-        aria-label="牌背"
-      >
-        <div className="game-card-back-emblem" aria-hidden="true" />
-      </div>
-    );
+    return <CardBack />;
   }
 
   const art = roleArt[card.name];
+  const displayPriority = showVictoryPriority && card.location !== 'harmony';
 
   return (
     <>
@@ -140,20 +138,11 @@ export const Card: React.FC<CardProps> = ({
               <div className="game-card-art-scrim" aria-hidden="true" />
             </>
           )}
-          <div className="game-card-corner game-card-corner-left" title="调和值">
-            <span className="game-card-corner-value">{card.harmony_value}</span>
-            <span className="game-card-corner-label">调和</span>
-          </div>
-          {showVictoryPriority && (
-            <div className="game-card-corner game-card-corner-right" title="胜利优先级">
-              <span className="game-card-corner-value">{card.victory_priority}</span>
-              <span className="game-card-corner-label">优先</span>
-            </div>
-          )}
+          <div className={cn('game-card-title-wrap', { 'game-card-title-harmony-only': !displayPriority })}>
 
-          <div className="game-card-title-wrap">
-            <div className="game-card-ribbon" />
+            <span className="game-card-stat game-card-stat-harmony" title="调和值" aria-label={`调和值 ${card.harmony_value}`}><svg className="game-card-handprint" viewBox="0 0 64 64" aria-hidden="true"><path fill="white" d="M20 34V17a4 4 0 0 1 8 0v12V10a4 4 0 0 1 8 0v19V13a4 4 0 0 1 8 0v19V21a4 4 0 0 1 8 0v22c0 13-8 18-18 18-9 0-13-5-17-12L8 34a4 4 0 0 1 6-5z" /></svg><b>{card.harmony_value}</b></span>
             <span className="game-card-title" title={card.name}>{card.name}</span>
+            {displayPriority && <span className="game-card-stat game-card-stat-priority" title="胜利优先级" aria-label={`胜利优先级 ${card.victory_priority}`}>{['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'][card.victory_priority] || card.victory_priority}</span>}
           </div>
 
         </div>
@@ -208,7 +197,7 @@ export const Card: React.FC<CardProps> = ({
             <p className="text-sm text-slate-300 mb-2">{card.description}</p>
             <p className="text-xs text-slate-400 mb-2">
               <span className="text-accent-400">调和值 {card.harmony_value}</span>（放入调和区时计入总和）
-              · <span className="text-slate-400">胜利优先级 {card.victory_priority}</span>（结算时比较）
+              {displayPriority && <>· <span className="text-slate-400">胜利优先级 {card.victory_priority}</span>（结算时比较）</>}
             </p>
             <button
               type="button"

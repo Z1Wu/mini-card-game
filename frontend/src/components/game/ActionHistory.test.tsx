@@ -11,6 +11,14 @@ const actions: PublicAction[] = [
 ]
 
 describe('ActionHistory', () => {
+  it('never renders a facedown action card even if its name is supplied', () => {
+    render(<ActionHistory open actions={actions.map(action => ({ ...action, card_name: CardType.CRIMINAL }))} />)
+    expect(screen.getByText('第 1 手')).toBeInTheDocument()
+    expect(screen.getByText('第 2 手')).toBeInTheDocument()
+    expect(screen.getAllByText(/犯人/)).toHaveLength(1)
+    expect(screen.getByText(/犯人/).closest('li')).toHaveClass('action-history-特技')
+  })
+
   it('stays compact until opened and renders only public action facts', async () => {
     const user = userEvent.setup()
     render(<ActionHistory actions={actions} />)

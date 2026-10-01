@@ -1,0 +1,5 @@
+{
+  "generator": "built-in image_gen",
+  "asset": "frontend/src/assets/art/card-back-classroom-v1.webp",
+  "prompt": "Create ONE portrait 2:3 card-back background for psychological horror Japanese cel-anime game. An abandoned classroom in an old Japanese school after an apocalypse, empty wooden desks, broken windows, dust, ruined curtains, cloudy light, very subtle muted burgundy red filter. No people, no blood, no magic, no symbols, no text or letters: lettering will be added in HTML. Painterly flat cel shading and simplified textures, soft readable silhouettes, oppressive quiet mood. Central area darker and relatively uncluttered for white handwritten title. Full bleed, no border."
+}

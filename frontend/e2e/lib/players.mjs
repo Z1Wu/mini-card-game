@@ -1,3 +1,5 @@
+import os from 'node:os';
+import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
 const TIMEOUT_MS = 15_000;
@@ -82,7 +84,7 @@ export async function waitForState(page, predicate, description, argument, timeo
 export async function chooseVisibleCard(page, cardName, action) {
   // Scope to hand area — field/doubt cards share the same aria-label
   const hand = page.locator('.table-hand');
-  const card = hand.getByLabel(`卡牌：${cardName}`, { exact: true }).first();
+  const card = hand.locator('.table-hand-scroll').getByLabel(`卡牌：${cardName}`, { exact: true }).first();
   await card.waitFor({ state: 'visible' });
   await card.scrollIntoViewIfNeeded();
   await card.click();
@@ -90,14 +92,21 @@ export async function chooseVisibleCard(page, cardName, action) {
   await page.waitForTimeout(350);
   // Action buttons live in a dedicated action bar (sibling of the card),
   // not inside the card element — scope to the hand container.
-  await hand.getByRole('button', { name: action, exact: true }).click();
+  await page.locator('.table-hand-actions').getByRole('button', { name: action, exact: true }).click();
+  if (action === '特技') {
+    await page.getByRole('status', { name: `展示特技牌：${cardName}`, exact: true }).waitFor({ state: 'visible' });
+    assert.equal(await page.locator('.game-modal').count(), 0, 'Skill choices wait until the face reveal finishes');
+    await page.waitForTimeout(200);
+    await page.screenshot({ path: os.tmpdir() + '/mini-card-game-skill-activation.png' });
+    await page.getByRole('status', { name: `展示特技牌：${cardName}`, exact: true }).waitFor({ state: 'hidden' });
+  }
   // Pause so the green play-feedback toast is captured in the video.
   await page.waitForTimeout(500);
 }
 
 export async function chooseFirstVisibleCard(page, action, excludedNames = []) {
   // Only enumerate cards inside the hand area (not field/doubt copies)
-  const labels = await page.locator('.table-hand [aria-label^="卡牌："]').evaluateAll((cards, names) => cards
+  const labels = await page.locator('.table-hand-scroll [aria-label^="卡牌："]').evaluateAll((cards, names) => cards
     .filter((card) => card instanceof HTMLElement && card.offsetParent !== null)
     .map((card) => card.getAttribute('aria-label'))
     .filter((label) => label && !names.includes(label.replace(/^卡牌：/, ''))), excludedNames);
@@ -117,7 +126,7 @@ export async function chooseFirstVisibleCard(page, action, excludedNames = []) {
  */
 async function showcaseTurn(page, excludedNames) {
   // Enumerate visible non-criminal cards in the hand
-  const labels = await page.locator('.table-hand [aria-label^="卡牌："]')
+  const labels = await page.locator('.table-hand-scroll [aria-label^="卡牌："]')
     .evaluateAll((cards, names) => cards
       .filter((card) => card instanceof HTMLElement && card.offsetParent !== null)
       .map((card) => card.getAttribute('aria-label'))
@@ -127,7 +136,7 @@ async function showcaseTurn(page, excludedNames) {
   const cardName = label.replace(/^卡牌：/, '');
 
   const hand = page.locator('.table-hand');
-  const card = hand.getByLabel(`卡牌：${cardName}`, { exact: true }).first();
+  const card = hand.locator('.table-hand-scroll').getByLabel(`卡牌：${cardName}`, { exact: true }).first();
   await card.waitFor({ state: 'visible' });
   await card.scrollIntoViewIfNeeded();
 
@@ -153,7 +162,7 @@ async function showcaseTurn(page, excludedNames) {
   await page.waitForTimeout(800);
 
   // 4. Cancel via ✕ button — shows card returning down + hint text reappearing
-  const cancelBtn = hand.getByRole('button', { name: '取消选择', exact: true });
+  const cancelBtn = page.locator('.table-hand-actions').getByRole('button', { name: '取消选择', exact: true });
   if (await cancelBtn.isVisible().catch(() => false)) {
     await cancelBtn.click();
     await page.waitForTimeout(600);
@@ -163,7 +172,7 @@ async function showcaseTurn(page, excludedNames) {
   }
 
   // 6. Play harmony — shows play-feedback toast
-  await hand.getByRole('button', { name: '调和', exact: true }).click();
+  await page.locator('.table-hand-actions').getByRole('button', { name: '调和', exact: true }).click();
   await page.waitForTimeout(600);
 
   return { action: 'harmony', card: cardName };
@@ -220,13 +229,13 @@ export async function playMixedTurn(page, state, step, showcase = false) {
     for (const name of simpleSkills) {
       // Scope to hand area to avoid matching field/doubt cards
       const hand = page.locator('.table-hand');
-      const locator = hand.getByLabel(`卡牌：${name}`, { exact: true });
+      const locator = hand.locator('.table-hand-scroll').getByLabel(`卡牌：${name}`, { exact: true });
       if (await locator.first().isVisible().catch(() => false)) {
         try {
           await locator.first().scrollIntoViewIfNeeded();
           await locator.first().click();
           await page.waitForTimeout(350);
-          await hand.getByRole('button', { name: '特技', exact: true }).click();
+          await page.locator('.table-hand-actions').getByRole('button', { name: '特技', exact: true }).click();
           // Pause so skill result modal is visible in the video.
           await page.waitForTimeout(700);
           const closeBtn = page.getByRole('button', { name: '关闭', exact: true });

@@ -1,10 +1,16 @@
 import React from 'react';
-import { Card, CardUsageType, Player } from '../../types/game';
+import { Card, CardUsageType, Player, PublicAction } from '../../types/game';
+import { usePlayPresentation } from './usePlayPresentation';
+import { SkillPlayReveal } from './SkillPlayReveal';
 import { Card as CardView } from './Card';
+import { PlayActions } from './PlayActions';
 import { PlayerHand } from './PlayerHand';
 import { PlayerZone } from './PlayerZone';
 
 interface GameTableProps {
+  suppressLocalSkillReveal?: boolean;
+  gameId?: string;
+  publicActions?: PublicAction[];
   players: Player[];
   localPlayer: Player;
   localPlayerId: string;
@@ -20,15 +26,14 @@ interface GameTableProps {
   speakingPlayerId?: string | null;
 }
 
-/** Full-screen card-game table: opponents around an oval table, play area in center, hand fixed at bottom. */
+/** Full-screen card-game table: owner-scoped public plays, central harmony target, local hand at bottom. */
 export const GameTable: React.FC<GameTableProps> = (props) => {
-  const opponents = props.players.filter(p => p.id !== props.localPlayerId);
+  const presentation = usePlayPresentation(props.gameId ?? 'table', props.publicActions ?? [], props.players, props.suppressLocalSkillReveal ? props.localPlayerId : undefined);
+  const opponents = presentation.players.filter(p => p.id !== props.localPlayerId);
+  const localPlayer = presentation.players.find(player => player.id === props.localPlayerId) ?? props.localPlayer;
   const isMyTurn = props.players[props.currentPlayerIndex]?.id === props.localPlayerId;
   const harmonyCount = props.harmonyArea.length;
 
-  const allFieldCards = props.players.flatMap(p =>
-    (p.field_cards ?? []).map(c => ({ player: p, card: c }))
-  );
 
   return (
     <div className="game-table">
@@ -55,7 +60,7 @@ export const GameTable: React.FC<GameTableProps> = (props) => {
             <div className="table-objective-copy">
               <span className="table-objective-kicker">调和仪式</span>
               <div className="table-objective-summary">
-                <span>目标 <strong>{props.requiredHarmonyValue}</strong></span>
+                <span>调和目标值 <strong>{props.requiredHarmonyValue}</strong></span>
                 <i aria-hidden="true" />
                 <span>已投入 <strong>{harmonyCount}</strong> 张</span>
                 <i aria-hidden="true" />
@@ -70,38 +75,32 @@ export const GameTable: React.FC<GameTableProps> = (props) => {
               )) : <span className="table-objective-empty">等待投入</span>}
             </div>
           </section>
+          <div className="table-center-controls">
+          <div className="table-objective-doubt" aria-label={`被质疑数 ${localPlayer.doubt_cards?.length ?? 0}`}>
+            被质疑数 <strong>{localPlayer.doubt_cards?.length ?? 0}</strong>
+          </div>
 
-          {/* Face-up field cards */}
-          <div className={`table-field${allFieldCards.length === 0 ? ' table-field-empty' : ''}`}>
-            <span className="table-field-heading">场上牌</span>
-            {allFieldCards.length > 0 ? (
-              allFieldCards.map(({ player, card }) => (
-                <div key={card.id} className="table-field-item">
-                  <span className="table-field-label">{player.name}</span>
-                  <div className="w-14 sm:w-16">
-                    <CardView card={card} showAsFaceDown={false} />
-                  </div>
-                </div>
-              ))
-            ) : (
-              <span className="table-zone-empty">场上暂无公开牌</span>
-            )}
           </div>
 
         </div>
       </div>
 
+      <div className="table-own-actions">
+          <PlayActions selectedCard={props.selectedCard} isCurrentTurn={isMyTurn} handCount={localPlayer.current_hand_count} harmonyIsEmpty={!props.harmonyArea.length} onPlay={props.onPlayCard} onSelect={props.onSelectCard} />
+      </div>
+
       {/* ── Player hand (fixed bottom) ── */}
       <PlayerHand
-        player={props.localPlayer}
+        player={localPlayer}
         isCurrentTurn={isMyTurn}
         selectedCard={props.selectedCard}
         onSelect={props.onSelectCard}
-        onPlay={props.onPlayCard}
         harmonyIsEmpty={!props.harmonyArea.length}
         newsClubMyChosenCard={props.newsClubMyChosenCard}
         turnStatusText={props.turnStatusText}
       />
+      {presentation.active && <SkillPlayReveal key={presentation.active.sequence} play={presentation.active} />}
     </div>
   );
 };
+

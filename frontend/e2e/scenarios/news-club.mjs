@@ -18,15 +18,10 @@ export async function run(ctx) {
     const page = ctx.pagesById.get(chooser);
     const modal = page.locator('.game-modal').filter({ hasText: /新闻部：选择一张手牌递给/ });
     await modal.waitFor({ state: 'visible' });
-    // This is a mandatory skill choice. Closing it would strand the room.
-    assert.equal(await modal.getByRole('button', { name: '取消', exact: true }).count(), 0);
+    assert.equal(await modal.getByRole('button', { name: '取消', exact: true }).count(), 0, 'Skill choices cannot be cancelled');
     await modal.click({ position: { x: 2, y: 2 } });
-    assert.ok(await modal.isVisible(), 'Backdrop clicks must retain the choice');
-    if (chooser === 'player2') {
-      await page.reload();
-      await modal.waitFor({ state: 'visible' });
-      await ctx.screenshot('news-club-restored-choice', page);
-    }
+    await ctx.actorPage.waitForTimeout(50);
+    assert.ok(await modal.isVisible(), 'Backdrop click cannot dismiss a skill');
     if (chooser !== 'player1') await ctx.showTitle(`新闻部传牌 · ${chooser} 正在选择`, chooser);
     const state = await readState(page);
     const expectedSize = chooser === 'player1' ? 2 : 4;

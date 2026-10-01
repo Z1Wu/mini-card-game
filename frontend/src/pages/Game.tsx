@@ -1,10 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/common/Button';
-import { Card } from '../components/game/Card';
+import { Card, CardBack } from '../components/game/Card';
 import { SettlementView } from '../components/game/SettlementView';
+import { TurnAnnouncement } from '../components/game/TurnAnnouncement';
+import { SkillActivation } from '../components/game/SkillActivation';
 import { GameTable } from '../components/game/GameTable';
 import { ActionHistory } from '../components/game/ActionHistory';
+import { CardCatalog } from '../components/game/CardCatalog';
 import { GameMenu } from '../components/game/GameMenu';
 import { GameConfirmDialog } from '../components/game/GameConfirmDialog';
 import { PushToTalkButton } from '../components/game/PushToTalkButton';
@@ -30,9 +33,10 @@ function skillNeedsTarget(card: CardType): boolean {
 
 export const Game: React.FC = () => {
   const navigate = useNavigate();
-  const { playerId, playerName, reset: resetPlayer } = usePlayerStore();
+  const { playerId, reset: resetPlayer } = usePlayerStore();
   const { gameState, setGameState, resetGame } = useGameStore();
   const { send } = useWebSocket();
+  const [activatingSkill, setActivatingSkill] = useState<CardType | null>(null);
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null);
   const [winnerId, setWinnerId] = useState<string | null>(null);
   /** 结算摘要（game_over 时下发），用于完整结算展示 */
@@ -94,8 +98,6 @@ export const Game: React.FC = () => {
   const [classRepPhase, setClassRepPhase] = useState<{ phase: 'waiting_target' | 'done'; actor_name?: string; target_name?: string } | null>(null);
   /** 班长：交换结果（双方可见） */
   const [classRepResult, setClassRepResult] = useState<{ card_you_gave: CardType; card_you_received: CardType } | null>(null);
-  /** 回合切换提示（几秒后消失） */
-  const [turnChangeToast, setTurnChangeToast] = useState<string | null>(null);
   /** 出牌反馈提示 */
   const [playFeedback, setPlayFeedback] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -132,12 +134,6 @@ export const Game: React.FC = () => {
   }, [playerId, navigate]);
 
   useEffect(() => {
-    if (!turnChangeToast) return;
-    const t = setTimeout(() => setTurnChangeToast(null), 3000);
-    return () => clearTimeout(t);
-  }, [turnChangeToast]);
-
-  useEffect(() => {
     if (!playFeedback) return;
     const t = setTimeout(() => setPlayFeedback(null), 2000);
     return () => clearTimeout(t);
@@ -168,15 +164,7 @@ export const Game: React.FC = () => {
       if (next?.state === GameStateEnum.GAME_OVER && next?.winner) {
         setWinnerId(next.winner);
       }
-      setGameState(prev => {
-        if (prev?.state === GameStateEnum.PLAYING && next?.state === GameStateEnum.PLAYING &&
-            (prev.turn_count !== next.turn_count || prev.current_player_index !== next.current_player_index)) {
-          const idx = next.current_player_index;
-          const nextPlayer = next.players[idx];
-          setTurnChangeToast(nextPlayer ? `轮到 ${nextPlayer.name} 出牌` : '下一回合');
-        }
-        return next;
-      });
+      setGameState(next);
     };
 
     const handleGameOver = (message: GameOverMessage) => {
@@ -274,20 +262,22 @@ export const Game: React.FC = () => {
       setGameError(message.message || '操作失败');
     };
 
+    const presentationTimers: ReturnType<typeof setTimeout>[] = [];
+    const afterReveal = (effect: () => void) => { presentationTimers.push(setTimeout(effect, 1550)); };
     wsService.on('game_state', handleGameState);
     wsService.on('error', handleError);
     wsService.on('game_over', handleGameOver);
-    wsService.on('skill_choice_required', handleSkillChoiceRequired);
-    wsService.on('rich_girl_choose_give', handleRichGirlChooseGive);
-    wsService.on('view_hand', handleViewHand);
-    wsService.on('view_harmony', handleViewHarmony);
+    wsService.on('skill_choice_required', message => afterReveal(() => handleSkillChoiceRequired(message)));
+    wsService.on('rich_girl_choose_give', message => afterReveal(() => handleRichGirlChooseGive(message)));
+    wsService.on('view_hand', message => afterReveal(() => handleViewHand(message)));
+    wsService.on('view_harmony', message => afterReveal(() => handleViewHarmony(message)));
     wsService.on('infected_choice_required', handleInfectedChoiceRequired);
-    wsService.on('news_club_choice_required', handleNewsClubChoiceRequired);
+    wsService.on('news_club_choice_required', message => afterReveal(() => handleNewsClubChoiceRequired(message)));
     wsService.on('news_club_in_progress', handleNewsClubInProgress);
     wsService.on('news_club_you_chose', handleNewsClubYouChose);
     wsService.on('news_club_ended', handleNewsClubEnded);
-    wsService.on('class_rep_choice_required', handleClassRepChoiceRequired);
-    wsService.on('honor_student_choice_required', handleHonorStudentChoiceRequired);
+    wsService.on('class_rep_choice_required', message => afterReveal(() => handleClassRepChoiceRequired(message)));
+    wsService.on('honor_student_choice_required', message => afterReveal(() => handleHonorStudentChoiceRequired(message)));
     wsService.on('honor_student_waiting', handleHonorStudentWaiting);
     wsService.on('honor_student_result', handleHonorStudentResult);
     wsService.on('honor_student_phase', handleHonorStudentPhase);
@@ -300,6 +290,7 @@ export const Game: React.FC = () => {
     if (currentId) wsService.send({ type: 'get_game_state', player_id: currentId });
 
     return () => {
+      presentationTimers.forEach(clearTimeout);
       wsService.off('game_state');
       wsService.off('game_over');
       wsService.off('skill_choice_required');
@@ -380,6 +371,20 @@ export const Game: React.FC = () => {
     setAccompliceDestinationId(null);
   };
 
+  const beginPlayCard = (card: CardType, usage: CardUsageType) => {
+    if (activatingSkill) return;
+    if (usage !== CardUsageType.SKILL) { handlePlayCard(card, usage); return; }
+    const others = gameState?.players.filter(p => p.id !== playerId && p.current_hand_count > 1) ?? [];
+    const noTarget = card.name === CardTypeEnum.HEALTH_COMMITTEE
+      ? !gameState?.players.some(p => p.current_hand_count > 1 && p.field_cards.length > 0)
+      : card.name === CardTypeEnum.ACCOMPLICE
+      ? !gameState?.players.some(source => source.doubt_cards.length > 0 && gameState.players.some(target => target.id !== playerId && target.id !== source.id))
+      : card.name === CardTypeEnum.HOME_CLUB
+      ? !gameState?.harmony_area.length
+      : skillNeedsTarget(card) && others.length === 0;
+    if (noTarget) { setGameError('当前没有可用的特技目标'); return; }
+    setActivatingSkill(card);
+  };
   const handleConfirmTarget = (targetPlayerId: string) => {
     if (!pendingTargetAction) return;
     handlePlayCard(pendingTargetAction.card, pendingTargetAction.usageType, targetPlayerId);
@@ -536,13 +541,11 @@ export const Game: React.FC = () => {
       {/* ── Floating HUD: turn pill + action buttons (overlay, zero layout cost) ── */}
       <div className="game-hud">
         <div className="game-hud-left">
-          <span className="game-hud-view" aria-label={`我的视角：${playerName}`}>
-            <span className="game-hud-view-mark" aria-hidden="true">我</span>
-            <span className="game-hud-name">{playerName}</span>
-          </span>
+          <button type="button" className="game-records-trigger" onClick={() => setHistoryOpen(value => !value)} aria-expanded={historyOpen}>游戏记录</button>
           <span className="game-hud-round">第 {gameState.turn_count + 1} 手</span>
         </div>
         <div className="game-hud-right">
+          <CardCatalog />
           <GameMenu
             open={menuOpen}
             isHost={isHost}
@@ -571,12 +574,7 @@ export const Game: React.FC = () => {
         />
       )}
 
-      {/* ── Turn-change toast (auto-dismiss) ── */}
-      {turnChangeToast && (
-        <div className="turn-toast" role="status" aria-live="polite">
-          {turnChangeToast}
-        </div>
-      )}
+      <TurnAnnouncement game={gameState} playerId={playerId} />
       {/* ── Play feedback toast ── */}
       {playFeedback && (
         <div className="play-feedback-toast" role="status" aria-live="polite">
@@ -592,7 +590,7 @@ export const Game: React.FC = () => {
           </div>
         )}
         {pendingTargetAction && (pendingTargetAction.card.name !== CardTypeEnum.HEALTH_COMMITTEE || pendingTargetAction.usageType === CardUsageType.DOUBT) && (
-          <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setPendingTargetAction(null)}>
+          <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
             <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl" onClick={e => e.stopPropagation()}>
               <p className="text-amber-200 font-medium mb-2">
                 {pendingTargetAction.usageType === CardUsageType.DOUBT ? '选择要质疑的玩家' : '选择目标玩家'}
@@ -609,14 +607,14 @@ export const Game: React.FC = () => {
                 {pendingTargetAction.usageType === CardUsageType.SKILL && gameState.players.filter(p => p.id !== playerId && p.current_hand_count <= 1).length > 0 && (
                   <span className="text-slate-500 text-xs w-full">（部分玩家手牌已剩一张，已排除）</span>
                 )}
-                <Button variant="secondary" size="sm" className="game-modal-cancel" onClick={() => setPendingTargetAction(null)}>取消</Button>
+                {pendingTargetAction.usageType === CardUsageType.DOUBT && <Button variant="secondary" size="sm" className="game-modal-cancel" onClick={() => setPendingTargetAction(null)}>取消</Button>}
               </div>
             </div>
           </div>
         )}
 
         {pendingHomeClub && (
-          <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setPendingHomeClub(null); setHomeClubHandId(null); setHomeClubHarmonyId(null); }}>
+          <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
             <div className="game-modal-wide bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl max-h-[90vh] overflow-auto" onClick={e => e.stopPropagation()}>
               <p className="text-emerald-200 font-medium mb-4">归宅部：选择一张手牌与调和区的一张牌进行替换</p>
               <div className="grid grid-cols-2 gap-4 mb-4">
@@ -649,14 +647,13 @@ export const Game: React.FC = () => {
               </div>
               <div className="flex gap-2">
                 <Button variant="primary" size="sm" onClick={handleConfirmHomeClub} disabled={!homeClubHandId || !homeClubHarmonyId}>确认替换</Button>
-                <Button variant="secondary" size="sm" className="game-modal-cancel" onClick={() => { setPendingHomeClub(null); setHomeClubHandId(null); setHomeClubHarmonyId(null); }}>取消</Button>
               </div>
             </div>
           </div>
         )}
 
         {pendingAccomplice && (
-          <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setPendingAccomplice(null)}>
+          <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
             <div className="game-modal-wide bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl max-h-[90vh] overflow-auto" onClick={e => e.stopPropagation()}>
               <p className="text-violet-200 font-medium mb-2">共犯：移动一张质疑牌</p>
               <p className="text-slate-400 text-xs mb-4">先选择场上的质疑牌，再选择新的目标玩家；不能移到自己或原位置。</p>
@@ -666,6 +663,8 @@ export const Game: React.FC = () => {
                   {gameState.players.flatMap(source => source.doubt_cards.map((card, index) => (
                     <Button
                       key={`${source.id}-${card.id}`}
+                      aria-label={`${source.name} 的质疑牌 ${index + 1}`}
+                      aria-pressed={accompliceDoubtCard?.target_card_id === card.id}
                       variant={accompliceDoubtCard?.target_card_id === card.id ? 'primary' : 'secondary'}
                       size="sm"
                       onClick={() => {
@@ -673,7 +672,8 @@ export const Game: React.FC = () => {
                         setAccompliceDestinationId(null);
                       }}
                     >
-                      {source.name} 的质疑牌 {index + 1}
+                      <span className="block w-20 mx-auto mb-1"><CardBack /></span>
+                      <span>{source.name} 的质疑牌 {index + 1}</span>
                     </Button>
                   )))}
                   {!gameState.players.some(source => source.doubt_cards.length > 0) && (
@@ -689,6 +689,7 @@ export const Game: React.FC = () => {
                     .map(target => (
                       <Button
                         key={target.id}
+                        aria-pressed={accompliceDestinationId === target.id}
                         variant={accompliceDestinationId === target.id ? 'primary' : 'secondary'}
                         size="sm"
                         disabled={!accompliceDoubtCard}
@@ -701,7 +702,6 @@ export const Game: React.FC = () => {
               </div>
               <div className="flex gap-2">
                 <Button variant="primary" size="sm" onClick={handleConfirmAccomplice} disabled={!accompliceDoubtCard || !accompliceDestinationId}>确认移动</Button>
-                <Button variant="secondary" size="sm" className="game-modal-cancel" onClick={() => setPendingAccomplice(null)}>取消</Button>
               </div>
             </div>
           </div>
@@ -716,11 +716,14 @@ export const Game: React.FC = () => {
                 {pendingInfectedChoice.map((card, index) => (
                   <Button
                     key={card.id}
+                    aria-label={`调和牌 ${index + 1}`}
+                    aria-pressed={infectedHarmonyCardId === card.id}
                     variant={infectedHarmonyCardId === card.id ? 'primary' : 'secondary'}
                     size="sm"
                     onClick={() => setInfectedHarmonyCardId(card.id)}
                   >
-                    调和牌 {index + 1}
+                    <span className="block w-20 mx-auto mb-1"><CardBack /></span>
+                    <span>调和牌 {index + 1}</span>
                   </Button>
                 ))}
               </div>
@@ -733,7 +736,7 @@ export const Game: React.FC = () => {
         )}
 
         {pendingTargetAction && pendingTargetAction.card.name === CardTypeEnum.HEALTH_COMMITTEE && pendingTargetAction.usageType === CardUsageType.SKILL && (
-          <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setPendingTargetAction(null); setSelectedFieldCard(null); }}>
+          <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
             <div className="game-modal-wide bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl max-h-[90vh] overflow-auto" onClick={e => e.stopPropagation()}>
               <p className="text-amber-200 font-medium mb-2">保健委员：选择一张场上正面朝上的卡牌，归入自己的手牌</p>
               <p className="text-slate-400 text-xs mb-4">手牌剩一张的玩家处于等待结算阶段，其场牌不可选</p>
@@ -755,14 +758,13 @@ export const Game: React.FC = () => {
               )}
               <div className="flex gap-2">
                 <Button variant="primary" size="sm" onClick={handleConfirmHealthCommitteeFieldCard} disabled={!selectedFieldCard}>确认选择</Button>
-                <Button variant="secondary" size="sm" className="game-modal-cancel" onClick={() => { setPendingTargetAction(null); setSelectedFieldCard(null); }}>取消</Button>
               </div>
             </div>
           </div>
         )}
 
         {pendingSkillChoice && pendingSkillChoice.skill_type === 'rich_girl' && (
-          <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setPendingSkillChoice(null); setRichGirlTakeId(null); setRichGirlGiveId(null); setRichGirlGivePhase(null); }}>
+          <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
             <div className="game-modal-wide bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl max-h-[90vh] overflow-auto" onClick={e => e.stopPropagation()}>
               {!richGirlGivePhase ? (
                 <>
@@ -770,15 +772,12 @@ export const Game: React.FC = () => {
                   <div className="flex flex-wrap gap-2 mb-4">
                     {pendingSkillChoice.target_hand.map((c) => (
                       <div key={c.id} className={`w-24 cursor-pointer rounded-lg border-2 p-1 ${richGirlTakeId === c.id ? 'border-violet-400 bg-violet-900/50' : 'border-slate-600 hover:border-violet-500'}`} onClick={() => setRichGirlTakeId(c.id)}>
-                        <div className="rounded-lg border-2 border-slate-600 bg-gradient-to-br from-slate-600 to-slate-700 aspect-[2/3] min-h-[100px] flex items-center justify-center">
-                          <span className="text-slate-500 text-xs">牌背</span>
-                        </div>
+                        <CardBack />
                       </div>
                     ))}
                   </div>
                   <div className="flex gap-2">
                     <Button variant="primary" size="sm" onClick={handleConfirmSkillChoice} disabled={!richGirlTakeId}>确认（查看拿到的牌）</Button>
-                    <Button variant="secondary" size="sm" className="game-modal-cancel" onClick={() => { setPendingSkillChoice(null); setRichGirlTakeId(null); setRichGirlGiveId(null); setRichGirlGivePhase(null); }}>取消</Button>
                   </div>
                 </>
               ) : (
@@ -803,7 +802,6 @@ export const Game: React.FC = () => {
                   </div>
                   <div className="flex gap-2">
                     <Button variant="primary" size="sm" onClick={handleConfirmSkillChoice} disabled={!richGirlGiveId}>确认交换</Button>
-                    <Button variant="secondary" size="sm" className="game-modal-cancel" onClick={() => { setRichGirlGivePhase(null); setRichGirlGiveId(null); }}>取消</Button>
                   </div>
                 </>
               )}
@@ -812,7 +810,7 @@ export const Game: React.FC = () => {
         )}
 
         {pendingClassRepChoice && (
-          <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setPendingClassRepChoice(null); setClassRepSelectedCardId(null); }}>
+          <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
             <div className="bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl" onClick={e => e.stopPropagation()}>
               <p className="text-amber-200 font-medium mb-4">班长：选一张手牌与 {pendingClassRepChoice.target_player_name} 交换</p>
               <div className="flex flex-wrap gap-2 mb-4">
@@ -824,19 +822,24 @@ export const Game: React.FC = () => {
               </div>
               <div className="flex gap-2">
                 <Button variant="primary" size="sm" onClick={handleConfirmClassRepChoice} disabled={!classRepSelectedCardId}>确认</Button>
-                <Button variant="secondary" size="sm" className="game-modal-cancel" onClick={() => { setPendingClassRepChoice(null); setClassRepSelectedCardId(null); }}>取消</Button>
               </div>
             </div>
           </div>
         )}
 
         {honorStudentResult !== null && (
-          <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setHonorStudentResult(null)}>
+          <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
             <div className="game-modal-compact bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl" onClick={e => e.stopPropagation()}>
               <h3 className="text-lg font-semibold text-white mb-2">优等生：举手结果</h3>
               <p className="text-slate-300 mb-4">
                 {honorStudentResult.length > 0 ? `举手的人：${honorStudentResult.join('、')}` : '无人举手'}
               </p>
+              {honorStudentResult.length > 0 && <div className="honor-result-players" aria-label="举手玩家">
+                {honorStudentResult.map((name, index) => <div className="honor-result-player" key={`${name}-${index}`}>
+                  <div className="table-seat-icon honor-result-avatar" role="img" aria-label={`${name}的头像`}>{name.match(/^玩家(\d+)$/)?.[1] ?? name.charAt(0)}</div>
+                  <strong>{name}</strong>
+                </div>)}
+              </div>}
               <Button variant="secondary" className="game-modal-dismiss" onClick={() => setHonorStudentResult(null)}>关闭</Button>
             </div>
           </div>
@@ -863,9 +866,10 @@ export const Game: React.FC = () => {
           </div>
         )}
 
-        {currentPlayer && <GameTable players={gameState.players} localPlayer={currentPlayer} localPlayerId={playerId ?? ''} currentPlayerIndex={gameState.current_player_index} harmonyArea={gameState.harmony_area} requiredHarmonyValue={gameState.required_harmony_value} selectedCard={selectedCard} onSelectCard={setSelectedCard} onPlayCard={handlePlayCard} newsClubMyChosenCard={newsClubMyChosenCard} turnStatusText={topBannerMessage?.text ?? '等待牌局状态'} speakingPlayerId={voice.speakingPlayerId} />}
+        {activatingSkill && <SkillActivation card={activatingSkill} onComplete={() => { setActivatingSkill(null); handlePlayCard(activatingSkill, CardUsageType.SKILL); }} />}
+        {currentPlayer && <GameTable gameId={gameState.id} publicActions={gameState.public_actions} players={gameState.players} localPlayer={currentPlayer} localPlayerId={playerId ?? ''} currentPlayerIndex={gameState.current_player_index} harmonyArea={gameState.harmony_area} requiredHarmonyValue={gameState.required_harmony_value} selectedCard={selectedCard} onSelectCard={setSelectedCard} onPlayCard={beginPlayCard} suppressLocalSkillReveal newsClubMyChosenCard={newsClubMyChosenCard} turnStatusText={topBannerMessage?.text ?? '等待牌局状态'} speakingPlayerId={voice.speakingPlayerId} />}
         {viewHandResult && (
-          <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setViewHandResult(null)}>
+          <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
             <div className="game-modal-wide bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl" onClick={e => e.stopPropagation()}>
               <h3 className="text-lg font-semibold text-white mb-2">风纪委员：{viewHandResult.target_player_name} 的手牌</h3>
               <div className="flex flex-wrap gap-2 mb-4">
@@ -875,13 +879,13 @@ export const Game: React.FC = () => {
                   </div>
                 ))}
               </div>
-              <Button variant="primary" onClick={() => setViewHandResult(null)}>关闭</Button>
+              <Button variant="primary" onClick={() => { send({ type: 'view_hand_confirm', player_id: playerId! }); setViewHandResult(null); }}>确认完成</Button>
             </div>
           </div>
         )}
 
         {viewHarmonyResult && (
-          <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setViewHarmonyResult(null)}>
+          <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
             <div className="game-modal-wide bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl" onClick={e => e.stopPropagation()}>
               <h3 className="text-lg font-semibold text-white mb-2">图书委员：调和区所有卡牌</h3>
               {viewHarmonyResult.length === 0 ? (
@@ -895,13 +899,13 @@ export const Game: React.FC = () => {
                   ))}
                 </div>
               )}
-              <Button variant="primary" onClick={() => setViewHarmonyResult(null)}>关闭</Button>
+              <Button variant="primary" onClick={() => { send({ type: 'view_harmony_confirm', player_id: playerId! }); setViewHarmonyResult(null); }}>确认完成</Button>
             </div>
           </div>
         )}
 
         {classRepResult && (
-          <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setClassRepResult(null)}>
+          <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
             <div className="game-modal-compact bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl" onClick={e => e.stopPropagation()}>
               <h3 className="text-lg font-semibold text-white mb-4">班长：交换结果</h3>
               <div className="grid grid-cols-2 gap-4 mb-4">
@@ -934,7 +938,7 @@ export const Game: React.FC = () => {
         )}
 
         {pendingNewsClubChoice && (
-          <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-label="新闻部传牌选卡">
+          <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
             <div className="game-modal-wide bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl" onClick={e => e.stopPropagation()}>
               <p className="text-sky-200 font-medium mb-4">新闻部：选择一张手牌递给 {pendingNewsClubChoice.next_player_name}（上家递来的牌不可选）</p>
               <div className="flex flex-wrap gap-2 mb-4">
@@ -948,7 +952,6 @@ export const Game: React.FC = () => {
               </div>
               <div className="flex gap-2">
                 <Button variant="primary" size="sm" onClick={handleConfirmNewsClubChoice} disabled={!newsClubSelectedCardId}>确认递给下家</Button>
-                <span className="text-sm text-slate-300">请选牌并确认后继续对局</span>
               </div>
             </div>
           </div>

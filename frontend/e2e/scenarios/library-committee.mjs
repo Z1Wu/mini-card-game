@@ -16,8 +16,9 @@ export async function run(ctx) {
   for (const id of ['player2', 'player3', 'player4']) {
     assert.equal(await ctx.pagesById.get(id).getByRole('heading', { name: '图书委员：调和区所有卡牌' }).count(), 0);
   }
+  assert.equal(await ctx.actorPage.evaluate(() => JSON.parse(window.render_game_to_text()).game.current_player_id), 'player1');
   await ctx.screenshot('library-private-result', ctx.actorPage);
-  await ctx.actorPage.getByRole('button', { name: '关闭', exact: true }).click();
+  await ctx.actorPage.getByRole('button', { name: '确认完成', exact: true }).click();
   await waitForLatestAction(ctx.actorPage, '特技', '图书委员');
   return {
     evidence: '仅行动者看到调和区真实牌面（学生会长），公开记录显示正面特技',

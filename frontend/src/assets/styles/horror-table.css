@@ -105,7 +105,7 @@
 .game-table .table-objective { background: radial-gradient(ellipse at 100% 0, rgba(105,29,40,.55), transparent 32px), #252828; border-color: #665656; border-left: 3px solid #803941; }
 .game-card:not(.game-card-back) { background: #bbbeb3; border-color: #797c74; }
 .game-card-face { background: #bbbeb3; }
-.game-card-ribbon { background: #bbbeb3; border-top: 3px solid var(--grade-color); }
+.game-card-ribbon { background: #bbbeb3; border-top: 0; }
 .game-card-art-scrim { background: linear-gradient(180deg, rgba(8,13,17,.05), transparent 62%, rgba(8,13,17,.15) 79%, #bbbeb3 80%); }
 .game-card-title { color: #161c1e; }
 .table-hand-card-lifted .game-card { outline-color: #e4d5b2; }
@@ -127,8 +127,8 @@
 .game-menu-panel { border-color: #758176; background: #263630; box-shadow: 0 8px 24px rgba(0,0,0,.45); }
 .game-menu-panel b { color: #18221f; background: #c4d7b8; }
 .game-action-panel,
-.game-modal > div { border-color: #84907e !important; background: #27332e !important; box-shadow: 0 8px 24px rgba(0,0,0,.5) !important; }
-.game-modal { background: rgba(9,15,13,.8) !important; }
+.game-modal > div { border-color: #a65059 !important; background: #382126 !important; box-shadow: 0 8px 24px rgba(20,0,5,.6) !important; }
+.game-modal { background: rgba(18,5,9,.8) !important; }
 .turn-toast { color: #efe7dc; background: #7b4148; }
 .play-feedback-toast { color: #e4e8dc; background: #496962; }
 @media (orientation: landscape) and (max-height: 500px) {
@@ -143,3 +143,262 @@
 .horror-art-grid figure { min-width: 0; margin: 0; }
 .horror-art-grid figcaption { margin-top: 8px; text-align: center; font-size: 14px; }
 .horror-art-grid .game-card-corner { display: none; }
+
+/* Issue #141: readable faction-colored faces and restrained warm-red mood. */
+.campus-shell { background: radial-gradient(ellipse at 20% 0, #52373a, transparent 70%), #251f22; }
+.horror-art-review { background: #291f23; }
+.game-table { background-image: linear-gradient(rgba(90,29,40,.17), rgba(51,20,27,.24)), url('../art/tabletop-horror-v2.webp'); }
+.game-card:not(.game-card-back), .game-card-face, .game-card-ribbon { background: var(--faction-color, #aebdac); }
+.game-card-art-scrim { background: linear-gradient(180deg, rgba(97,33,43,.08), transparent 65%, var(--faction-color) 81%); }
+.game-card-title { font-size: clamp(.75rem, 13cqw, 1.6rem); line-height: 1.1; color: #211b1d; }
+.game-card-title-wrap { min-height: 22%; }
+.game-card-ribbon { border-top-width: 2px; }
+.game-card-art, .game-card:hover .game-card-art { filter: saturate(.82) sepia(.08); }
+.game-table .table-seat, .game-table .table-hand-info, .game-table .table-turn-task { background-color: #302326; border-color: #79555a; }
+.game-table .table-hand { background: linear-gradient(0deg, rgba(35,20,25,.98), rgba(35,20,25,.9) 76%, transparent); }
+.game-table .table-decision, .game-table .table-objective { background: #34272b; }
+.turn-announcement {
+  position: fixed; z-index: 90; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  display: flex; flex-direction: column; align-items: center; gap: .45rem;
+  width: min(84vw, 460px); padding: 1.2rem 1.6rem; pointer-events: none;
+  color: #f1dfd1; background: linear-gradient(90deg, transparent, rgba(58,22,32,.96) 15% 85%, transparent);
+  text-align: center; animation: turn-announce 2.2s ease both;
+}
+.turn-announcement strong { font-size: clamp(1.4rem, 4vw, 2.4rem); letter-spacing: .08em; overflow-wrap: anywhere; }
+.turn-announcement-caption { font-size: .75rem; color: #c7a3a6; letter-spacing: .3em; }
+.turn-announcement-rule { height: 1px; width: 72%; background: linear-gradient(90deg, transparent, #b88186, transparent); }
+.turn-announcement.is-own-turn { color: #ffe8cb; background: linear-gradient(90deg, transparent, rgba(95,32,44,.96) 15% 85%, transparent); }
+@keyframes turn-announce {
+  0% { opacity: 0; transform: translate(-50%,-50%) scale(.94); filter: blur(3px); }
+  12%, 78% { opacity: 1; transform: translate(-50%,-50%) scale(1); filter: blur(0); }
+  100% { opacity: 0; transform: translate(-50%,-54%); }
+}
+@media (prefers-reduced-motion: reduce) { .turn-announcement { animation: none; } }
+
+/* Stats share the name strip, leaving the portrait unobstructed. */
+.game-card-title-wrap { display: grid; grid-template-columns: 1em minmax(0,1fr) 1em; gap: .12em; padding: .18em .12em; align-items: center; font-size: min(12cqw, 1.4rem); }
+.game-card-title-harmony-only { grid-template-columns: 1em minmax(0,1fr); }
+.game-card-title { font-size: min(12.5cqw, 1.4rem); white-space: nowrap; overflow-wrap: normal; line-height: 1.05; }
+.game-card-stat { position: relative; z-index: 1; font-weight: 900; line-height: 1; text-align: center; color: #302124; font-variant-numeric: tabular-nums; }
+.game-card-stat-priority { font-family: Georgia, 'Times New Roman', serif; font-size: .95em; }
+
+
+/* Public cards stay in separate lanes attached to their owner. */
+.player-field { display: flex; gap: 6px; overflow-x: auto; padding: 3px; scrollbar-width: thin; }
+.player-field-card { flex: 0 0 84px; width: 84px; }
+.game-table .table-seats { position: relative; display: grid; height: auto; padding: 12px 18px 0; gap: 12px; align-items: start; }
+.table-seats.opponents-2 { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.table-seats.opponents-3 { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.table-seats.opponents-4 { grid-template-columns: repeat(4,minmax(0,1fr)); }
+.game-table .table-seats .table-seat { position: relative; left: auto; right: auto; top: auto; transform: none; max-width: 100%; justify-self: center; flex-direction: column; width: min(100%,220px); }
+.game-table .table-seat > .player-field { width: 100%; max-width: 100%; }
+.game-table .table-center { justify-content: flex-start; padding-top: 10px; padding-bottom: 210px; }
+.game-table .table-objective { margin-left: 0; margin-right: auto; }
+.table-local-field { position: absolute; bottom: 60px; left: 12px; }
+.table-local-field .player-field { max-width: 280px; }
+.table-local-field::before { content: '你的场牌'; display: block; color: #e1cdc6; font-size: 11px; }
+@media (orientation: landscape) and (max-height: 500px) {
+  .game-table .table-seats { padding: 3px 8px 0; gap: 6px; }
+  .game-table .table-seat { gap: 0; padding: 2px 4px; min-height: 0; }
+  .game-table .table-seat-name { font-size: 11px; line-height: 12px; }
+  .game-table .table-seat-meta { margin-top: 1px; }
+  .game-table .table-seat-stat { font-size: 9px; line-height: 11px; padding: 0 2px; }
+  .game-table .table-seat-stat-label { font-size: 8px; }
+  .game-table .table-seat-icon { width: 24px; height: 24px; }
+  .player-field-card { flex-basis: 64px; width: 64px; }
+  .game-table .player-field-card .game-card { aspect-ratio: 4/5; }
+  .game-table .table-seat > .player-field { padding: 2px 0 0; gap: 4px; }
+  .game-table .table-center { padding-top: 4px; }
+  .game-table .table-objective { min-height: 24px; padding: 2px 8px; }
+  .game-table .table-objective-summary { font-size: 10px; line-height: 16px; }
+  .game-table .table-objective-summary strong { font-size: 16px; line-height: 16px; }
+  .game-table .table-objective-cards { display: none; }
+  .table-local-field { bottom: 56px; left: 8px; }
+  .table-local-field .player-field { max-width: 128px; }
+}
+
+.game-table .table-objective-card { width: 22px; }
+@media (orientation: landscape) and (max-height: 500px) {
+  .game-table .table-hand:has(.table-decision) .table-hand-card { width: 60px; }
+}
+
+/* Full-bleed portraits, vertical names and white value symbols. */
+.game-card:not(.game-card-back), .game-card-criminal:not(.game-card-back) { padding: 0; border: 2px solid var(--faction-color); border-radius: 3px; }
+.game-card-face { position: absolute; inset: 0; border-radius: 0; background: #21191b; }
+.game-card-art, .game-card:hover .game-card-art { inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 25%; }
+.game-card-art-scrim { background: linear-gradient(90deg, rgba(0,0,0,.75), rgba(0,0,0,.3) 24%, transparent 48%); }
+.game-card-title-wrap, .game-card-title-harmony-only { inset: 0; min-height: 0; padding: 0; display: block; }
+.game-card-ribbon { display: none; }
+.game-card-title { position: absolute; left: 4%; top: 5%; max-height: 90%; writing-mode: vertical-rl; text-orientation: upright; white-space: nowrap; color: #fff; font-size: min(19cqw, 28px); line-height: 1.15; font-weight: 800; text-shadow: 0 1px 3px #000; }
+.game-card-stat { position: absolute; z-index: 2; color: #000; font-size: min(18cqw, 26px); line-height: 1; }
+.game-card-stat-harmony { top: 3%; right: 2%; width: 36%; height: 28%; display: grid; place-items: center; }
+.game-card-handprint { position: absolute; inset: 0; width: 100%; height: 100%; }
+.game-card-stat-harmony b { position: relative; padding-top: 48%; font-size: inherit; font-weight: 900; }
+.game-card-stat-priority { bottom: 4%; right: 5%; width: 28%; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; background: #fff; font-family: Georgia, serif; }
+.game-card-back { background: linear-gradient(rgba(102,19,35,.3),rgba(45,10,20,.55)), url('../art/card-back-classroom-v1.webp') center / cover; border: 1px solid #8d6669; }
+.game-card-back::before, .game-card-back::after { display: none; }
+.game-card-back-title { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: .3em; padding: 5%; text-align: center; color: #fff; background: radial-gradient(ellipse,rgba(0,0,0,.3),transparent 75%); text-shadow: 0 2px 4px #180b0d; }
+.game-card-back-title span { font-family: 'KaiTi','STKaiti','Yu Mincho',serif; font-size: min(13cqw,22px); font-weight: 800; letter-spacing: .05em; }
+.game-card-back-title small { font-family: Georgia,serif; font-style: italic; font-size: min(10cqw,16px); }
+.game-table .table-hand { background: none; border-color: transparent; }
+.table-hand-action-btn small { display: none; }
+.player-field { gap: 0; }
+.player-field-card + .player-field-card { margin-left: -58px; }
+@media (orientation: landscape) and (max-height: 500px) {
+  .game-table .table-hand { background: none; }
+  .game-table .table-seat > .player-field { gap: 0; }
+  .player-field-card + .player-field-card { margin-left: -44px; }
+}
+
+.game-card-back-title span { white-space: nowrap; font-size: min(11cqw,22px); }
+
+/* Reserve the floating menu's corner above the owner lanes. */
+@media (max-height: 600px) and (orientation: landscape) {
+  .game-table .table-seats { padding-right: 80px; }
+}
+
+/* Compact own-hand controls and a central harmony status. */
+.game-card-stat-harmony b { transform: translate(8%, -6%); }
+.game-table .table-center { position: fixed; inset: 0; padding: 0; justify-content: center; pointer-events: none; }
+.game-table .table-center-inner { width: fit-content; max-width: calc(100% - 20px); }
+.game-table .table-objective { margin: 0 auto; pointer-events: auto; }
+.table-hand-playrow { position: relative; display: grid; grid-template-columns: minmax(0,1fr) 80px; align-items: center; gap: 12px; padding-left: 300px; }
+.game-table .table-hand-scroll { min-width: 0; }
+.game-table .table-hand-actions { position: relative; display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; }
+.game-table .table-hand-action-btn { min-height: 44px; width: 100%; }
+.game-table .table-hand-action-cancel { position: absolute; right: 0; top: -34px; width: 30px; min-height: 28px; }
+.game-table .table-hand-doubt-state { position: absolute; left: 8px; top: 0; margin: 0; }
+.table-local-field { bottom: 8px; }
+.game-records-trigger { min-height: 36px; padding: 4px 10px; border: 1px solid #79555a; border-radius: 9px; background: #302326; color: #fff; font-size: 12px; }
+.game-table .table-seats { padding-left: 170px; padding-right: 80px; }
+.action-history-panel li { grid-template-columns: 3.5rem 1fr; }
+@media (orientation: landscape) and (max-height: 500px) {
+  .table-hand-playrow { padding-left: 140px; grid-template-columns: minmax(0,1fr) 64px; gap: 6px; }
+  .game-table .table-hand-action-btn { min-height: 32px; }
+  .game-table .table-hand-action-cancel { width: 28px; min-height: 26px; top: -30px; }
+  .game-table .table-hand-doubt-state { min-height: 22px; padding: 2px 5px; font-size: 10px; }
+  .table-local-field { bottom: 8px; }
+  .game-table .table-seats { padding-left: 135px; padding-right: 80px; }
+}
+
+
+
+.game-table-fixture-header { display: none; }
+.game-table-fixture { padding: 0; }
+
+.game-table .table-hand-doubt-state { top: -26px; }
+
+/* Communications sit beside the hand at the bottom-right safe edge. */
+.voice-chat-dock { top: auto; bottom: max(12px, env(safe-area-inset-bottom, 0px)); left: auto; right: max(12px, env(safe-area-inset-right, 0px)); align-items: flex-end; }
+
+/* Reserve space for the communication dock beside the hand. */
+.game-table .table-hand { padding-right: calc(120px + env(safe-area-inset-right, 0px)); }
+.game-table .table-hand-playrow { width: 100%; }
+.game-table .table-hand-actions { justify-self: end; margin-right: 0; }
+.skill-play-reveal { position: fixed; inset: 0; z-index: 55; pointer-events: none; background: radial-gradient(ellipse at center, rgba(20,5,10,.45), transparent 65%); }
+.skill-play-card { position: absolute; left: 50%; top: 50%; width: clamp(115px,16vh,185px); transform: translate(-50%,-50%); animation: skill-card-arrive 1500ms ease-in-out both; filter: drop-shadow(0 8px 25px #10080b); }
+.skill-play-caption { display: block; padding: 5px; color: #fff; text-align: center; font-size: 12px; background: #302326; }
+@keyframes skill-card-arrive {
+  0% { opacity: 0; transform: translate(-50%,-50%) scale(.85); }
+  15%, 65% { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--arrival-x)),calc(-50% + var(--arrival-y))) scale(.4); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skill-play-card { animation: none; }
+}
+
+.skill-play-reveal { z-index: 75; }
+
+.fixture-play-controls { position: fixed; top: 8px; left: 8px; z-index: 80; display: flex; gap: 4px; }
+.fixture-play-controls button { background: #302326; border: 1px solid #79555a; padding: 6px; color: white; }
+
+.table-objective-doubt { align-self: center; padding: 3px 10px; border: 1px solid #79555a; border-radius: 8px; background: rgba(48,35,38,.92); color: #e1cdc6; font-size: 12px; }
+.table-objective-doubt strong { margin-left: 4px; color: #fff; }
+.game-table .table-center-inner { position: relative; }
+.table-objective-doubt { position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+.card-catalog { width: min(950px,calc(100vw - 24px)); max-height: calc(100dvh - 24px); padding: 16px; border: 1px solid #79555a; border-radius: 12px; background: #241b1e; color: #e9deda; }
+.card-catalog::backdrop { background: rgba(0,0,0,.75); }
+.card-catalog header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.card-catalog h2 { font-size: 20px; font-weight: 800; }
+.card-catalog header button { width: 40px; height: 40px; border-radius: 8px; background: #50373c; font-size: 24px; }
+.card-catalog-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); gap: 14px; }
+.card-catalog article { display: flex; gap: 12px; padding: 12px; border: 1px solid #594248; border-radius: 8px; }
+.card-catalog-art { width: 85px; flex-shrink: 0; }
+.card-catalog h3 { color: #fff; font-size: 17px; font-weight: 800; }
+.card-catalog h4 { margin-top: 8px; color: #c5a18e; font-size: 12px; }
+.card-catalog p { font-size: 12px; line-height: 1.5; }
+.card-catalog-stats { color: #c4b5b0; }
+.game-table .table-seats { padding-right: 160px; }
+
+.table-center-controls { position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: auto; }
+.table-center-controls .table-objective-doubt { position: static; transform: none; }
+.game-table .table-own-actions .table-hand-actions { display: flex; flex-direction: row; width: 270px; gap: 6px; }
+.game-table .table-own-actions .table-hand-action-btn { min-height: 36px; }
+.game-table .table-own-actions .table-hand-action-cancel { position: static; width: 30px; flex: 0 0 30px; }
+.game-table .table-hand-playrow { grid-template-columns: minmax(0,1fr); }
+.game-table .table-decision { position: fixed; left: 50%; bottom: 160px; transform: translateX(-50%); width: min(720px, calc(100vw - 24px)); max-height: 90px; overflow: auto; }
+@media (orientation: landscape) and (max-height: 500px) {
+  .game-table .table-decision { left: auto; right: 12px; bottom: 110px; transform: none; width: min(360px, calc(50vw - 155px)); max-height: 120px; }
+  .game-table .table-own-actions .table-hand-action-btn { min-height: 32px; }
+}
+
+/* Readable public hand, field and doubt counters. */
+.game-table .table-seat-meta { flex-wrap: wrap; gap: 4px; }
+.game-table .table-seat-stat { font-size: 14px; line-height: 18px; padding: 1px 4px; }
+.game-table .table-seat-stat-label { font-size: 12px; }
+.game-table .table-seat-stat strong { font-size: 14px; }
+@media (max-height: 500px) and (orientation: landscape) {
+  .game-table .table-seat-meta { gap: 2px; }
+  .game-table .table-seat-stat { font-size: 12px; line-height: 14px; padding: 0 2px; }
+  .game-table .table-seat-stat-label { font-size: 10px; }
+  .game-table .table-seat-stat strong { font-size: 12px; }
+}
+.skill-activation { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; background: rgba(15,5,8,.68); }
+.skill-activation-card { width: clamp(150px,26vh,230px); animation: skill-activation-show 1500ms ease both; }
+@keyframes skill-activation-show { 0% { opacity: 0; transform: scale(.8); } 15%,85% { opacity: 1; transform: scale(1); } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .skill-activation-card { animation: none; } }
+body:has(.skill-activation) .turn-announcement { visibility: hidden; }
+.game-modal [class*="border-emerald"] { border-color: #b95c68 !important; }
+.game-modal [class*="bg-emerald"] { background-color: rgba(113,35,47,.5) !important; }
+.game-modal [class*="text-emerald"] { color: #f0bcc2 !important; }
+
+.game-table .table-hand-card-lifted { transform: none; }
+.game-table .table-hand-scroll { padding-top: 8px; padding-bottom: 8px; }
+/* Distinguish the selected choice from the red skill panel. */
+.game-modal .border-emerald-400,
+.game-modal .border-violet-400,
+.game-modal .border-amber-400,
+.game-modal .border-sky-400,
+.game-modal [aria-pressed="true"] {
+  border-color: #ffe08a !important;
+  background-color: rgba(156,116,35,.25) !important;
+  box-shadow: 0 0 0 2px #ffe08a, 0 0 14px rgba(255,208,107,.45);
+}
+.honor-result-players { display: flex; flex-wrap: wrap; gap: 16px; margin: 12px 0 18px; justify-content: flex-end; }
+.honor-result-player { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.honor-result-avatar { width: 54px; height: 54px; font-size: 22px; border: 2px solid #c28d93; background: #583b43; color: #fff; }
+.honor-result-player strong { font-size: 14px; color: #f2e3e5; }
+.login-poster.campus-shell { min-height: 100dvh; height: auto; background-size: cover; background-position: center; background-attachment: fixed; justify-content: center; padding: 24px; color: #eee0df; }
+.login-poster.campus-shell::before { display: none; }
+.login-poster .campus-panel { background: rgba(35,17,23,.48); border-color: #925560; box-shadow: 0 20px 60px rgba(0,0,0,.45); backdrop-filter: blur(1px); }
+.login-poster .campus-panel::before { background: linear-gradient(90deg,#512730,#bc636c,#512730); }
+.login-poster .campus-title { color: #fff0ee; font-size: 30px; text-shadow: 0 2px 6px #16070b; letter-spacing: .04em; }
+.login-poster .campus-kicker, .login-poster .text-slate-500, .login-poster label { color: #dfbdc1; }
+.login-poster .campus-panel input { color: #fff !important; background: rgba(15,8,12,.8) !important; border-color: #79515c !important; }
+@media (max-width: 640px) { .login-poster.campus-shell { justify-content: center; padding: 20px; background-position: 38% center; }.login-poster .campus-panel { background: rgba(35,17,23,.48); } }
+/* Keep the action row between the information sheet and the local hand. */
+.game-table .table-own-actions { position: fixed; left: 50%; bottom: 174px; transform: translateX(-50%); z-index: 25; }
+.game-table .table-decision { bottom: 222px; }
+@media (max-height: 500px) and (orientation: landscape) {
+  .game-table .table-own-actions { bottom: 118px; }
+  .game-table .table-decision { bottom: 150px; max-height: 80px; }
+}
+
+/* Center skill confirmations without the old blue footer strip. */
+.game-modal > div > .flex.gap-2:last-child {
+  justify-content: center;
+  background: none;
+  border-top: 0;
+}
+

@@ -16,6 +16,8 @@ export type MessageType =
   | 'play_card'
   | 'skill_choice_required'
   | 'skill_choice'
+  | 'view_harmony_confirm'
+  | 'view_hand_confirm'
   | 'view_hand'
   | 'view_harmony'
   | 'news_club_choice_required'
@@ -338,6 +340,11 @@ export interface NewsClubYouChoseMessage extends BaseMessage {
 }
 
 /** 风纪委员特技：服务端下发「查看目标手牌」结果，仅发给使用风纪委员的玩家 */
+export interface ViewHandConfirmMessage extends BaseMessage {
+  type: 'view_hand_confirm' | 'view_harmony_confirm';
+  player_id: string;
+}
+
 export interface ViewHandMessage extends BaseMessage {
   type: 'view_hand';
   target_player_id: string;
@@ -408,6 +415,7 @@ export type WebSocketMessage =
   | HonorStudentResponseMessage
   | InfectedChoiceRequiredMessage
   | InfectedChoiceMessage
+  | ViewHandConfirmMessage
   | ViewHandMessage
   | ViewHarmonyMessage
   | RichGirlChooseGiveMessage

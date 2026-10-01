@@ -1,3 +1,4 @@
+import loginPoster from '../assets/art/login-ensemble-red-v1.webp';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/common/Button';
@@ -137,12 +138,12 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="campus-shell flex items-center justify-center p-4 sm:p-8">
+    <div className="campus-shell login-poster flex items-center justify-center p-4 sm:p-8" style={{ backgroundImage: `linear-gradient(90deg, rgba(20,5,9,.08), rgba(20,5,9,.45)), url(${loginPoster})` }}>
       <div className="campus-panel max-w-md w-full p-7 sm:p-8">
         <div className="text-center mb-8 pt-2">
-          <p className="campus-kicker mb-2">Campus Card Club</p>
-          <h1 className="campus-title text-4xl font-bold mb-2">放课后卡牌会</h1>
-          <p className="text-slate-500">集结同伴，开始一局轻松又刺激的对决</p>
+          <p className="campus-kicker mb-2">Embalming Girl</p>
+          <h1 className="campus-title text-4xl font-bold mb-2">冰冷的她醒来前</h1>
+          <p className="text-slate-500">旧校舍里，谁还能相信？</p>
         </div>
 
         {error && (

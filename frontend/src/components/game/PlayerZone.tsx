@@ -1,6 +1,6 @@
 import React from 'react';
-import { Card as CardModel, CardType, Player } from '../../types/game';
-import { Card as CardView } from './Card';
+import { Player } from '../../types/game';
+import { PlayerField } from './PlayerField';
 
 interface PlayerZoneProps {
   player: Player;
@@ -9,33 +9,18 @@ interface PlayerZoneProps {
   isSpeaking?: boolean;
 }
 
-const faceDownCard = (playerId: string, index: number): CardModel => ({
-  id: `opponent-hand-${playerId}-${index}`,
-  name: CardType.HOME_CLUB,
-  description: '',
-  harmony_value: 0,
-  victory_priority: 0,
-  victory_condition: '',
-  owner_id: playerId,
-  is_face_up: false,
-  location: 'hand',
-  target_player_id: null,
-});
-
 export const PlayerZone: React.FC<PlayerZoneProps> = ({ player, isCurrentTurn, isSpeaking = false }) => {
   const isWaitingSettlement = player.current_hand_count === 1;
   const initial = player.name.charAt(0);
   const fieldCount = player.field_cards?.length ?? 0;
   const doubtCount = player.doubt_cards?.length ?? 0;
-  const handCards = player.current_hand_count > 0
-    ? Array.from({ length: Math.min(player.current_hand_count, 4) }, (_, i) => faceDownCard(player.id, i))
-    : [];
 
   return (
     <div
       className={`table-seat${isCurrentTurn ? ' table-seat-current' : ''}${isWaitingSettlement ? ' table-seat-settlement' : ''}${isSpeaking ? ' table-seat-speaking' : ''}`}
       aria-label={`${player.name}${isCurrentTurn ? ' (当前回合)' : ''}`}
       role="listitem"
+      data-field-owner={player.id}
     >
       <div className="table-seat-main">
         <div className="table-seat-avatar">
@@ -57,25 +42,14 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({ player, isCurrentTurn, i
               <strong>{fieldCount}</strong>
             </span>
             <span className={`table-seat-stat table-seat-stat-doubt${doubtCount > 0 ? ' is-active' : ' is-zero'}`} aria-label={`质疑牌 ${doubtCount} 张`}>
-              <span className="table-seat-stat-label" aria-hidden="true">质疑</span>
+              <span className="table-seat-stat-label" aria-hidden="true">质疑牌</span>
               <strong>{doubtCount}</strong>
             </span>
           </div>
           {isWaitingSettlement && <div className="table-seat-settle">等待结算</div>}
         </div>
       </div>
-      {handCards.length > 0 && (
-        <div className="table-seat-cards" aria-hidden="true">
-          {handCards.map(card => (
-            <div key={card.id} className="table-seat-card">
-              <CardView card={card} showAsFaceDown />
-            </div>
-          ))}
-          {player.current_hand_count > handCards.length && (
-            <b className="table-seat-card-overflow">+{player.current_hand_count - handCards.length}</b>
-          )}
-        </div>
-      )}
+      <PlayerField player={player} />
     </div>
   );
 };

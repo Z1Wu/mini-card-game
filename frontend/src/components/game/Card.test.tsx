@@ -87,3 +87,31 @@ describe('Card', () => {
     vi.useRealTimers()
   })
 })
+
+it('shows only harmony value on harmony cards, including long-press detail', () => {
+  vi.useFakeTimers();
+  render(<Card card={{ ...card, location: 'harmony' }} showVictoryPriority />);
+  expect(screen.getByTitle('调和值')).toBeInTheDocument();
+  expect(screen.queryByTitle('胜利优先级')).not.toBeInTheDocument();
+  fireEvent.mouseDown(screen.getByLabelText(`卡牌：${card.name}`));
+  act(() => vi.advanceTimersByTime(500));
+  expect(screen.queryByText(/胜利优先级/)).not.toBeInTheDocument();
+  vi.useRealTimers();
+});
+it('does not expose faction color through hidden card backs', () => {
+  const view = render(<Card card={{ ...card, name: CardType.CRIMINAL }} showAsFaceDown />);
+  const before = screen.getByLabelText('牌背').outerHTML;
+  view.rerender(<Card card={{ ...card, name: CardType.ALIEN }} showAsFaceDown />);
+  expect(screen.getByLabelText('牌背').outerHTML).toBe(before);
+});
+
+it('keeps accessible harmony and Roman priority with the vertical title', () => {
+  render(<Card card={card} />);
+  const left = screen.getByTitle('调和值');
+  const title = screen.getByTitle(card.name);
+  const right = screen.getByTitle('胜利优先级');
+  expect(left.querySelector('svg')).not.toBeNull();
+  expect(title).toHaveTextContent(card.name);
+  expect(right).toHaveTextContent('Ⅱ');
+  expect(right).toHaveAccessibleName('胜利优先级 2');
+});

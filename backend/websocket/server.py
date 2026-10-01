@@ -42,6 +42,7 @@ class GameWebSocketServer:
         self.game_rules = GameRules(self.game_manager)
         self.honor_student_responses: Dict[str, str] = {}
         self.pending_rich_girl: dict | None = None  # { player_id, card_id, target_player_id, take_card_id?: str }
+        self.pending_view_hand: dict | None = None
         self.pending_news_club: dict | None = None  # { order: [player_id], index: int }
         self.pending_class_rep: dict | None = None  # { player_id, card_id, target_player_id, my_card_id?: str }
         self.pending_honor_student_responders: dict | None = None  # { player_id: "criminal"|"alien" } 仅持犯人/外星人的玩家需响应
@@ -167,6 +168,8 @@ class GameWebSocketServer:
                 await self._handle_reset_game(websocket)
             elif message_type == "play_card":
                 await self._handle_play_card(websocket, data)
+            elif message_type in ("view_hand_confirm", "view_harmony_confirm"):
+                await self._handle_view_hand_confirm(websocket, data)
             elif message_type == "skill_choice":
                 await self._handle_skill_choice(websocket, data)
             elif message_type == "news_club_choice":
@@ -301,6 +304,14 @@ class GameWebSocketServer:
             await self._send_infected_prompt(websocket)
             return
 
+        if self.pending_view_hand and self.pending_view_hand["player_id"] == player_id:
+            if self.pending_view_hand.get("kind") == "harmony":
+                await self.send_to_client(websocket, {"type": "view_harmony", "harmony_area": [c.model_dump() for c in game.harmony_area]})
+                return
+            target = next((p for p in game.players if p.id == self.pending_view_hand["target_player_id"]), None)
+            if target:
+                await self.send_to_client(websocket, {"type": "view_hand", "target_player_id": target.id, "target_player_name": target.name, "hand": [c.model_dump() for c in target.hand]})
+            return
         if self.pending_rich_girl and self.pending_rich_girl.get("player_id") == player_id:
             target_id = self.pending_rich_girl["target_player_id"]
             target = next((p for p in game.players if p.id == target_id), None)
@@ -451,6 +462,7 @@ class GameWebSocketServer:
             })
             return
         self.pending_rich_girl = None
+        self.pending_view_hand = None
         self.pending_news_club = None
         self.pending_class_rep = None
         self.pending_honor_student_responders = None
@@ -485,6 +497,7 @@ class GameWebSocketServer:
         scenario_name = str(data.get("scenario") or "")
         try:
             self.pending_rich_girl = None
+            self.pending_view_hand = None
             self.pending_news_club = None
             self.pending_class_rep = None
             self.pending_honor_student_responders = None
@@ -543,6 +556,9 @@ class GameWebSocketServer:
 
         player_id = await self._authenticated_actor_id(websocket, data)
         if not player_id:
+            return
+        if self.pending_view_hand:
+            await self.send_to_client(websocket, {"type": "error", "message": "等待查看牌面确认完成"})
             return
         card_id = data.get("card_id")
         usage_type_str = data.get("usage_type")
@@ -671,6 +687,7 @@ class GameWebSocketServer:
                         if ws:
                             await self.send_to_client(ws, {"type": "honor_student_choice_required", "role": role})
             if is_discipline_view and target_player_id:
+                self.pending_view_hand = {"player_id": player_id, "target_player_id": target_player_id}
                 target_player = next((p for p in self.game_manager.game.players if p.id == target_player_id), None)
                 if target_player and websocket:
                     await self.send_to_client(websocket, {
@@ -692,6 +709,7 @@ class GameWebSocketServer:
                         "target_player_name": target_player.name,
                     })
             if is_library and usage_type == CardUsageType.SKILL and websocket:
+                self.pending_view_hand = {"player_id": player_id, "kind": "harmony"}
                 g = self.game_manager.game
                 await self.send_to_client(websocket, {
                     "type": "view_harmony",
@@ -735,6 +753,23 @@ class GameWebSocketServer:
                 "type": "error",
                 "message": fail_message
             })
+
+    async def _handle_view_hand_confirm(self, websocket, data: dict):
+        actor_id = await self._authenticated_actor_id(websocket, data)
+        if not actor_id or not self.pending_view_hand or self.pending_view_hand["player_id"] != actor_id:
+            return
+        expected_type = "view_harmony_confirm" if self.pending_view_hand.get("kind") == "harmony" else "view_hand_confirm"
+        if data.get("type", expected_type) != expected_type:
+            return
+        self.pending_view_hand = None
+        self.game_manager.next_turn()
+        await self._broadcast_game_state()
+        game = self.game_manager.game
+        if game and game.state == GameState.GAME_OVER:
+            checker = VictoryChecker(game)
+            winner = checker.check_victory()
+            if winner:
+                await self._broadcast_game_over(winner, checker.get_settlement_summary())
 
     async def _handle_skill_choice(self, websocket: websockets.WebSocketServerProtocol, data: dict):
         player_id = await self._authenticated_actor_id(websocket, data)
@@ -891,6 +926,7 @@ class GameWebSocketServer:
         self.pending_news_club["index"] = idx + 1
         if idx + 1 >= len(order):
             self.game_rules.game_manager.next_turn()
+            self.pending_view_hand = None
             self.pending_news_club = None
             await self.broadcast({"type": "news_club_ended"})
             await self._broadcast_game_state()

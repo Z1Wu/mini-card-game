@@ -12,7 +12,7 @@ export async function run(ctx) {
   const actorHand = await ctx.actorPage.evaluate(() => JSON.parse(window.render_game_to_text()).game.own_hand.map((card) => card.name));
   const giveName = actorHand.find((cardName) => cardName !== '班长');
   assert.ok(giveName, 'actor needs a second card to offer');
-  const receiveName = await targetPage.evaluate(() => document.querySelector('.table-hand [aria-label^="卡牌："]')?.getAttribute('aria-label')?.replace(/^卡牌：/, ''));
+  const receiveName = await targetPage.evaluate(() => document.querySelector('.table-hand-scroll [aria-label^="卡牌："]')?.getAttribute('aria-label')?.replace(/^卡牌：/, ''));
   assert.ok(receiveName, 'target needs a visible hand card');
 
   await chooseVisibleCard(ctx.actorPage, '班长', '特技');
@@ -20,6 +20,13 @@ export async function run(ctx) {
   let modal = ctx.actorPage.locator('.game-modal').filter({ hasText: /班长：选一张手牌与 玩家2 交换/ });
   await modal.waitFor({ state: 'visible' });
   await modal.getByLabel(`卡牌：${giveName}`, { exact: true }).first().click();
+  const footerStyle = await modal.locator(':scope > div > .flex.gap-2:last-child').evaluate(node => {
+    const style = getComputedStyle(node);
+    return { alignment: style.justifyContent, background: style.backgroundImage };
+  });
+  assert.equal(footerStyle.alignment, 'center', 'Confirmation is centered');
+  assert.equal(footerStyle.background, 'none', 'Confirmation footer has no blue strip');
+  await ctx.screenshot('class-representative-confirmation', ctx.actorPage);
   await modal.getByRole('button', { name: '确认', exact: true }).click();
   await ctx.actorPage.getByText('正在等待 玩家2 选牌', { exact: true }).waitFor({ state: 'visible' });
   await ctx.screenshot('class-representative-waiting', ctx.actorPage);
@@ -47,3 +54,4 @@ export async function run(ctx) {
     extraCoverage: ['waiting-panel', 'result-panel'],
   };
 }
+

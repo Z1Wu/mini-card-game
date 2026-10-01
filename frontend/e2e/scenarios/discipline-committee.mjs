@@ -14,14 +14,19 @@ export async function run(ctx) {
   // Effect semantics: the private view must equal the target's real hand.
   const viewedNames = (await readCardNamesIn(modal)).sort();
   const targetPage = ctx.pagesById.get('player2');
-  const actualNames = (await targetPage.evaluate(() => [...document.querySelectorAll('.table-hand [aria-label^="卡牌："]')]
+  const actualNames = (await targetPage.evaluate(() => [...document.querySelectorAll('.table-hand-scroll [aria-label^="卡牌："]')]
     .map((card) => card.getAttribute('aria-label').replace(/^卡牌：/, '')))).sort();
   assert.deepEqual(viewedNames, actualNames);
   for (const id of ['player3', 'player4']) {
     assert.equal(await ctx.pagesById.get(id).getByRole('heading', { name: '风纪委员：玩家2 的手牌' }).count(), 0);
   }
   await ctx.screenshot('discipline-private-result', ctx.actorPage);
-  await ctx.actorPage.getByRole('button', { name: '关闭', exact: true }).click();
+  assert.equal((await readState(ctx.actorPage)).game.current_player_id, 'player1', 'Viewing keeps the actor turn');
+  const before = (await readState(ctx.actorPage)).game.turn_count;
+  await targetPage.evaluate(() => {});
+  await ctx.actorPage.getByRole('button', { name: '确认完成', exact: true }).click();
+  await ctx.actorPage.waitForFunction(() => JSON.parse(window.render_game_to_text()).game.current_player_id !== 'player1');
+  assert.equal((await readState(ctx.actorPage)).game.turn_count, before + 1);
   await waitForLatestAction(ctx.actorPage, '特技', '风纪委员', 'player2');
   const state = await readState(ctx.actorPage);
   // View-only effect: playing the card costs the actor one hand card (face-up

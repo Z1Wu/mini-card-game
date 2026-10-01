@@ -152,7 +152,7 @@ class GameRules:
             player, card, target_player_id, target_card_id,
             source_player_id, hand_card_id, harmony_card_id,
         )
-        if card.name != CardType.NEWS_CLUB:
+        if card.name not in (CardType.NEWS_CLUB, CardType.DISCIPLINE_COMMITTEE, CardType.LIBRARY_COMMITTEE):
             self.game_manager.next_turn()
         logger.info("特技出卡成功")
         return True
