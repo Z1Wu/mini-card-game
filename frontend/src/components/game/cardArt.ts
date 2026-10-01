@@ -1,16 +1,16 @@
-import accompliceArt from '../../assets/art/cards/accomplice-soft-red-v3.webp';
-import alienArt from '../../assets/art/cards/alien-soft-red-v3.webp';
-import classRepresentativeArt from '../../assets/art/cards/class-representative-soft-red-v3.webp';
-import criminalArt from '../../assets/art/cards/criminal-soft-red-v3.webp';
-import disciplineCommitteeArt from '../../assets/art/cards/discipline-committee-soft-red-v3.webp';
-import healthCommitteeArt from '../../assets/art/cards/health-committee-soft-red-v3.webp';
-import homeClubArt from '../../assets/art/cards/home-club-soft-red-v3.webp';
-import honorStudentArt from '../../assets/art/cards/honor-student-soft-red-v3.webp';
-import infectedArt from '../../assets/art/cards/infected-soft-red-v3.webp';
-import libraryCommitteeArt from '../../assets/art/cards/library-committee-soft-red-v3.webp';
-import newsClubArt from '../../assets/art/cards/news-club-soft-red-v3.webp';
-import richGirlArt from '../../assets/art/cards/rich-girl-soft-red-v3.webp';
-import studentCouncilPresidentArt from '../../assets/art/cards/student-council-president-soft-red-v3.webp';
+import accompliceArt from '../../assets/art/cards/accomplice-horror-v2.webp';
+import alienArt from '../../assets/art/cards/alien-horror-v2.webp';
+import classRepresentativeArt from '../../assets/art/cards/class-representative-horror-v2.webp';
+import criminalArt from '../../assets/art/cards/criminal-horror-v2.webp';
+import disciplineCommitteeArt from '../../assets/art/cards/discipline-committee-horror-v2.webp';
+import healthCommitteeArt from '../../assets/art/cards/health-committee-horror-v2.webp';
+import homeClubArt from '../../assets/art/cards/home-club-horror-v2.webp';
+import honorStudentArt from '../../assets/art/cards/honor-student-horror-v2.webp';
+import infectedArt from '../../assets/art/cards/infected-horror-v2.webp';
+import libraryCommitteeArt from '../../assets/art/cards/library-committee-horror-v2.webp';
+import newsClubArt from '../../assets/art/cards/news-club-horror-v2.webp';
+import richGirlArt from '../../assets/art/cards/rich-girl-horror-v2.webp';
+import studentCouncilPresidentArt from '../../assets/art/cards/student-council-president-horror-v2.webp';
 import { CardType as RoleType } from '../../types/game';
 
 /** Match the illustrated grade neckerchief: first blue, second green, third red. */
