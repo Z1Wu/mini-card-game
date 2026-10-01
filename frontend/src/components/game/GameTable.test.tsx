@@ -44,7 +44,7 @@ describe('GameTable information hierarchy', () => {
     expect(screen.getByLabelText('质疑牌 1 张')).toHaveClass('is-active');
     expect(screen.getByLabelText('你有 1 张质疑牌')).toBeInTheDocument();
     expect(screen.getByText('请选择一张手牌')).toBeInTheDocument();
-    expect(screen.getByText('场上暂无公开牌').closest('.table-field')).toHaveClass('table-field-empty');
+    expect(screen.queryByText('场上暂无公开牌')).not.toBeInTheDocument();
   });
 
   it('keeps a server-driven multi-player wait visible to the current actor', () => {

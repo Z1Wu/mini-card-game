@@ -181,3 +181,43 @@
 .game-card-title { font-size: min(12.5cqw, 1.4rem); white-space: nowrap; overflow-wrap: normal; line-height: 1.05; }
 .game-card-stat { position: relative; z-index: 1; font-weight: 900; line-height: 1; text-align: center; color: #302124; font-variant-numeric: tabular-nums; }
 .game-card-stat-priority { font-family: Georgia, 'Times New Roman', serif; font-size: .95em; }
+
+
+/* Public cards stay in separate lanes attached to their owner. */
+.player-field { display: flex; gap: 6px; overflow-x: auto; padding: 3px; scrollbar-width: thin; }
+.player-field-card { flex: 0 0 84px; width: 84px; }
+.game-table .table-seats { position: relative; display: grid; height: auto; padding: 12px 18px 0; gap: 12px; align-items: start; }
+.table-seats.opponents-2 { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.table-seats.opponents-3 { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.table-seats.opponents-4 { grid-template-columns: repeat(4,minmax(0,1fr)); }
+.game-table .table-seats .table-seat { position: relative; left: auto; right: auto; top: auto; transform: none; max-width: 100%; justify-self: center; flex-direction: column; width: min(100%,220px); }
+.game-table .table-seat > .player-field { width: 100%; max-width: 100%; }
+.game-table .table-center { justify-content: flex-start; padding-top: 10px; padding-bottom: 210px; }
+.game-table .table-objective { margin-left: 0; margin-right: auto; }
+.table-local-field { position: absolute; bottom: 60px; left: 12px; }
+.table-local-field .player-field { max-width: 280px; }
+.table-local-field::before { content: '你的场牌'; display: block; color: #e1cdc6; font-size: 11px; }
+@media (orientation: landscape) and (max-height: 500px) {
+  .game-table .table-seats { padding: 3px 8px 0; gap: 6px; }
+  .game-table .table-seat { gap: 0; padding: 2px 4px; min-height: 0; }
+  .game-table .table-seat-name { font-size: 11px; line-height: 12px; }
+  .game-table .table-seat-meta { margin-top: 1px; }
+  .game-table .table-seat-stat { font-size: 9px; line-height: 11px; padding: 0 2px; }
+  .game-table .table-seat-stat-label { font-size: 8px; }
+  .game-table .table-seat-icon { width: 24px; height: 24px; }
+  .player-field-card { flex-basis: 64px; width: 64px; }
+  .game-table .player-field-card .game-card { aspect-ratio: 4/5; }
+  .game-table .table-seat > .player-field { padding: 2px 0 0; gap: 4px; }
+  .game-table .table-center { padding-top: 4px; }
+  .game-table .table-objective { min-height: 24px; padding: 2px 8px; }
+  .game-table .table-objective-summary { font-size: 10px; line-height: 16px; }
+  .game-table .table-objective-summary strong { font-size: 16px; line-height: 16px; }
+  .game-table .table-objective-cards { display: none; }
+  .table-local-field { bottom: 56px; left: 8px; }
+  .table-local-field .player-field { max-width: 128px; }
+}
+
+.game-table .table-objective-card { width: 22px; }
+@media (orientation: landscape) and (max-height: 500px) {
+  .game-table .table-hand:has(.table-decision) .table-hand-card { width: 60px; }
+}

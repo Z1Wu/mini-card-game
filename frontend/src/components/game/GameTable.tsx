@@ -20,15 +20,12 @@ interface GameTableProps {
   speakingPlayerId?: string | null;
 }
 
-/** Full-screen card-game table: opponents around an oval table, play area in center, hand fixed at bottom. */
+/** Full-screen card-game table: owner-scoped public plays, central harmony target, local hand at bottom. */
 export const GameTable: React.FC<GameTableProps> = (props) => {
   const opponents = props.players.filter(p => p.id !== props.localPlayerId);
   const isMyTurn = props.players[props.currentPlayerIndex]?.id === props.localPlayerId;
   const harmonyCount = props.harmonyArea.length;
 
-  const allFieldCards = props.players.flatMap(p =>
-    (p.field_cards ?? []).map(c => ({ player: p, card: c }))
-  );
 
   return (
     <div className="game-table">
@@ -71,22 +68,6 @@ export const GameTable: React.FC<GameTableProps> = (props) => {
             </div>
           </section>
 
-          {/* Face-up field cards */}
-          <div className={`table-field${allFieldCards.length === 0 ? ' table-field-empty' : ''}`}>
-            <span className="table-field-heading">场上牌</span>
-            {allFieldCards.length > 0 ? (
-              allFieldCards.map(({ player, card }) => (
-                <div key={card.id} className="table-field-item">
-                  <span className="table-field-label">{player.name}</span>
-                  <div className="w-14 sm:w-16">
-                    <CardView card={card} showAsFaceDown={false} />
-                  </div>
-                </div>
-              ))
-            ) : (
-              <span className="table-zone-empty">场上暂无公开牌</span>
-            )}
-          </div>
 
         </div>
       </div>

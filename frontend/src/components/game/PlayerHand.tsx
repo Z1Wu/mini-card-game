@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card as CardView } from './Card';
 import { Card, CardType, CardUsageType, Player } from '../../types/game';
+import { PlayerField } from './PlayerField';
 import { CardDecisionPanel } from './CardDecisionPanel';
 
 interface PlayerHandProps {
@@ -30,6 +31,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
   return (
     <div className={`table-hand${isSettlement ? ' table-hand-settlement' : ''}${isCurrentTurn ? ' table-hand-my-turn' : ''}${player.hand.length <= 9 ? ' table-hand-compact' : ''}`} aria-label="我的手牌">
+      <div className="table-local-field"><PlayerField player={player} /></div>
       {(player.doubt_cards?.length ?? 0) > 0 && (
         <div className="table-hand-doubt-state" aria-label={`你有 ${player.doubt_cards.length} 张质疑牌`}>
           <span aria-hidden="true">!</span> 被质疑 ×{player.doubt_cards.length}

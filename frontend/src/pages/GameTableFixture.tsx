@@ -11,7 +11,7 @@ const player = (index: number): Player => ({
   id: `player-${index}`,
   name: ['小林（你）', '小王', '小陈', '小李', '小周'][index],
   hand: index === 0 ? roles.slice(0, 4).map((role, cardIndex) => card(`hand-${cardIndex}`, role)) : [],
-  field_cards: index % 2 ? [card(`field-${index}`, roles[index])] : [],
+  field_cards: Array.from({ length: Math.min(8, Math.max(1, Number(new URLSearchParams(window.location.search).get('fields')) || 1)) }, (_, i) => ({ ...card(`field-${index}-${i}`, roles[index]), location: 'field' as const })),
   doubt_cards: index > 1 ? [{ ...card(`doubt-${index}`, roles[index]), hidden: true, is_face_up: false }] : [],
   is_connected: true,
   current_hand_count: index === 0 ? 4 : 4 - (index % 2),

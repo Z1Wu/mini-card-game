@@ -107,8 +107,9 @@ async function initializeScenario(scenario, host, byId) {
   }));
   for (const [index, player] of players.entries()) {
     const expectedSize = index === 0 ? actorHandSize : 3;
-    assert.equal(await player.page.locator('.table-hand [aria-label^="卡牌："]').count(), expectedSize, `${scenario.name}: ${player.username} should see exactly its own cards`);
-    assert.ok(await player.page.locator('.table-seat-cards [aria-label="牌背"]').count() > 0, `${scenario.name}: opponent hands should render only as card backs`);
+    assert.equal(await player.page.locator('.table-hand-scroll [aria-label^="卡牌："]').count(), expectedSize, `${scenario.name}: ${player.username} should see exactly its own cards`);
+    assert.equal(await player.page.locator('.table-seat-cards').count(), 0, `${scenario.name}: opponent hand backs are omitted`);
+    assert.ok(await player.page.locator('.table-seat-stat-hand').count() > 0, `${scenario.name}: opponent hand counts remain visible`);
   }
   const state = await readState(host.page);
   assert.equal(state.game.current_player_id, 'player1', `${scenario.name}: player1 must be the deterministic actor`);

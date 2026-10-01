@@ -14,7 +14,7 @@ export async function run(ctx) {
   // Effect semantics: the private view must equal the target's real hand.
   const viewedNames = (await readCardNamesIn(modal)).sort();
   const targetPage = ctx.pagesById.get('player2');
-  const actualNames = (await targetPage.evaluate(() => [...document.querySelectorAll('.table-hand [aria-label^="卡牌："]')]
+  const actualNames = (await targetPage.evaluate(() => [...document.querySelectorAll('.table-hand-scroll [aria-label^="卡牌："]')]
     .map((card) => card.getAttribute('aria-label').replace(/^卡牌：/, '')))).sort();
   assert.deepEqual(viewedNames, actualNames);
   for (const id of ['player3', 'player4']) {

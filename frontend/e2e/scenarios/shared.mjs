@@ -21,7 +21,7 @@ export async function waitForLatestAction(page, usageType, cardName, targetPlaye
 
 /** Visible own-hand card names, in display order. */
 export async function readHandNames(page) {
-  const labels = await page.locator('.table-hand [aria-label^="卡牌："]').evaluateAll((cards) => cards
+  const labels = await page.locator('.table-hand-scroll [aria-label^="卡牌："]').evaluateAll((cards) => cards
     .filter((card) => card instanceof HTMLElement && card.offsetParent !== null)
     .map((card) => card.getAttribute('aria-label')));
   return labels.map(cardNameFromLabel);

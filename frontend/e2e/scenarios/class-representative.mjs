@@ -12,7 +12,7 @@ export async function run(ctx) {
   const actorHand = await ctx.actorPage.evaluate(() => JSON.parse(window.render_game_to_text()).game.own_hand.map((card) => card.name));
   const giveName = actorHand.find((cardName) => cardName !== '班长');
   assert.ok(giveName, 'actor needs a second card to offer');
-  const receiveName = await targetPage.evaluate(() => document.querySelector('.table-hand [aria-label^="卡牌："]')?.getAttribute('aria-label')?.replace(/^卡牌：/, ''));
+  const receiveName = await targetPage.evaluate(() => document.querySelector('.table-hand-scroll [aria-label^="卡牌："]')?.getAttribute('aria-label')?.replace(/^卡牌：/, ''));
   assert.ok(receiveName, 'target needs a visible hand card');
 
   await chooseVisibleCard(ctx.actorPage, '班长', '特技');

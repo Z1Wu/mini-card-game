@@ -1,6 +1,6 @@
 import React from 'react';
-import { Card as CardModel, CardType, Player } from '../../types/game';
-import { Card as CardView } from './Card';
+import { Player } from '../../types/game';
+import { PlayerField } from './PlayerField';
 
 interface PlayerZoneProps {
   player: Player;
@@ -9,27 +9,11 @@ interface PlayerZoneProps {
   isSpeaking?: boolean;
 }
 
-const faceDownCard = (playerId: string, index: number): CardModel => ({
-  id: `opponent-hand-${playerId}-${index}`,
-  name: CardType.HOME_CLUB,
-  description: '',
-  harmony_value: 0,
-  victory_priority: 0,
-  victory_condition: '',
-  owner_id: playerId,
-  is_face_up: false,
-  location: 'hand',
-  target_player_id: null,
-});
-
 export const PlayerZone: React.FC<PlayerZoneProps> = ({ player, isCurrentTurn, isSpeaking = false }) => {
   const isWaitingSettlement = player.current_hand_count === 1;
   const initial = player.name.charAt(0);
   const fieldCount = player.field_cards?.length ?? 0;
   const doubtCount = player.doubt_cards?.length ?? 0;
-  const handCards = player.current_hand_count > 0
-    ? Array.from({ length: Math.min(player.current_hand_count, 4) }, (_, i) => faceDownCard(player.id, i))
-    : [];
 
   return (
     <div
@@ -64,18 +48,7 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({ player, isCurrentTurn, i
           {isWaitingSettlement && <div className="table-seat-settle">等待结算</div>}
         </div>
       </div>
-      {handCards.length > 0 && (
-        <div className="table-seat-cards" aria-hidden="true">
-          {handCards.map(card => (
-            <div key={card.id} className="table-seat-card">
-              <CardView card={card} showAsFaceDown />
-            </div>
-          ))}
-          {player.current_hand_count > handCards.length && (
-            <b className="table-seat-card-overflow">+{player.current_hand_count - handCards.length}</b>
-          )}
-        </div>
-      )}
+      <PlayerField player={player} />
     </div>
   );
 };
