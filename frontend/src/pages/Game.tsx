@@ -874,7 +874,7 @@ export const Game: React.FC = () => {
                   ))}
                 </div>
               )}
-              <Button variant="primary" onClick={() => setViewHarmonyResult(null)}>关闭</Button>
+              <Button variant="primary" onClick={() => { send({ type: 'view_harmony_confirm', player_id: playerId! }); setViewHarmonyResult(null); }}>确认完成</Button>
             </div>
           </div>
         )}

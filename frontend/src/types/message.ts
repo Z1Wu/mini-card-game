@@ -16,6 +16,7 @@ export type MessageType =
   | 'play_card'
   | 'skill_choice_required'
   | 'skill_choice'
+  | 'view_harmony_confirm'
   | 'view_hand_confirm'
   | 'view_hand'
   | 'view_harmony'
@@ -340,7 +341,7 @@ export interface NewsClubYouChoseMessage extends BaseMessage {
 
 /** 风纪委员特技：服务端下发「查看目标手牌」结果，仅发给使用风纪委员的玩家 */
 export interface ViewHandConfirmMessage extends BaseMessage {
-  type: 'view_hand_confirm';
+  type: 'view_hand_confirm' | 'view_harmony_confirm';
   player_id: string;
 }
 
