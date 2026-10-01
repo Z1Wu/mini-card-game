@@ -32,6 +32,9 @@ try {
     }
     await page.locator('.table-hand-scroll').getByLabel(/^卡牌：/).first().focus();
     await page.keyboard.press('Enter');
+    const selectedBounds = await page.locator('.table-hand-card-lifted').boundingBox();
+    const scrollBounds = await page.locator('.table-hand-scroll').boundingBox();
+    assert.ok(selectedBounds.y >= scrollBounds.y && selectedBounds.y + selectedBounds.height <= scrollBounds.y + scrollBounds.height, 'Selected hand card remains fully inside the scroll viewport');
     const objectiveBox = await page.locator('.table-objective').boundingBox();
     const decisionBox = await page.locator('.table-decision').boundingBox();
     assert.ok(objectiveBox && decisionBox, `${viewport.width}×${viewport.height}, ${players} players is missing objective or decision bounds`);
