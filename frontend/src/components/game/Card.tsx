@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Card as CardModel, CardType as RoleType, CardUsageType } from '../../types/game';
 import { cn } from '../../utils/helpers';
-import { roleArt } from './cardArt';
+import { roleArt, roleGradeColor } from './cardArt';
 
 interface CardProps {
   card: CardModel;
@@ -51,6 +51,7 @@ export const Card: React.FC<CardProps> = ({
   const [showDescriptionPopover, setShowDescriptionPopover] = useState(false);
   const visual = roleVisuals[card.name] ?? roleVisuals[RoleType.HOME_CLUB];
   const cardStyle = {
+    '--grade-color': roleGradeColor[card.name] ?? '#354b70',
     '--card-tone': visual.tone,
     '--card-accent': visual.accent,
     '--card-glow': visual.glow,
