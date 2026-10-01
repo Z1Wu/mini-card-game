@@ -1,0 +1,150 @@
+/* Issue #135: after-school club cards on a sunlit classroom desk. */
+.game-table {
+  background: url('../art/tabletop-campus-v1.webp') center / cover no-repeat #e5c7a1;
+  box-shadow: inset 0 0 80px rgba(116, 80, 46, .08);
+}
+.game-table::before { display: none; }
+.game-table .table-felt {
+  border: 0;
+  border-radius: 16px;
+  background: none;
+  box-shadow: none;
+}
+
+/* Paper borders, portrait window and a school roster name strip. */
+.game-card:not(.game-card-back) {
+  border: 1px solid color-mix(in srgb, var(--card-tone) 45%, #c7baa3);
+  border-radius: 7px;
+  background: #fffdf6;
+  box-shadow: 0 4px 9px rgba(90, 65, 39, .2);
+  padding: 5%;
+}
+.game-card:not(.game-card-back)::before,
+.game-card:not(.game-card-back)::after { display: none; }
+.game-card-face { border-radius: 3px; background: #f7f0e4; }
+.game-card-art {
+  inset: 0 0 21%;
+  height: 79%;
+  opacity: 1;
+  object-position: center 26%;
+  filter: saturate(.8) brightness(1.08);
+}
+.game-card-art-scrim {
+  background: linear-gradient(180deg, rgba(255, 250, 233, .07), transparent 58%, rgba(255, 253, 246, .2) 79%, #fffdf6 80%);
+}
+.game-card:hover .game-card-art { opacity: 1; filter: saturate(.9) brightness(1.08); }
+.game-card-corner {
+  top: 3%;
+  border-radius: 4px;
+  border-color: rgba(104, 94, 74, .15);
+  background: rgba(255, 253, 246, .96);
+  box-shadow: 0 2px 4px rgba(67, 55, 39, .12);
+}
+.game-card-corner-left { left: 3%; }
+.game-card-corner-right { right: 3%; }
+.game-card-title-wrap { left: 0; right: 0; bottom: 0; min-height: 21%; }
+.game-card-ribbon {
+  inset: 0;
+  border-radius: 0;
+  background: #fffdf6;
+  border-top: 2px solid color-mix(in srgb, var(--card-tone) 60%, #fffdf6);
+  box-shadow: none;
+}
+.game-card-title { color: #334155; text-shadow: none; font-weight: 850; }
+.game-card-criminal:not(.game-card-back) { border: 2px solid #c54c56; }
+.table-hand-card-lifted .game-card { outline-color: #417675; box-shadow: 0 5px 12px rgba(46, 78, 75, .3); }
+
+/* A modest school notebook cover, identical for every hidden role. */
+.game-card-back {
+  border: 1px solid #8ca7a1;
+  border-radius: 6px;
+  background: repeating-linear-gradient(0deg, transparent 0 7px, rgba(255,255,255,.07) 7px 8px), #638880;
+  box-shadow: 0 3px 7px rgba(66, 62, 45, .2);
+}
+.game-card-back::before { border: 1px solid rgba(255, 253, 235, .45); border-radius: 3px; box-shadow: none; }
+.game-card-back::after { display: none; }
+.game-card-back-emblem {
+  width: 39%;
+  transform: none;
+  border-radius: 50%;
+  border: 1px solid #f8ecd3;
+  background: #f8ecd3;
+  box-shadow: none;
+}
+.game-card-back-emblem::before { inset: 21%; border: 1px solid #638880; transform: rotate(45deg); }
+.game-card-back-emblem::after { background: #638880; box-shadow: none; }
+
+/* Cream paper, school-uniform ink and soft club colors. */
+.game-table .table-seat,
+.game-table .table-seat-current {
+  color: #334155;
+  border-color: #c7b99f;
+  background: rgba(255, 253, 245, .96);
+  box-shadow: 0 3px 9px rgba(109, 82, 49, .14);
+}
+.game-table .table-seat-current { border: 2px solid #56877c; box-shadow: 0 0 0 2px rgba(86, 135, 124, .15); }
+.game-table .table-seat-current::before { color: #fff; background: #56877c; box-shadow: none; }
+.game-table .table-seat-name,
+.game-table .table-hand-title { color: #344858; }
+.game-table .table-seat-icon,
+.game-table .table-hand-icon { color: #fff; background: #648680; border-color: #fffaf0; box-shadow: none; }
+.game-table .table-seat-stat { background: #f0eee3; border-color: #dbd5c4; }
+.game-table .table-seat-stat-label,
+.game-table .table-seat-stat strong { color: #45586a; }
+.game-table .table-seat-stat-doubt.is-active { background: #f9e3d5; border-color: #d8a28a; }
+.game-table .table-seat-stat-doubt.is-active strong,
+.game-table .table-seat-stat-doubt.is-active .table-seat-stat-label { color: #8c4b3b; }
+.game-table .table-seat-cards { background: none; }
+.game-table .table-seat-card-overflow,
+.game-table .table-hand-stats { color: #5e6b6b; }
+.game-table .table-hand { background: linear-gradient(0deg, rgba(246,236,217,.96), rgba(246,236,217,.85) 76%, transparent); border-color: rgba(116, 94, 62, .2); box-shadow: none; }
+.game-table .table-hand-info { background: #fffaf0; border-color: #c6b99d; box-shadow: 0 3px 8px rgba(109,82,49,.12); }
+.game-table .table-turn-task { background: #fffaf0; border-color: #c5b99e; box-shadow: 0 2px 5px rgba(97,75,41,.12); color: #546168; }
+.game-table .table-turn-task strong,
+.game-table .table-turn-task span:last-child { color: #3f6e67; }
+.game-table .table-decision { color: #394d5b; background: #fffaf0; border-color: #c9bda5; box-shadow: 0 3px 8px rgba(101,78,44,.12); }
+.game-table .table-decision-summary strong,
+.game-table .table-decision-summary em,
+.game-table .table-decision-details summary { color: #3f6e67; }
+.game-table .table-decision-summary span { color: #4e5b64; background: #eeeadd; }
+.game-table .table-decision-skill,
+.game-table .table-decision-victory { color: #455465; }
+.game-table .table-decision-skill b { color: #a35253; }
+.game-table .table-decision-victory b { color: #3f6e67; }
+.game-table .table-decision-previews span { color: #455465; background: #eeeadd; }
+.game-table .table-decision-previews b { color: #344858; }
+.game-table .table-objective { width: fit-content; max-width: 100%; min-height: 2.8rem; margin: 0 auto; padding: .4rem .8rem; gap: .7rem; border-radius: 10px; border-color: #c6b99d; background: rgba(255,250,238,.94); box-shadow: 0 3px 8px rgba(109,82,49,.12); }
+.game-table .table-objective-seal,
+.game-table .table-objective-kicker,
+.game-table .table-objective-unknown,
+.game-table .table-objective-empty,
+.game-table .table-objective-summary i { display: none; }
+.game-table .table-objective-summary { gap: .7rem; }
+.game-table .table-objective-cards:has(.table-objective-empty) { display: none; }
+.game-table .table-objective-seal { color: #fffaf0; border-color: #78988d; background: #648680; box-shadow: none; }
+.game-table .table-objective-summary,
+.game-table .table-objective-summary strong,
+.game-table .table-objective-unknown { color: #3d5660; }
+.game-table .table-objective-kicker,
+.game-table .table-objective-empty { color: #6a776f; }
+.game-table .table-field,
+.game-table .table-field:has(.table-zone-empty) { background: rgba(255,250,238,.7); border-color: #c6b99d; }
+.game-table .table-field.table-field-empty { background: none; }
+.game-table .table-field-heading,
+.game-table .table-field-label,
+.game-table .table-zone-empty { color: #586858; }
+.table-hand-action-harmony { background: #b96b65; }
+.table-hand-action-doubt { background: #ae8347; }
+.table-hand-action-skill { background: #557c79; }
+.table-hand-action-cancel { background: #7b8586; }
+.game-hud-view,
+.game-menu-trigger,
+.action-history-toggle { color: #344858; background: #fffaf0; border-color: #c6b99d; box-shadow: 0 3px 8px rgba(109,82,49,.12); }
+.game-hud-name,
+.game-hud-round { color: #344858; }
+.game-hud-view-mark { color: #fffaf0; background: #648680; }
+.voice-ptt { color: #fffaf0; border-color: #78988d; background: #557c79; box-shadow: 0 3px 8px rgba(109,82,49,.18); }
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .game-table { background-color: #e5c7a1; box-shadow: none; }
+}
