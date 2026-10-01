@@ -16,6 +16,7 @@ export type MessageType =
   | 'play_card'
   | 'skill_choice_required'
   | 'skill_choice'
+  | 'view_hand_confirm'
   | 'view_hand'
   | 'view_harmony'
   | 'news_club_choice_required'
