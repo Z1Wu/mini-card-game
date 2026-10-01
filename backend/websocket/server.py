@@ -963,6 +963,10 @@ class GameWebSocketServer:
             "game_state": self._serialize_game_state(player_id),
         })
 
+        # A restored game page subscribes after session replay. Re-send only
+        # this authenticated player's outstanding private interaction.
+        await self._resume_pending_interaction(player_id, websocket)
+
     async def _handle_query_game_status(self, websocket: websockets.WebSocketServerProtocol):
         """无需登录即可查询：当前是否有对局、对局状态、参与玩家名称。"""
         g = self.game_manager.game

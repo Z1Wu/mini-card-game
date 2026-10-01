@@ -115,9 +115,22 @@ export const Game: React.FC = () => {
   });
 
   useEffect(() => {
-    if (!playerId) {
+    if (playerId) return;
+    const session = wsService.getSavedSession();
+    if (!session) {
       navigate('/', { replace: true });
+      return;
     }
+    const restoreIdentity = (message: { player_id: string; player_name: string; reconnect_token: string }) => {
+      const store = usePlayerStore.getState();
+      store.setUsername(session.username);
+      store.setRoomCode(session.roomCode);
+      store.setReconnectToken(message.reconnect_token);
+      store.setPlayer(message.player_id, message.player_name);
+    };
+    wsService.on('reconnect_success', restoreIdentity);
+    void wsService.connect().catch(() => navigate('/', { replace: true }));
+    return () => wsService.off('reconnect_success', restoreIdentity);
   }, [playerId, navigate]);
 
   useEffect(() => {
@@ -242,6 +255,8 @@ export const Game: React.FC = () => {
     const handleNewsClubEnded = () => {
       setNewsClubCurrentChooserId(null);
       setNewsClubMyChosenCard(null);
+      setPendingNewsClubChoice(null);
+      setNewsClubSelectedCardId(null);
     };
     const handleError = (message: { type: string; message?: string }) => {
       setGameError(message.message || '操作失败');
@@ -270,6 +285,10 @@ export const Game: React.FC = () => {
     wsService.on('class_rep_phase', handleClassRepPhase);
     wsService.on('class_rep_result', handleClassRepResult);
 
+    // Session replay can arrive before this page subscribes to private choices.
+    const currentId = usePlayerStore.getState().playerId;
+    if (currentId) wsService.send({ type: 'get_game_state', player_id: currentId });
+
     return () => {
       presentationTimers.forEach(clearTimeout);
       wsService.off('game_state');
@@ -293,7 +312,7 @@ export const Game: React.FC = () => {
       wsService.off('class_rep_phase');
       wsService.off('class_rep_result');
     };
-  }, [setGameState, navigate]);
+  }, [setGameState, navigate, playerId]);
 
   const handlePlayCard = (card: CardType, usageType: CardUsageType, targetPlayerId?: string, targetCardId?: string, handCardId?: string, harmonyCardId?: string, sourcePlayerId?: string) => {
     if (usageType === CardUsageType.DOUBT && targetPlayerId == null) {
@@ -908,6 +927,16 @@ export const Game: React.FC = () => {
           </div>
         )}
 
+        {newsClubCurrentChooserId === playerId && !pendingNewsClubChoice && (
+          <Button className="fixed top-16 left-3 z-50" onClick={() => {
+            const session = usePlayerStore.getState();
+            if (!session.username || !session.reconnectToken) return;
+            wsService.disconnect();
+            wsService.setSession(session.roomCode, session.username, session.reconnectToken);
+            void wsService.connect().catch(() => setGameError('恢复选卡失败，请重试'));
+          }}>恢复新闻部选卡</Button>
+        )}
+
         {pendingNewsClubChoice && (
           <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
             <div className="game-modal-wide bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl" onClick={e => e.stopPropagation()}>
@@ -916,9 +945,9 @@ export const Game: React.FC = () => {
                 {pendingNewsClubChoice.your_hand
                   .filter((c) => c.id !== pendingNewsClubChoice.exclude_card_id)
                   .map((c) => (
-                    <div key={c.id} className={`w-24 cursor-pointer rounded-lg border-2 p-1 ${newsClubSelectedCardId === c.id ? 'border-sky-400 bg-sky-900/50' : 'border-slate-600 hover:border-sky-500'}`} onClick={() => setNewsClubSelectedCardId(c.id)}>
+                    <button type="button" key={c.id} data-card-id={c.id} aria-pressed={newsClubSelectedCardId === c.id} className={`w-24 cursor-pointer rounded-lg border-2 p-1 ${newsClubSelectedCardId === c.id ? 'border-sky-400 bg-sky-900/50' : 'border-slate-600 hover:border-sky-500'}`} onClick={() => setNewsClubSelectedCardId(c.id)}>
                       <Card card={c} showAsFaceDown={false} />
-                    </div>
+                    </button>
                   ))}
               </div>
               <div className="flex gap-2">
