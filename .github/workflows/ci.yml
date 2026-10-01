@@ -30,6 +30,7 @@ jobs:
         run: |
           uv sync --frozen
           uv run pytest tests/ -v --tb=short
+          uv run python ../scripts/test_report_cleanup.py
 
   frontend:
     name: Frontend
@@ -135,6 +136,9 @@ jobs:
             exit 0
           fi
 
+          # Preserve reports referenced by every still-open PR. Fail closed on API errors.
+          CLEANUP_SCRIPT="$GITHUB_WORKSPACE/scripts/filter-report-cleanup.py"
+          OPEN_PRS=$(python3 "$CLEANUP_SCRIPT" --open-prs "$REPO")
           STAGING=$(mktemp -d)
           if ! git clone --depth=1 --branch=gh-pages \
                "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" \
@@ -151,7 +155,8 @@ jobs:
 
           cd "$STAGING/ci-runs"
           find . -mindepth 1 -maxdepth 1 -type d -name 'pr-*' ! -name '*-mobile' -printf '%f\n' \
-            | sort -t- -k3 -rn | tail -n +11 | xargs -r rm -rf
+            | sort -t- -k3 -rn | tail -n +11 \
+            | python3 "$CLEANUP_SCRIPT" "$OPEN_PRS" | xargs -r rm -rf
           cd "$STAGING"
 
           git config user.name "github-actions[bot]"
@@ -238,6 +243,9 @@ jobs:
             exit 0
           fi
 
+          # Preserve reports referenced by every still-open PR. Fail closed on API errors.
+          CLEANUP_SCRIPT="$GITHUB_WORKSPACE/scripts/filter-report-cleanup.py"
+          OPEN_PRS=$(python3 "$CLEANUP_SCRIPT" --open-prs "$REPO")
           STAGING=$(mktemp -d)
           if ! git clone --depth=1 --branch=gh-pages \
                "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" \
@@ -252,7 +260,8 @@ jobs:
 
           cd "$STAGING/ci-runs"
           find . -mindepth 1 -maxdepth 1 -type d -name 'pr-*-mobile' -printf '%f\n' \
-            | sort -t- -k3 -rn | tail -n +11 | xargs -r rm -rf
+            | sort -t- -k3 -rn | tail -n +11 \
+            | python3 "$CLEANUP_SCRIPT" "$OPEN_PRS" | xargs -r rm -rf
           cd "$STAGING"
 
           git config user.name "github-actions[bot]"
