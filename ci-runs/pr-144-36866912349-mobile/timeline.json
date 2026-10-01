@@ -1,6 +1,6 @@
 {
   "title": "844×390 关键场景（多视角）",
-  "recording_started_at": 1790857825541,
+  "recording_started_at": 1790860637482,
   "players": [
     {
       "name": "player1",
@@ -11,40 +11,40 @@
     {
       "name": "player2",
       "username": "player2",
-      "offset_ms": 103,
+      "offset_ms": 91,
       "video": "player2.webm"
     },
     {
       "name": "player3",
       "username": "player3",
-      "offset_ms": 200,
+      "offset_ms": 164,
       "video": "player3.webm"
     },
     {
       "name": "player4",
       "username": "player4",
-      "offset_ms": 295,
+      "offset_ms": 242,
       "video": "player4.webm"
     }
   ],
   "events": [
     {
-      "at_ms": 1173,
+      "at_ms": 992,
       "player_id": "player1",
       "label": "1/4 · 归宅部交换隐藏调和牌"
     },
     {
-      "at_ms": 4162,
+      "at_ms": 3452,
       "player_id": "player1",
       "label": "2/4 · 大小姐两阶段交换"
     },
     {
-      "at_ms": 9387,
+      "at_ms": 8094,
       "player_id": "player1",
       "label": "3/4 · 班长双方选牌交换"
     },
     {
-      "at_ms": 14463,
+      "at_ms": 12969,
       "player_id": "player1",
       "label": "4/4 · 优等生等待举手与结果"
     }
