@@ -379,14 +379,14 @@ body:has(.skill-activation) .turn-announcement { visibility: hidden; }
 .honor-result-player { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .honor-result-avatar { width: 54px; height: 54px; font-size: 22px; border: 2px solid #c28d93; background: #583b43; color: #fff; }
 .honor-result-player strong { font-size: 14px; color: #f2e3e5; }
-.login-poster.campus-shell { min-height: 100dvh; height: auto; background-size: cover; background-position: center; background-attachment: fixed; justify-content: flex-end; padding-right: max(5vw,24px); color: #eee0df; }
+.login-poster.campus-shell { min-height: 100dvh; height: auto; background-size: cover; background-position: center; background-attachment: fixed; justify-content: center; padding: 24px; color: #eee0df; }
 .login-poster.campus-shell::before { display: none; }
-.login-poster .campus-panel { background: rgba(35,17,23,.86); border-color: #925560; box-shadow: 0 20px 60px rgba(0,0,0,.45); backdrop-filter: blur(8px); }
+.login-poster .campus-panel { background: rgba(35,17,23,.48); border-color: #925560; box-shadow: 0 20px 60px rgba(0,0,0,.45); backdrop-filter: blur(1px); }
 .login-poster .campus-panel::before { background: linear-gradient(90deg,#512730,#bc636c,#512730); }
 .login-poster .campus-title { color: #fff0ee; font-size: 30px; text-shadow: 0 2px 6px #16070b; letter-spacing: .04em; }
 .login-poster .campus-kicker, .login-poster .text-slate-500, .login-poster label { color: #dfbdc1; }
 .login-poster .campus-panel input { color: #fff !important; background: rgba(15,8,12,.8) !important; border-color: #79515c !important; }
-@media (max-width: 640px) { .login-poster.campus-shell { justify-content: center; padding: 20px; background-position: 38% center; }.login-poster .campus-panel { background: rgba(35,17,23,.9); } }
+@media (max-width: 640px) { .login-poster.campus-shell { justify-content: center; padding: 20px; background-position: 38% center; }.login-poster .campus-panel { background: rgba(35,17,23,.48); } }
 /* Keep the action row between the information sheet and the local hand. */
 .game-table .table-own-actions { position: fixed; left: 50%; bottom: 174px; transform: translateX(-50%); z-index: 25; }
 .game-table .table-decision { bottom: 222px; }
@@ -401,3 +401,4 @@ body:has(.skill-activation) .turn-announcement { visibility: hidden; }
   background: none;
   border-top: 0;
 }
+
