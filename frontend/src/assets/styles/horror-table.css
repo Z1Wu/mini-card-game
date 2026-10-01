@@ -342,3 +342,15 @@
   .game-table .table-decision { left: 8px; bottom: 110px; width: 128px; max-height: 140px; }
   .game-table .table-center-controls .table-hand-action-btn { min-height: 32px; }
 }
+
+/* Readable public hand, field and doubt counters. */
+.game-table .table-seat-meta { flex-wrap: wrap; gap: 4px; }
+.game-table .table-seat-stat { font-size: 14px; line-height: 18px; padding: 1px 4px; }
+.game-table .table-seat-stat-label { font-size: 12px; }
+.game-table .table-seat-stat strong { font-size: 14px; }
+@media (max-height: 500px) and (orientation: landscape) {
+  .game-table .table-seat-meta { gap: 2px; }
+  .game-table .table-seat-stat { font-size: 12px; line-height: 14px; padding: 0 2px; }
+  .game-table .table-seat-stat-label { font-size: 10px; }
+  .game-table .table-seat-stat strong { font-size: 12px; }
+}
