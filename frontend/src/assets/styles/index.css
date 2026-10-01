@@ -383,7 +383,7 @@ button:focus-visible,
   min-height: 100vh;
   background:
     linear-gradient(rgba(3, 5, 16, .12), rgba(3, 5, 16, .26)),
-    url('../art/tabletop-campus-v1.webp') center / cover no-repeat,
+    url('../art/tabletop-apocalypse-v1.webp') center / cover no-repeat,
     #070b18;
   border: none;
   border-radius: 0;
@@ -1994,3 +1994,4 @@ button:focus-visible,
   .voice-chat-dock { right: .5rem; bottom: 6.4rem; }
   .voice-ptt { min-height: 34px; padding: .3rem .62rem; font-size: .68rem; }
 }
+
