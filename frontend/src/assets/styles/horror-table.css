@@ -288,11 +288,11 @@
 
 .game-table .table-hand-doubt-state { top: -26px; }
 
-/* Keep voice controls clear of the vertical play actions. */
-.voice-chat-dock { top: 56px; bottom: auto; left: 10px; right: auto; align-items: flex-start; }
+/* Communications sit beside the hand at the bottom-right safe edge. */
+.voice-chat-dock { top: auto; bottom: max(12px, env(safe-area-inset-bottom, 0px)); left: auto; right: max(12px, env(safe-area-inset-right, 0px)); align-items: flex-end; }
 
-/* Right edge is reserved for play actions; communications use the left edge. */
-.game-table .table-hand { padding-right: max(12px, env(safe-area-inset-right, 0px)); }
+/* Reserve space for the communication dock beside the hand. */
+.game-table .table-hand { padding-right: calc(120px + env(safe-area-inset-right, 0px)); }
 .game-table .table-hand-playrow { width: 100%; }
 .game-table .table-hand-actions { justify-self: end; margin-right: 0; }
 .skill-play-reveal { position: fixed; inset: 0; z-index: 55; pointer-events: none; background: radial-gradient(ellipse at center, rgba(20,5,10,.45), transparent 65%); }
