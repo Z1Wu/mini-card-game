@@ -1,0 +1,107 @@
+/* Issue #137: sealed old school refuge; matte dossiers and cel-shaded portraits. */
+.campus-shell { background: radial-gradient(ellipse at 20% 0, #3a443c, transparent 65%), #1b2422; }
+.campus-panel { background: #d4d3c4; border-color: #969f91; box-shadow: 0 12px 32px rgba(0,0,0,.3); }
+.game-table {
+  background: linear-gradient(rgba(13,18,20,.12), rgba(13,18,20,.3)), url('../art/tabletop-apocalypse-v1.webp') center / cover no-repeat #333632;
+  box-shadow: inset 0 0 90px rgba(10,14,16,.4);
+}
+.game-table::before { display: none; }
+.game-table .table-felt { border: 0; border-radius: 0; background: none; box-shadow: none; }
+
+.game-card:not(.game-card-back) {
+  padding: 5%;
+  border: 1px solid #a4aaa4;
+  border-radius: 4px;
+  background: #cfd0c4;
+  box-shadow: 0 4px 10px rgba(0,0,0,.4);
+}
+.game-card:not(.game-card-back)::before,
+.game-card:not(.game-card-back)::after { display: none; }
+.game-card-face { border-radius: 2px; background: #cfd0c4; }
+.game-card-art { inset: 0 0 21%; height: 79%; object-position: center 25%; opacity: 1; filter: none; }
+.game-card:hover .game-card-art { opacity: 1; filter: none; }
+.game-card-art-scrim { background: linear-gradient(180deg, rgba(8,13,17,.08), transparent 62%, rgba(8,13,17,.12) 79%, #cfd0c4 80%); }
+.game-card-corner {
+  top: 3%;
+  border-radius: 2px;
+  border-color: #8d948b;
+  background: rgba(224,225,212,.97);
+  color: #253038;
+  box-shadow: none;
+}
+.game-card-corner-left { left: 3%; }
+.game-card-corner-right { right: 3%; }
+.game-card-corner-label { color: #43504e; }
+.game-card-title-wrap { bottom: 0; left: 0; right: 0; min-height: 21%; }
+.game-card-ribbon { inset: 0; border-radius: 0; background: #cfd0c4; border-top: 1px solid #838c83; box-shadow: none; }
+.game-card-title { color: #253038; text-shadow: none; }
+.game-card-criminal:not(.game-card-back) { border: 2px solid #9b5054; }
+.table-hand-card-lifted .game-card { outline-color: #c4d7b8; box-shadow: 0 6px 15px rgba(0,0,0,.6); }
+
+/* All hidden roles share one sealed-file cover; no role-dependent clues. */
+.game-card-back {
+  border: 1px solid #a5aaa0;
+  border-radius: 3px;
+  background: repeating-linear-gradient(0deg, transparent 0 8px, rgba(201,211,196,.035) 8px 9px), #394843;
+  box-shadow: 0 3px 8px rgba(0,0,0,.45);
+}
+.game-card-back::before { border: 1px solid #88938a; border-radius: 1px; box-shadow: none; }
+.game-card-back::after { inset: 37% 6%; border: 0; border-radius: 0; transform: rotate(-18deg); background: #bcbdae; }
+.game-card-back-emblem { width: 34%; transform: none; border: 1px solid #79867a; background: #394843; box-shadow: none; }
+.game-card-back-emblem::before { inset: 18%; border: 1px solid #bcbdae; }
+.game-card-back-emblem::after { background: #bcbdae; box-shadow: none; }
+
+.game-table .table-seat,
+.game-table .table-seat-current { border-color: #758176; background: rgba(34,45,43,.96); box-shadow: 0 3px 8px rgba(0,0,0,.3); border-radius: 7px; }
+.game-table .table-seat-current { border: 2px solid #c4d7b8; box-shadow: 0 0 0 2px rgba(196,215,184,.12); }
+.game-table .table-seat-current::before { color: #18221f; background: #c4d7b8; box-shadow: none; }
+.game-table .table-seat-icon,
+.game-table .table-hand-icon { background: #5c716b; border-color: #a2ada0; box-shadow: none; }
+.game-table .table-seat-cards { background: none; }
+.game-table .table-seat-stat { border-color: #65736a; background: #2c3b35; }
+.game-table .table-seat-stat-label { color: #c1c9bc; }
+.game-table .table-seat-stat strong { color: #e4e8dc; }
+.game-table .table-seat-stat-doubt.is-active { background: #503536; border-color: #a0716b; }
+.game-table .table-hand { background: linear-gradient(0deg, rgba(15,23,23,.97), rgba(15,23,23,.87) 76%, transparent); border-color: #65736a; box-shadow: none; }
+.game-table .table-hand-info { background: #263630; border-color: #758176; box-shadow: none; }
+.game-table .table-hand-stats { color: #b8c2b7; }
+.game-table .table-turn-task { background: #263630; border-color: #758176; box-shadow: none; }
+.game-table .table-turn-task strong,
+.game-table .table-turn-task span:last-child { color: #dce8d3; }
+.game-table .table-decision { background: #27332e; border-color: #84907e; border-radius: 5px; box-shadow: 0 3px 8px rgba(0,0,0,.4); }
+.game-table .table-decision-summary strong { color: #e1e3cd; }
+.game-table .table-decision-summary em,
+.game-table .table-decision-details summary { color: #bfd0b7; }
+.game-table .table-decision-skill b { color: #d6b0a0; }
+.game-table .table-objective { width: fit-content; max-width: 100%; min-height: 2.8rem; margin: 0 auto; padding: .4rem .8rem; gap: .7rem; border-radius: 5px; border-color: #758176; background: rgba(34,45,43,.95); box-shadow: 0 3px 8px rgba(0,0,0,.3); }
+.game-table .table-objective-seal,
+.game-table .table-objective-kicker,
+.game-table .table-objective-unknown,
+.game-table .table-objective-empty,
+.game-table .table-objective-summary i { display: none; }
+.game-table .table-objective-summary { gap: .7rem; }
+.game-table .table-objective-summary strong { color: #e1e3cd; }
+.game-table .table-objective-cards:has(.table-objective-empty) { display: none; }
+.game-table .table-field,
+.game-table .table-field:has(.table-zone-empty) { background: rgba(24,35,31,.65); border-color: #65736a; }
+.game-table .table-field.table-field-empty { background: none; }
+.game-table .table-zone-empty { color: #c0c6b8; }
+.table-hand-action-harmony { background: #845052; }
+.table-hand-action-doubt { background: #826949; }
+.table-hand-action-skill { background: #496962; }
+.table-hand-action-cancel { background: #53615b; }
+.game-hud-view,
+.game-menu-trigger,
+.action-history-toggle { border-color: #758176; background: #263630; box-shadow: none; }
+.game-hud-view-mark { color: #e4e8dc; background: #5c716b; }
+.voice-ptt { border-color: #758176; background: #3d5951; box-shadow: none; }
+.game-menu-panel { border-color: #758176; background: #263630; box-shadow: 0 8px 24px rgba(0,0,0,.45); }
+.game-menu-panel b { color: #18221f; background: #c4d7b8; }
+.game-action-panel,
+.game-modal > div { border-color: #84907e !important; background: #27332e !important; box-shadow: 0 8px 24px rgba(0,0,0,.5) !important; }
+.game-modal { background: rgba(9,15,13,.8) !important; }
+.turn-toast { color: #efe7dc; background: #7b4148; }
+.play-feedback-toast { color: #e4e8dc; background: #496962; }
+@media (orientation: landscape) and (max-height: 500px) {
+  .game-table { background-color: #333632; box-shadow: inset 0 0 60px rgba(10,14,16,.3); }
+}
