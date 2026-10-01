@@ -96,6 +96,7 @@ export async function chooseVisibleCard(page, cardName, action) {
   if (action === '特技') {
     await page.getByRole('status', { name: `展示特技牌：${cardName}`, exact: true }).waitFor({ state: 'visible' });
     assert.equal(await page.locator('.game-modal').count(), 0, 'Skill choices wait until the face reveal finishes');
+    await page.waitForTimeout(200);
     await page.screenshot({ path: os.tmpdir() + '/mini-card-game-skill-activation.png' });
     await page.getByRole('status', { name: `展示特技牌：${cardName}`, exact: true }).waitFor({ state: 'hidden' });
   }
