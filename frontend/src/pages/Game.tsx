@@ -626,6 +626,7 @@ export const Game: React.FC = () => {
                   {gameState.players.flatMap(source => source.doubt_cards.map((card, index) => (
                     <Button
                       key={`${source.id}-${card.id}`}
+                      aria-label={`${source.name} 的质疑牌 ${index + 1}`}
                       variant={accompliceDoubtCard?.target_card_id === card.id ? 'primary' : 'secondary'}
                       size="sm"
                       onClick={() => {
@@ -633,7 +634,8 @@ export const Game: React.FC = () => {
                         setAccompliceDestinationId(null);
                       }}
                     >
-                      {source.name} 的质疑牌 {index + 1}
+                      <span className="block w-20 mx-auto mb-1"><CardBack /></span>
+                      <span>{source.name} 的质疑牌 {index + 1}</span>
                     </Button>
                   )))}
                   {!gameState.players.some(source => source.doubt_cards.length > 0) && (
@@ -676,11 +678,13 @@ export const Game: React.FC = () => {
                 {pendingInfectedChoice.map((card, index) => (
                   <Button
                     key={card.id}
+                    aria-label={`调和牌 ${index + 1}`}
                     variant={infectedHarmonyCardId === card.id ? 'primary' : 'secondary'}
                     size="sm"
                     onClick={() => setInfectedHarmonyCardId(card.id)}
                   >
-                    调和牌 {index + 1}
+                    <span className="block w-20 mx-auto mb-1"><CardBack /></span>
+                    <span>调和牌 {index + 1}</span>
                   </Button>
                 ))}
               </div>
