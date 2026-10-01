@@ -137,8 +137,8 @@ jobs:
           fi
 
           # Preserve reports referenced by every still-open PR. Fail closed on API errors.
-          OPEN_PRS=$(gh pr list --repo "$REPO" --state open --limit 10000 --json number)
           CLEANUP_SCRIPT="$GITHUB_WORKSPACE/scripts/filter-report-cleanup.py"
+          OPEN_PRS=$(python3 "$CLEANUP_SCRIPT" --open-prs "$REPO")
           STAGING=$(mktemp -d)
           if ! git clone --depth=1 --branch=gh-pages \
                "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" \
@@ -244,8 +244,8 @@ jobs:
           fi
 
           # Preserve reports referenced by every still-open PR. Fail closed on API errors.
-          OPEN_PRS=$(gh pr list --repo "$REPO" --state open --limit 10000 --json number)
           CLEANUP_SCRIPT="$GITHUB_WORKSPACE/scripts/filter-report-cleanup.py"
+          OPEN_PRS=$(python3 "$CLEANUP_SCRIPT" --open-prs "$REPO")
           STAGING=$(mktemp -d)
           if ! git clone --depth=1 --branch=gh-pages \
                "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" \
