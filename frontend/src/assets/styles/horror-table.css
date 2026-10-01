@@ -290,3 +290,24 @@
 
 /* Keep voice controls clear of the vertical play actions. */
 .voice-chat-dock { top: 56px; bottom: auto; left: 10px; right: auto; align-items: flex-start; }
+
+/* Right edge is reserved for play actions; communications use the left edge. */
+.game-table .table-hand { padding-right: max(12px, env(safe-area-inset-right, 0px)); }
+.game-table .table-hand-playrow { width: 100%; }
+.game-table .table-hand-actions { justify-self: end; margin-right: 0; }
+.skill-play-reveal { position: fixed; inset: 0; z-index: 55; pointer-events: none; background: radial-gradient(ellipse at center, rgba(20,5,10,.45), transparent 65%); }
+.skill-play-card { position: absolute; left: 50%; top: 50%; width: clamp(115px,16vh,185px); transform: translate(-50%,-50%); animation: skill-card-arrive 1500ms ease-in-out both; filter: drop-shadow(0 8px 25px #10080b); }
+.skill-play-caption { display: block; padding: 5px; color: #fff; text-align: center; font-size: 12px; background: #302326; }
+@keyframes skill-card-arrive {
+  0% { opacity: 0; transform: translate(-50%,-50%) scale(.85); }
+  15%, 65% { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--arrival-x)),calc(-50% + var(--arrival-y))) scale(.4); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skill-play-card { animation: none; }
+}
+
+.skill-play-reveal { z-index: 75; }
+
+.fixture-play-controls { position: fixed; top: 8px; left: 8px; z-index: 80; display: flex; gap: 4px; }
+.fixture-play-controls button { background: #302326; border: 1px solid #79555a; padding: 6px; color: white; }

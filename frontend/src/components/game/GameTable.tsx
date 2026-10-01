@@ -1,10 +1,14 @@
 import React from 'react';
-import { Card, CardUsageType, Player } from '../../types/game';
+import { Card, CardUsageType, Player, PublicAction } from '../../types/game';
+import { usePlayPresentation } from './usePlayPresentation';
+import { SkillPlayReveal } from './SkillPlayReveal';
 import { Card as CardView } from './Card';
 import { PlayerHand } from './PlayerHand';
 import { PlayerZone } from './PlayerZone';
 
 interface GameTableProps {
+  gameId?: string;
+  publicActions?: PublicAction[];
   players: Player[];
   localPlayer: Player;
   localPlayerId: string;
@@ -22,7 +26,9 @@ interface GameTableProps {
 
 /** Full-screen card-game table: owner-scoped public plays, central harmony target, local hand at bottom. */
 export const GameTable: React.FC<GameTableProps> = (props) => {
-  const opponents = props.players.filter(p => p.id !== props.localPlayerId);
+  const presentation = usePlayPresentation(props.gameId ?? 'table', props.publicActions ?? [], props.players);
+  const opponents = presentation.players.filter(p => p.id !== props.localPlayerId);
+  const localPlayer = presentation.players.find(player => player.id === props.localPlayerId) ?? props.localPlayer;
   const isMyTurn = props.players[props.currentPlayerIndex]?.id === props.localPlayerId;
   const harmonyCount = props.harmonyArea.length;
 
@@ -74,7 +80,7 @@ export const GameTable: React.FC<GameTableProps> = (props) => {
 
       {/* ── Player hand (fixed bottom) ── */}
       <PlayerHand
-        player={props.localPlayer}
+        player={localPlayer}
         isCurrentTurn={isMyTurn}
         selectedCard={props.selectedCard}
         onSelect={props.onSelectCard}
@@ -83,6 +89,7 @@ export const GameTable: React.FC<GameTableProps> = (props) => {
         newsClubMyChosenCard={props.newsClubMyChosenCard}
         turnStatusText={props.turnStatusText}
       />
+      {presentation.active && <SkillPlayReveal key={presentation.active.sequence} play={presentation.active} />}
     </div>
   );
 };

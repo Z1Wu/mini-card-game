@@ -31,7 +31,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
   return (
     <div className={`table-hand${isSettlement ? ' table-hand-settlement' : ''}${isCurrentTurn ? ' table-hand-my-turn' : ''}${player.hand.length <= 9 ? ' table-hand-compact' : ''}`} aria-label="我的手牌">
-      <div className="table-local-field"><PlayerField player={player} /></div>
+      <div className="table-local-field" data-field-owner={player.id}><PlayerField player={player} /></div>
       <div className={`table-turn-task${isCurrentTurn ? ' table-turn-task-active' : ''}`} role="status" aria-live="polite">
         <span className="table-turn-task-icon" aria-hidden="true">{isCurrentTurn ? '◆' : '◇'}</span>
         <strong>{isWaitingForInteraction

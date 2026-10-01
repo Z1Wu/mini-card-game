@@ -821,7 +821,7 @@ export const Game: React.FC = () => {
           </div>
         )}
 
-        {currentPlayer && <GameTable players={gameState.players} localPlayer={currentPlayer} localPlayerId={playerId ?? ''} currentPlayerIndex={gameState.current_player_index} harmonyArea={gameState.harmony_area} requiredHarmonyValue={gameState.required_harmony_value} selectedCard={selectedCard} onSelectCard={setSelectedCard} onPlayCard={handlePlayCard} newsClubMyChosenCard={newsClubMyChosenCard} turnStatusText={topBannerMessage?.text ?? '等待牌局状态'} speakingPlayerId={voice.speakingPlayerId} />}
+        {currentPlayer && <GameTable gameId={gameState.id} publicActions={gameState.public_actions} players={gameState.players} localPlayer={currentPlayer} localPlayerId={playerId ?? ''} currentPlayerIndex={gameState.current_player_index} harmonyArea={gameState.harmony_area} requiredHarmonyValue={gameState.required_harmony_value} selectedCard={selectedCard} onSelectCard={setSelectedCard} onPlayCard={handlePlayCard} newsClubMyChosenCard={newsClubMyChosenCard} turnStatusText={topBannerMessage?.text ?? '等待牌局状态'} speakingPlayerId={voice.speakingPlayerId} />}
         {viewHandResult && (
           <div className="game-modal fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setViewHandResult(null)}>
             <div className="game-modal-wide bg-slate-800 rounded-xl p-6 border border-slate-600 max-w-lg w-full shadow-xl" onClick={e => e.stopPropagation()}>

@@ -20,6 +20,7 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({ player, isCurrentTurn, i
       className={`table-seat${isCurrentTurn ? ' table-seat-current' : ''}${isWaitingSettlement ? ' table-seat-settlement' : ''}${isSpeaking ? ' table-seat-speaking' : ''}`}
       aria-label={`${player.name}${isCurrentTurn ? ' (当前回合)' : ''}`}
       role="listitem"
+      data-field-owner={player.id}
     >
       <div className="table-seat-main">
         <div className="table-seat-avatar">

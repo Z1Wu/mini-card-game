@@ -43,6 +43,7 @@ try {
     assert.ok(actionBoxes.every((b, index) => !index || (b.y >= actionBoxes[index - 1].y + actionBoxes[index - 1].height && Math.abs(b.x - actionBoxes[0].x) < 1)), 'Actions run vertically');
     const handBox = await page.locator('.table-hand-scroll').boundingBox();
     assert.ok(actionBoxes[0].x >= handBox.x + handBox.width, 'Actions are beside the hand');
+    assert.ok(actionBoxes[0].x + actionBoxes[0].width >= viewport.width - 20, 'Actions use the far right edge');
     assert.equal(await page.locator('.table-seat-cards').count(), 0, 'Opponent hand backs must be absent');
     assert.equal(await page.locator('.player-field').count(), players, 'Every owner has a separate field');
     const exposedNames = await page.locator('.player-field').evaluateAll(fields => fields.every(field => {
