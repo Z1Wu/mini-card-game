@@ -60,7 +60,7 @@ export const GameTable: React.FC<GameTableProps> = (props) => {
             <div className="table-objective-copy">
               <span className="table-objective-kicker">调和仪式</span>
               <div className="table-objective-summary">
-                <span>目标 <strong>{props.requiredHarmonyValue}</strong></span>
+                <span>调和目标值 <strong>{props.requiredHarmonyValue}</strong></span>
                 <i aria-hidden="true" />
                 <span>已投入 <strong>{harmonyCount}</strong> 张</span>
                 <i aria-hidden="true" />
