@@ -12,6 +12,10 @@ export async function run(ctx) {
   await ctx.actorPage.getByRole('button', { name: '玩家2', exact: true }).click();
   let modal = ctx.actorPage.locator('.game-modal').filter({ hasText: /大小姐：从 玩家2 手牌选一张拿取/ });
   await modal.waitFor({ state: 'visible' });
+    assert.equal(await modal.getByRole('button', { name: '取消', exact: true }).count(), 0, 'Skill choices cannot be cancelled');
+    await modal.click({ position: { x: 2, y: 2 } });
+    await ctx.actorPage.waitForTimeout(50);
+    assert.ok(await modal.isVisible(), 'Backdrop click cannot dismiss a skill');
   assert.ok(await modal.getByLabel('牌背', { exact: true }).count() > 0);
   assert.equal(await modal.locator('[aria-label^="卡牌："]').count(), 0, 'Target card identities must stay hidden before take confirmation');
   assert.equal(await targetPage.getByText(/大小姐：从 玩家2 手牌选一张拿取/).count(), 0);
@@ -23,6 +27,10 @@ export async function run(ctx) {
   await modal.getByRole('button', { name: '确认（查看拿到的牌）', exact: true }).click();
   modal = ctx.actorPage.locator('.game-modal').filter({ hasText: /选择要交给 玩家2 的牌/ });
   await modal.waitFor({ state: 'visible' });
+    assert.equal(await modal.getByRole('button', { name: '取消', exact: true }).count(), 0, 'Skill choices cannot be cancelled');
+    await modal.click({ position: { x: 2, y: 2 } });
+    await ctx.actorPage.waitForTimeout(50);
+    assert.ok(await modal.isVisible(), 'Backdrop click cannot dismiss a skill');
   // The give phase privately reveals which hidden card was taken.
   const taken = (await readLabeledCards(modal, ['拿到的牌']))['拿到的牌'];
   assert.ok(taken && targetBefore.includes(taken), `taken card ${taken} must come from 玩家2's real hand`);

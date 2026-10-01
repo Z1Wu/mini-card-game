@@ -354,3 +354,7 @@
   .game-table .table-seat-stat-label { font-size: 10px; }
   .game-table .table-seat-stat strong { font-size: 12px; }
 }
+.skill-activation { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; background: rgba(15,5,8,.68); }
+.skill-activation-card { width: clamp(150px,26vh,230px); animation: skill-activation-show 1500ms ease both; }
+@keyframes skill-activation-show { 0% { opacity: 0; transform: scale(.8); } 15%,85% { opacity: 1; transform: scale(1); } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .skill-activation-card { animation: none; } }

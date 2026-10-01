@@ -27,6 +27,10 @@ export async function run(ctx) {
   const harmonyBeforeTake = (await readState(ctx.actorPage)).game.harmony_card_count;
   const modal = ctx.actorPage.locator('.game-modal').filter({ hasText: '感染者：回合开始效果' });
   await modal.waitFor({ state: 'visible' });
+    assert.equal(await modal.getByRole('button', { name: '取消', exact: true }).count(), 0, 'Skill choices cannot be cancelled');
+    await modal.click({ position: { x: 2, y: 2 } });
+    await ctx.actorPage.waitForTimeout(50);
+    assert.ok(await modal.isVisible(), 'Backdrop click cannot dismiss a skill');
   assert.ok(await modal.getByLabel('牌背', { exact: true }).count() > 0, 'Hidden choices show card backs');
   assert.ok(await modal.getByLabel('牌背', { exact: true }).evaluateAll(nodes => nodes.every(node => getComputedStyle(node).backgroundImage.includes('card-back-classroom-v1'))), 'Every hidden choice uses the abandoned classroom artwork');
   await ctx.screenshot('infected-next-turn', ctx.actorPage);

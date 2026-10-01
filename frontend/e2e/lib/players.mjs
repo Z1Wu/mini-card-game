@@ -1,3 +1,5 @@
+import os from 'node:os';
+import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
 const TIMEOUT_MS = 15_000;
@@ -91,6 +93,12 @@ export async function chooseVisibleCard(page, cardName, action) {
   // Action buttons live in a dedicated action bar (sibling of the card),
   // not inside the card element — scope to the hand container.
   await page.locator('.table-hand-actions').getByRole('button', { name: action, exact: true }).click();
+  if (action === '特技') {
+    await page.getByRole('status', { name: `展示特技牌：${cardName}`, exact: true }).waitFor({ state: 'visible' });
+    assert.equal(await page.locator('.game-modal').count(), 0, 'Skill choices wait until the face reveal finishes');
+    await page.screenshot({ path: os.tmpdir() + '/mini-card-game-skill-activation.png' });
+    await page.getByRole('status', { name: `展示特技牌：${cardName}`, exact: true }).waitFor({ state: 'hidden' });
+  }
   // Pause so the green play-feedback toast is captured in the video.
   await page.waitForTimeout(500);
 }

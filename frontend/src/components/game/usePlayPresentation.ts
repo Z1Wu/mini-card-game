@@ -21,16 +21,16 @@ export function collectNewPlays(previous: Snapshot | null, gameId: string, actio
   return { snapshot, actions: fresh, reveals, reset: false };
 }
 
-export function usePlayPresentation(gameId: string, actions: PublicAction[], players: Player[]) {
+export function usePlayPresentation(gameId: string, actions: PublicAction[], players: Player[], suppressActorId?: string) {
   const previous = useRef<Snapshot | null>(null);
   const [queue, setQueue] = useState<RevealedPlay[]>([]);
   useLayoutEffect(() => {
     const next = collectNewPlays(previous.current, gameId, actions, players);
     previous.current = next.snapshot;
     if (next.reset) setQueue([]);
-    else if (next.reveals.length) setQueue(current => [...current, ...next.reveals]);
+    else if (next.reveals.length) setQueue(current => [...current, ...next.reveals.filter(play => play.actorId !== suppressActorId)]);
     next.actions.forEach(action => playActionSound(action.usage_type));
-  }, [gameId, actions, players]);
+  }, [gameId, actions, players, suppressActorId]);
   useEffect(() => {
     window.addEventListener('pointerdown', unlockPlaySounds);
     window.addEventListener('keydown', unlockPlaySounds);

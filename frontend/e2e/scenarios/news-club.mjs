@@ -18,6 +18,10 @@ export async function run(ctx) {
     const page = ctx.pagesById.get(chooser);
     const modal = page.locator('.game-modal').filter({ hasText: /新闻部：选择一张手牌递给/ });
     await modal.waitFor({ state: 'visible' });
+    assert.equal(await modal.getByRole('button', { name: '取消', exact: true }).count(), 0, 'Skill choices cannot be cancelled');
+    await modal.click({ position: { x: 2, y: 2 } });
+    await ctx.actorPage.waitForTimeout(50);
+    assert.ok(await modal.isVisible(), 'Backdrop click cannot dismiss a skill');
     if (chooser !== 'player1') await ctx.showTitle(`新闻部传牌 · ${chooser} 正在选择`, chooser);
     const state = await readState(page);
     const expectedSize = chooser === 'player1' ? 2 : 4;

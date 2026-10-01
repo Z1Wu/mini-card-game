@@ -8,6 +8,7 @@ import { PlayerHand } from './PlayerHand';
 import { PlayerZone } from './PlayerZone';
 
 interface GameTableProps {
+  suppressLocalSkillReveal?: boolean;
   gameId?: string;
   publicActions?: PublicAction[];
   players: Player[];
@@ -27,7 +28,7 @@ interface GameTableProps {
 
 /** Full-screen card-game table: owner-scoped public plays, central harmony target, local hand at bottom. */
 export const GameTable: React.FC<GameTableProps> = (props) => {
-  const presentation = usePlayPresentation(props.gameId ?? 'table', props.publicActions ?? [], props.players);
+  const presentation = usePlayPresentation(props.gameId ?? 'table', props.publicActions ?? [], props.players, props.suppressLocalSkillReveal ? props.localPlayerId : undefined);
   const opponents = presentation.players.filter(p => p.id !== props.localPlayerId);
   const localPlayer = presentation.players.find(player => player.id === props.localPlayerId) ?? props.localPlayer;
   const isMyTurn = props.players[props.currentPlayerIndex]?.id === props.localPlayerId;
