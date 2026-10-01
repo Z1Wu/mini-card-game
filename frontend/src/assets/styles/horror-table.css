@@ -395,3 +395,9 @@ body:has(.skill-activation) .turn-announcement { visibility: hidden; }
   .game-table .table-decision { bottom: 150px; max-height: 80px; }
 }
 
+/* Center skill confirmations without the old blue footer strip. */
+.game-modal > div > .flex.gap-2:last-child {
+  justify-content: center;
+  background: none;
+  border-top: 0;
+}

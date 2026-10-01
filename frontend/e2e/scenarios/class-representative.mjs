@@ -20,6 +20,13 @@ export async function run(ctx) {
   let modal = ctx.actorPage.locator('.game-modal').filter({ hasText: /班长：选一张手牌与 玩家2 交换/ });
   await modal.waitFor({ state: 'visible' });
   await modal.getByLabel(`卡牌：${giveName}`, { exact: true }).first().click();
+  const footerStyle = await modal.locator(':scope > div > .flex.gap-2:last-child').evaluate(node => {
+    const style = getComputedStyle(node);
+    return { alignment: style.justifyContent, background: style.backgroundImage };
+  });
+  assert.equal(footerStyle.alignment, 'center', 'Confirmation is centered');
+  assert.equal(footerStyle.background, 'none', 'Confirmation footer has no blue strip');
+  await ctx.screenshot('class-representative-confirmation', ctx.actorPage);
   await modal.getByRole('button', { name: '确认', exact: true }).click();
   await ctx.actorPage.getByText('正在等待 玩家2 选牌', { exact: true }).waitFor({ state: 'visible' });
   await ctx.screenshot('class-representative-waiting', ctx.actorPage);
@@ -47,3 +54,4 @@ export async function run(ctx) {
     extraCoverage: ['waiting-panel', 'result-panel'],
   };
 }
+
