@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/common/Button';
-import { Card } from '../components/game/Card';
+import { Card, CardBack } from '../components/game/Card';
 import { SettlementView } from '../components/game/SettlementView';
 import { TurnAnnouncement } from '../components/game/TurnAnnouncement';
 import { GameTable } from '../components/game/GameTable';
@@ -728,9 +728,7 @@ export const Game: React.FC = () => {
                   <div className="flex flex-wrap gap-2 mb-4">
                     {pendingSkillChoice.target_hand.map((c) => (
                       <div key={c.id} className={`w-24 cursor-pointer rounded-lg border-2 p-1 ${richGirlTakeId === c.id ? 'border-violet-400 bg-violet-900/50' : 'border-slate-600 hover:border-violet-500'}`} onClick={() => setRichGirlTakeId(c.id)}>
-                        <div className="rounded-lg border-2 border-slate-600 bg-gradient-to-br from-slate-600 to-slate-700 aspect-[2/3] min-h-[100px] flex items-center justify-center">
-                          <span className="text-slate-500 text-xs">牌背</span>
-                        </div>
+                        <CardBack />
                       </div>
                     ))}
                   </div>

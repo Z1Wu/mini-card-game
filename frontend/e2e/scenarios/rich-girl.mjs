@@ -12,10 +12,13 @@ export async function run(ctx) {
   await ctx.actorPage.getByRole('button', { name: '玩家2', exact: true }).click();
   let modal = ctx.actorPage.locator('.game-modal').filter({ hasText: /大小姐：从 玩家2 手牌选一张拿取/ });
   await modal.waitFor({ state: 'visible' });
-  assert.ok(await modal.getByText('牌背', { exact: true }).count() > 0);
+  assert.ok(await modal.getByLabel('牌背', { exact: true }).count() > 0);
   assert.equal(await modal.locator('[aria-label^="卡牌："]').count(), 0, 'Target card identities must stay hidden before take confirmation');
   assert.equal(await targetPage.getByText(/大小姐：从 玩家2 手牌选一张拿取/).count(), 0);
-  await modal.getByText('牌背', { exact: true }).first().click();
+  const backs = modal.getByLabel('牌背', { exact: true });
+  assert.ok(await backs.count() > 0, 'Opaque target cards use the shared back');
+  assert.ok(await backs.first().evaluate(node => getComputedStyle(node).backgroundImage.includes('card-back-classroom-v1')), 'The shared abandoned-classroom artwork appears');
+  await backs.first().click();
   await ctx.screenshot('rich-girl-hidden-take', ctx.actorPage);
   await modal.getByRole('button', { name: '确认（查看拿到的牌）', exact: true }).click();
   modal = ctx.actorPage.locator('.game-modal').filter({ hasText: /选择要交给 玩家2 的牌/ });

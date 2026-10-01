@@ -35,6 +35,13 @@ const roleVisuals: Record<RoleType, { mark: string; tone: string; accent: string
   [RoleType.HONOR_STUDENT]: { mark: '优', tone: '#38bdf8', accent: '#f0f9ff', glow: 'rgba(56, 189, 248, 0.25)' },
 };
 
+/** Shared back also works for opaque, ID-only choice cards. */
+export function CardBack() {
+  return <div className="game-card game-card-back relative aspect-[2/3] min-h-0 w-full overflow-hidden rounded-xl shadow-lg transition-all duration-200" aria-label="牌背">
+    <div className="game-card-back-title" aria-hidden="true"><span>冰冷的她醒来前</span><small>Embalming Girl</small></div>
+  </div>;
+}
+
 export const Card: React.FC<CardProps> = ({
   card,
   onPlay,
@@ -89,17 +96,7 @@ export const Card: React.FC<CardProps> = ({
   };
 
   if (showAsFaceDown) {
-    return (
-      <div
-        className={cn(
-          'game-card game-card-back relative aspect-[2/3] min-h-0 w-full overflow-hidden rounded-xl',
-          'shadow-lg transition-all duration-200'
-        )}
-        aria-label="牌背"
-      >
-        <div className="game-card-back-title" aria-hidden="true"><span>冰冷的她醒来前</span><small>Embalming Girl</small></div>
-      </div>
-    );
+    return <CardBack />;
   }
 
   const art = roleArt[card.name];
