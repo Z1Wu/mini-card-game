@@ -25,7 +25,7 @@ try {
   await login();
   const desktopBounds=await page.locator('.avatar-selection').boundingBox();
   assert.ok(Math.abs(desktopBounds.x + desktopBounds.width / 2 - 640) < 2);
-  await page.getByRole('button', {name:'大小姐头像',exact:true}).click();
+  await page.getByRole('button', {name:'小熊头像',exact:true}).click();
   await page.screenshot({path:path.join(output,'avatar-desktop.png')});
   await page.getByRole('button', {name:'确认头像',exact:true}).click();
   await page.waitForURL('**/rooms');
@@ -41,7 +41,7 @@ try {
   await second.getByLabel('密码').fill('password1');
   await second.getByRole('button',{name:'登录',exact:true}).click();
   await second.waitForURL('**/avatar');
-  assert.equal(await second.getByRole('button',{name:'大小姐头像',exact:true}).getAttribute('aria-pressed'),'true');
+  assert.equal(await second.getByRole('button',{name:'小熊头像',exact:true}).getAttribute('aria-pressed'),'true');
   const bounds=await second.locator('.avatar-selection').boundingBox();
   assert.ok(bounds.x>=0 && bounds.x+bounds.width<=390);
   await second.screenshot({path:path.join(output,'avatar-mobile.png')});

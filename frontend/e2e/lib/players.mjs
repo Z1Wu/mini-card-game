@@ -66,7 +66,7 @@ async function login(player) {
   await player.page.getByLabel('用户名').fill(player.username);
   await player.page.getByLabel('密码').fill(player.password);
   await Promise.all([player.page.waitForURL('**/avatar', { timeout: TIMEOUT_MS }), player.page.getByRole('button', { name: '登录', exact: true }).click()]);
-  await player.page.getByRole('button', { name: '图书委员头像', exact: true }).click();
+  await player.page.getByRole('button', { name: '小兔子头像', exact: true }).click();
   await Promise.all([player.page.waitForURL('**/rooms', { timeout: TIMEOUT_MS }), player.page.getByRole('button', { name: '确认头像', exact: true }).click()]);
 }
 
