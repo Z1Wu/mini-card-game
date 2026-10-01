@@ -12,6 +12,8 @@ from auth.passwords import verify_password, hash_password
 
 logger = logging.getLogger(__name__)
 
+AVATAR_IDS = {"class-rep", "library", "alien", "rich-girl", "news", "honor", "discipline", "infected"}
+
 _USERS = {}  # username -> {"password": str, "password_hash": str, "name": str, "role": str}
 
 
@@ -33,6 +35,7 @@ def _load_users():
                     "password_hash": item.get("password_hash", ""),
                     "name": item.get("name") or u,
                     "role": item.get("role", "player"),
+                    "avatar_id": item.get("avatar_id") if item.get("avatar_id") in AVATAR_IDS else None,
                 }
         logger.info("Loaded %s users from %s", len(_USERS), path)
     except FileNotFoundError:
@@ -75,6 +78,8 @@ def _save_users():
         elif user.get("password"):
             entry["password"] = user["password"]
         entry["role"] = user.get("role", "player")
+        if user.get("avatar_id"):
+            entry["avatar_id"] = user["avatar_id"]
         items.append(entry)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(items, f, ensure_ascii=False, indent=2)
@@ -163,3 +168,22 @@ def admin_count() -> int:
     """Return the number of admin users (used to prevent deleting the last admin)."""
     _load_users()
     return sum(1 for u in _USERS.values() if u.get("role") == "admin")
+
+
+def get_user_avatar(username: str):
+    _load_users()
+    return _USERS.get(username, {}).get("avatar_id")
+
+
+def set_user_avatar(username: str, avatar_id: str) -> bool:
+    _load_users()
+    if not isinstance(avatar_id, str) or avatar_id not in AVATAR_IDS or username not in _USERS:
+        return False
+    previous = _USERS[username].get("avatar_id")
+    _USERS[username]["avatar_id"] = avatar_id
+    try:
+        _save_users()
+    except OSError:
+        _USERS[username]["avatar_id"] = previous
+        raise
+    return True

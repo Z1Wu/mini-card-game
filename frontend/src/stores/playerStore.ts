@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 
 interface PlayerState {
+  avatarId: string | null;
+  setAvatarId: (avatarId: string | null) => void;
   playerId: string | null;
   playerName: string | null;
   username: string | null;
@@ -18,6 +20,8 @@ interface PlayerState {
 }
 
 export const usePlayerStore = create<PlayerState>((set) => ({
+  avatarId: null,
+  setAvatarId: (avatarId) => set({ avatarId }),
   playerId: null,
   playerName: null,
   username: null,
@@ -31,5 +35,5 @@ export const usePlayerStore = create<PlayerState>((set) => ({
   setRoomCode: (roomCode) => set({ roomCode }),
   setReconnectToken: (reconnectToken) => set({ reconnectToken }),
   setConnected: (connected) => set({ isConnected: connected }),
-  reset: () => set({ playerId: null, playerName: null, username: null, password: null, roomCode: 'default', reconnectToken: null, isConnected: false }),
+  reset: () => set({ avatarId: null, playerId: null, playerName: null, username: null, password: null, roomCode: 'default', reconnectToken: null, isConnected: false }),
 }));

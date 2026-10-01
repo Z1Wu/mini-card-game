@@ -55,6 +55,7 @@ export const Login: React.FC = () => {
       if (username.trim()) {
         rememberUsername(username.trim());
       }
+      usePlayerStore.getState().setAvatarId(message.avatar_id ?? null);
       setReconnectToken(message.reconnect_token);
       // No room yet: the hub session starts in the internal holding room and
       // the player picks a room on the /rooms page next.
@@ -74,10 +75,11 @@ export const Login: React.FC = () => {
       }
 
       setPassword('');
-      navigate('/rooms');
+      navigate('/avatar');
     };
 
     const handleReconnectSuccess = (message: ReconnectSuccessMessage) => {
+      usePlayerStore.getState().setAvatarId(message.avatar_id ?? null);
       setServerError('');
       setIsConnecting(false);
       if (message.player_id && message.player_name) {
@@ -93,7 +95,7 @@ export const Login: React.FC = () => {
         wsService.setSession(wsService.getSessionRoomCode(), storedUsername, activeToken);
       }
       setPassword('');
-      navigate('/rooms');
+      navigate('/avatar');
     };
 
     wsService.on('error', handleError);

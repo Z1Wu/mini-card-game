@@ -37,6 +37,7 @@ class Card(BaseModel):
 class Player(BaseModel):
     id: str
     name: str
+    avatar_id: Optional[str] = None
     hand: List[Card] = []
     field_cards: List[Card] = []
     doubt_cards: List[Card] = []

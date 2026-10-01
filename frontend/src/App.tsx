@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
 import { Login } from './pages/Login';
+import { AvatarSelection } from './pages/AvatarSelection';
 import { Rooms } from './pages/Rooms';
 import { Lobby } from './pages/Lobby';
 import { Game } from './pages/Game';
@@ -50,6 +51,7 @@ function App() {
       <SessionGuard />
       <Routes>
         <Route path="/" element={<Login />} />
+        <Route path="/avatar" element={<AvatarSelection />} />
         <Route path="/rooms" element={<Rooms />} />
         <Route path="/lobby" element={<Lobby />} />
         <Route path="/game" element={<Game />} />

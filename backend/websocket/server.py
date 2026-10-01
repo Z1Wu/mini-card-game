@@ -1115,6 +1115,7 @@ class GameWebSocketServer:
                 {
                     "id": player.id,
                     "name": player.name,
+                    "avatar_id": player.avatar_id,
                     "hand_count": len(player.hand)
                 }
                 for player in self.game_manager.game.players

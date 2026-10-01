@@ -1,3 +1,4 @@
+import { PlayerAvatar } from '../components/common/PlayerAvatar';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/common/Button';
@@ -14,7 +15,7 @@ export const Lobby: React.FC = () => {
   const { playerId, playerName, isConnected, roomCode, reset: resetPlayer } = usePlayerStore();
   const { setGameState, resetGame } = useGameStore();
   const { send } = useWebSocket();
-  const [players, setPlayers] = useState<Array<{ id: string; name: string; hand_count: number }>>([]);
+  const [players, setPlayers] = useState<Array<{ id: string; name: string; avatar_id?: string | null; hand_count: number }>>([]);
   const [lobbyError, setLobbyError] = useState('');
   const isHost = players[0]?.id === playerId;
 
@@ -37,9 +38,10 @@ export const Lobby: React.FC = () => {
         setGameState(message.game_state);
         // 用 game_state.players 同步大厅玩家列表（避免漏收 player_list 广播）
         const list = message.game_state.players ?? [];
-        setPlayers(list.map((p: { id: string; name: string; hand?: unknown[]; current_hand_count?: number }) => ({
+        setPlayers(list.map((p: { id: string; name: string; avatar_id?: string | null; hand?: unknown[]; current_hand_count?: number }) => ({
           id: p.id,
           name: p.name,
+          avatar_id: p.avatar_id,
           hand_count: p.current_hand_count ?? (Array.isArray(p.hand) ? p.hand.length : 0),
         })));
         // 如果游戏状态不是 WAITING，说明游戏已经开始，导航到游戏页面（后端序列化为小写 "waiting"）
@@ -146,7 +148,7 @@ export const Lobby: React.FC = () => {
                   className="campus-player rounded-xl p-4 border"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-700 font-medium">{player.name}{players[0]?.id === player.id ? '（房主）' : ''}</span>
+                    <span className="text-slate-700 font-medium flex items-center gap-2"><PlayerAvatar avatarId={player.avatar_id} name={player.name} />{player.name}{players[0]?.id === player.id ? '（房主）' : ''}</span>
                     <span className="text-slate-500 text-sm">手牌: {player.hand_count}</span>
                   </div>
                 </div>

@@ -1,6 +1,8 @@
 import { CardUsageType, Card, Game } from './game';
 
 export type MessageType =
+  | 'set_avatar'
+  | 'avatar_saved'
   | 'login'
   | 'login_success'
   | 'reconnect'
@@ -98,6 +100,7 @@ export interface LoginSuccessMessage extends BaseMessage {
   type: 'login_success';
   player_id: string;
   player_name: string;
+  avatar_id?: string | null;
   role?: string;
   reconnect_token: string;
 }
@@ -113,6 +116,7 @@ export interface ReconnectSuccessMessage extends BaseMessage {
   type: 'reconnect_success';
   player_id: string;
   player_name: string;
+  avatar_id?: string | null;
   reconnect_token?: string;
 }
 
@@ -153,6 +157,7 @@ export interface PlayerListMessage extends BaseMessage {
     id: string;
     name: string;
     hand_count: number;
+    avatar_id?: string | null;
   }>;
 }
 
@@ -386,7 +391,13 @@ export interface VoiceChunkBroadcastMessage extends BaseMessage {
   data: string;
 }
 
+export interface AvatarMessage extends BaseMessage {
+  type: 'set_avatar' | 'avatar_saved';
+  avatar_id: string;
+}
+
 export type WebSocketMessage =
+  | AvatarMessage
   | CreateRoomMessage
   | RoomCreatedMessage
   | JoinRoomMessage

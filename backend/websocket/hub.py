@@ -10,6 +10,7 @@ from random import Random
 from typing import Callable, Optional
 
 import websockets
+from auth.users import get_user_avatar, set_user_avatar
 
 from game.state import GameState
 
@@ -190,9 +191,32 @@ class RoomHubWebSocketServer:
             "type": "login_success",
             "player_id": username,
             "player_name": get_user_name(username),
+            "avatar_id": get_user_avatar(username),
             "role": get_user_role(username),
             "reconnect_token": token,
         })
+
+    async def _handle_set_avatar(self, websocket, data: dict) -> None:
+        username = await self._require_authenticated(websocket)
+        if not username:
+            return
+        avatar_id = data.get("avatar_id")
+        try:
+            saved = set_user_avatar(username, avatar_id)
+        except OSError:
+            await self._send(websocket, {"type": "error", "code": "avatar_save_failed", "message": "头像保存失败，请重试"})
+            return
+        if not saved:
+            await self._send(websocket, {"type": "error", "code": "invalid_avatar", "message": "请选择有效的角色头像"})
+            return
+        entry = self._rooms.get(self._connection_rooms.get(websocket, DEFAULT_ROOM_CODE))
+        if entry and entry.server.game_manager.game:
+            player = next((p for p in entry.server.game_manager.game.players if p.id == username), None)
+            if player:
+                player.avatar_id = avatar_id
+                await entry.server._broadcast_player_list()
+                await entry.server._broadcast_game_state()
+        await self._send(websocket, {"type": "avatar_saved", "avatar_id": avatar_id})
 
     async def _handle_hub_reconnect(self, websocket, data: dict) -> None:
         """Restore a hub session from a reconnect token or password."""
@@ -236,6 +260,7 @@ class RoomHubWebSocketServer:
             "type": "reconnect_success",
             "player_id": username,
             "player_name": get_user_name(username),
+            "avatar_id": get_user_avatar(username),
             "reconnect_token": token,
         })
 
@@ -270,6 +295,8 @@ class RoomHubWebSocketServer:
                 "message": "Failed to join game",
             })
             return False
+        player = next(p for p in server.game_manager.game.players if p.id == username)
+        player.avatar_id = get_user_avatar(username)
         server.player_connections[username] = websocket
         await server._broadcast_player_list()
         return True
@@ -425,6 +452,8 @@ class RoomHubWebSocketServer:
                     await self._handle_hub_login(websocket, data)
                 elif message_type == "reconnect":
                     await self._handle_hub_reconnect(websocket, data)
+                elif message_type == "set_avatar":
+                    await self._handle_set_avatar(websocket, data)
                 elif message_type == "create_room":
                     await self._create_room(websocket)
                 elif message_type == "join_room":
