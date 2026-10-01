@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Card as CardModel, CardType as RoleType, CardUsageType } from '../../types/game';
 import { cn } from '../../utils/helpers';
-import { roleArt, roleGradeColor } from './cardArt';
+import { roleArt, roleGradeColor, roleFactionColor } from './cardArt';
 
 interface CardProps {
   card: CardModel;
@@ -51,6 +51,7 @@ export const Card: React.FC<CardProps> = ({
   const [showDescriptionPopover, setShowDescriptionPopover] = useState(false);
   const visual = roleVisuals[card.name] ?? roleVisuals[RoleType.HOME_CLUB];
   const cardStyle = {
+    '--faction-color': roleFactionColor(card.name),
     '--grade-color': roleGradeColor[card.name] ?? '#354b70',
     '--card-tone': visual.tone,
     '--card-accent': visual.accent,
@@ -103,6 +104,7 @@ export const Card: React.FC<CardProps> = ({
   }
 
   const art = roleArt[card.name];
+  const displayPriority = showVictoryPriority && card.location !== 'harmony';
 
   return (
     <>
@@ -144,7 +146,7 @@ export const Card: React.FC<CardProps> = ({
             <span className="game-card-corner-value">{card.harmony_value}</span>
             <span className="game-card-corner-label">调和</span>
           </div>
-          {showVictoryPriority && (
+          {displayPriority && (
             <div className="game-card-corner game-card-corner-right" title="胜利优先级">
               <span className="game-card-corner-value">{card.victory_priority}</span>
               <span className="game-card-corner-label">优先</span>
@@ -208,7 +210,7 @@ export const Card: React.FC<CardProps> = ({
             <p className="text-sm text-slate-300 mb-2">{card.description}</p>
             <p className="text-xs text-slate-400 mb-2">
               <span className="text-accent-400">调和值 {card.harmony_value}</span>（放入调和区时计入总和）
-              · <span className="text-slate-400">胜利优先级 {card.victory_priority}</span>（结算时比较）
+              {displayPriority && <>· <span className="text-slate-400">胜利优先级 {card.victory_priority}</span>（结算时比较）</>}
             </p>
             <button
               type="button"

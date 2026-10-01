@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/common/Button';
 import { Card } from '../components/game/Card';
 import { SettlementView } from '../components/game/SettlementView';
+import { TurnAnnouncement } from '../components/game/TurnAnnouncement';
 import { GameTable } from '../components/game/GameTable';
 import { ActionHistory } from '../components/game/ActionHistory';
 import { GameMenu } from '../components/game/GameMenu';
@@ -94,8 +95,6 @@ export const Game: React.FC = () => {
   const [classRepPhase, setClassRepPhase] = useState<{ phase: 'waiting_target' | 'done'; actor_name?: string; target_name?: string } | null>(null);
   /** 班长：交换结果（双方可见） */
   const [classRepResult, setClassRepResult] = useState<{ card_you_gave: CardType; card_you_received: CardType } | null>(null);
-  /** 回合切换提示（几秒后消失） */
-  const [turnChangeToast, setTurnChangeToast] = useState<string | null>(null);
   /** 出牌反馈提示 */
   const [playFeedback, setPlayFeedback] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -117,12 +116,6 @@ export const Game: React.FC = () => {
       navigate('/', { replace: true });
     }
   }, [playerId, navigate]);
-
-  useEffect(() => {
-    if (!turnChangeToast) return;
-    const t = setTimeout(() => setTurnChangeToast(null), 3000);
-    return () => clearTimeout(t);
-  }, [turnChangeToast]);
 
   useEffect(() => {
     if (!playFeedback) return;
@@ -155,15 +148,7 @@ export const Game: React.FC = () => {
       if (next?.state === GameStateEnum.GAME_OVER && next?.winner) {
         setWinnerId(next.winner);
       }
-      setGameState(prev => {
-        if (prev?.state === GameStateEnum.PLAYING && next?.state === GameStateEnum.PLAYING &&
-            (prev.turn_count !== next.turn_count || prev.current_player_index !== next.current_player_index)) {
-          const idx = next.current_player_index;
-          const nextPlayer = next.players[idx];
-          setTurnChangeToast(nextPlayer ? `轮到 ${nextPlayer.name} 出牌` : '下一回合');
-        }
-        return next;
-      });
+      setGameState(next);
     };
 
     const handleGameOver = (message: GameOverMessage) => {
@@ -552,12 +537,7 @@ export const Game: React.FC = () => {
         />
       )}
 
-      {/* ── Turn-change toast (auto-dismiss) ── */}
-      {turnChangeToast && (
-        <div className="turn-toast" role="status" aria-live="polite">
-          {turnChangeToast}
-        </div>
-      )}
+      <TurnAnnouncement game={gameState} playerId={playerId} />
       {/* ── Play feedback toast ── */}
       {playFeedback && (
         <div className="play-feedback-toast" role="status" aria-live="polite">

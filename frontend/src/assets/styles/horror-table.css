@@ -2,7 +2,7 @@
 .campus-shell { background: radial-gradient(ellipse at 20% 0, #3a443c, transparent 65%), #1b2422; }
 .campus-panel { background: #d4d3c4; border-color: #969f91; box-shadow: 0 12px 32px rgba(0,0,0,.3); }
 .game-table {
-  background: linear-gradient(rgba(13,18,20,.12), rgba(13,18,20,.3)), url('../art/tabletop-horror-v2.webp') center / cover no-repeat #333632;
+  background: linear-gradient(rgba(13,18,20,.12), rgba(13,18,20,.3)), url('../art/tabletop-soft-red-v3.webp') center / cover no-repeat #333632;
   box-shadow: inset 0 0 90px rgba(10,14,16,.4);
 }
 .game-table::before { display: none; }
@@ -143,3 +143,34 @@
 .horror-art-grid figure { min-width: 0; margin: 0; }
 .horror-art-grid figcaption { margin-top: 8px; text-align: center; font-size: 14px; }
 .horror-art-grid .game-card-corner { display: none; }
+
+/* Issue #141: readable faction-colored faces and restrained warm-red mood. */
+.campus-shell { background: radial-gradient(ellipse at 20% 0, #52373a, transparent 70%), #251f22; }
+.horror-art-review { background: #291f23; }
+.game-table { background-image: linear-gradient(rgba(90,29,40,.17), rgba(51,20,27,.24)), url('../art/tabletop-soft-red-v3.webp'); }
+.game-card:not(.game-card-back), .game-card-face, .game-card-ribbon { background: var(--faction-color, #aebdac); }
+.game-card-art-scrim { background: linear-gradient(180deg, rgba(97,33,43,.08), transparent 65%, var(--faction-color) 81%); }
+.game-card-title { font-size: clamp(.75rem, 13cqw, 1.6rem); line-height: 1.1; color: #211b1d; }
+.game-card-title-wrap { min-height: 22%; }
+.game-card-ribbon { border-top-width: 2px; }
+.game-card-art, .game-card:hover .game-card-art { filter: saturate(.82) sepia(.08); }
+.game-table .table-seat, .game-table .table-hand-info, .game-table .table-turn-task { background-color: #302326; border-color: #79555a; }
+.game-table .table-hand { background: linear-gradient(0deg, rgba(35,20,25,.98), rgba(35,20,25,.9) 76%, transparent); }
+.game-table .table-decision, .game-table .table-objective { background: #34272b; }
+.turn-announcement {
+  position: fixed; z-index: 90; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  display: flex; flex-direction: column; align-items: center; gap: .45rem;
+  width: min(84vw, 460px); padding: 1.2rem 1.6rem; pointer-events: none;
+  color: #f1dfd1; background: linear-gradient(90deg, transparent, rgba(58,22,32,.96) 15% 85%, transparent);
+  text-align: center; animation: turn-announce 2.2s ease both;
+}
+.turn-announcement strong { font-size: clamp(1.4rem, 4vw, 2.4rem); letter-spacing: .08em; overflow-wrap: anywhere; }
+.turn-announcement-caption { font-size: .75rem; color: #c7a3a6; letter-spacing: .3em; }
+.turn-announcement-rule { height: 1px; width: 72%; background: linear-gradient(90deg, transparent, #b88186, transparent); }
+.turn-announcement.is-own-turn { color: #ffe8cb; background: linear-gradient(90deg, transparent, rgba(95,32,44,.96) 15% 85%, transparent); }
+@keyframes turn-announce {
+  0% { opacity: 0; transform: translate(-50%,-50%) scale(.94); filter: blur(3px); }
+  12%, 78% { opacity: 1; transform: translate(-50%,-50%) scale(1); filter: blur(0); }
+  100% { opacity: 0; transform: translate(-50%,-54%); }
+}
+@media (prefers-reduced-motion: reduce) { .turn-announcement { animation: none; } }

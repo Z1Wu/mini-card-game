@@ -8,6 +8,7 @@ export function CardArtFixture() {
       <header>
         <h1>旧校舍 · 角色档案</h1>
         <p>一年级：深蓝领巾 · 二年级：墨绿领巾 · 三年级：酒红领巾</p>
+      <p>学生：灰绿 · 犯人/共犯：暗红 · 感染者：灰紫 · 外星人：灰蓝 · 归宅部：赭黄</p>
       </header>
       <div className="horror-art-grid">
         {Object.values(CardType).map((name, index) => {

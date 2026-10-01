@@ -87,3 +87,20 @@ describe('Card', () => {
     vi.useRealTimers()
   })
 })
+
+it('shows only harmony value on harmony cards, including long-press detail', () => {
+  vi.useFakeTimers();
+  render(<Card card={{ ...card, location: 'harmony' }} showVictoryPriority />);
+  expect(screen.getByTitle('调和值')).toBeInTheDocument();
+  expect(screen.queryByTitle('胜利优先级')).not.toBeInTheDocument();
+  fireEvent.mouseDown(screen.getByLabelText(`卡牌：${card.name}`));
+  act(() => vi.advanceTimersByTime(500));
+  expect(screen.queryByText(/胜利优先级/)).not.toBeInTheDocument();
+  vi.useRealTimers();
+});
+it('does not expose faction color through hidden card backs', () => {
+  const view = render(<Card card={{ ...card, name: CardType.CRIMINAL }} showAsFaceDown />);
+  const before = screen.getByLabelText('牌背').outerHTML;
+  view.rerender(<Card card={{ ...card, name: CardType.ALIEN }} showAsFaceDown />);
+  expect(screen.getByLabelText('牌背').outerHTML).toBe(before);
+});
