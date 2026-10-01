@@ -29,4 +29,3 @@ export const roleArt: Partial<Record<RoleType, string>> = {
   [RoleType.STUDENT_COUNCIL_PRESIDENT]: studentCouncilPresidentArt,
   [RoleType.HONOR_STUDENT]: honorStudentArt,
 };
-
