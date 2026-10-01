@@ -645,6 +645,7 @@ export const Game: React.FC = () => {
                     <Button
                       key={`${source.id}-${card.id}`}
                       aria-label={`${source.name} 的质疑牌 ${index + 1}`}
+                      aria-pressed={accompliceDoubtCard?.target_card_id === card.id}
                       variant={accompliceDoubtCard?.target_card_id === card.id ? 'primary' : 'secondary'}
                       size="sm"
                       onClick={() => {
@@ -669,6 +670,7 @@ export const Game: React.FC = () => {
                     .map(target => (
                       <Button
                         key={target.id}
+                        aria-pressed={accompliceDestinationId === target.id}
                         variant={accompliceDestinationId === target.id ? 'primary' : 'secondary'}
                         size="sm"
                         disabled={!accompliceDoubtCard}
@@ -696,6 +698,7 @@ export const Game: React.FC = () => {
                   <Button
                     key={card.id}
                     aria-label={`调和牌 ${index + 1}`}
+                    aria-pressed={infectedHarmonyCardId === card.id}
                     variant={infectedHarmonyCardId === card.id ? 'primary' : 'secondary'}
                     size="sm"
                     onClick={() => setInfectedHarmonyCardId(card.id)}

@@ -365,3 +365,13 @@ body:has(.skill-activation) .turn-announcement { visibility: hidden; }
 
 .game-table .table-hand-card-lifted { transform: none; }
 .game-table .table-hand-scroll { padding-top: 8px; padding-bottom: 8px; }
+/* Distinguish the selected choice from the red skill panel. */
+.game-modal .border-emerald-400,
+.game-modal .border-violet-400,
+.game-modal .border-amber-400,
+.game-modal .border-sky-400,
+.game-modal [aria-pressed="true"] {
+  border-color: #ffe08a !important;
+  background-color: rgba(156,116,35,.25) !important;
+  box-shadow: 0 0 0 2px #ffe08a, 0 0 14px rgba(255,208,107,.45);
+}
