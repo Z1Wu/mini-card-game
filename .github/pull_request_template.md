@@ -1,7 +1,5 @@
 ## Summary
 
-Closes #
-
 Describe what changed and why.
 
 ## Scope
@@ -16,4 +14,4 @@ Describe what changed and why.
 
 ## Collaboration notes
 
-List follow-up Issues, dependencies, migration steps, or known risks. Write "None" when not applicable.
+List related PRs, dependencies, follow-up work, migration steps, or known risks. Write "None" when not applicable.

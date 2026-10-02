@@ -3,9 +3,9 @@
 ## 分支和 Pull Request
 
 - 不要直接推送到 `main`；每项改动使用独立分支和 PR。
-- 从最新的 `main` 创建分支，命名为 `codex/issue-<number>-<short-description>`，例如 `codex/issue-93-align-docs`。
+- 从最新的 `main` 创建分支，命名为 `codex/<short-description>`，例如 `codex/align-docs`。
 - PR 合并前应通过 GitHub Actions；合并后才可从 `main` 打发布 tag。
-- Issue 是工作单元：先查找并认领现有 Issue；无匹配项时创建含目标、范围、验收标准、验证命令和非目标的 agent-ready Issue。
+- 以用户请求明确工作范围，在 PR 描述中记录目标、范围、验证结果和后续事项。
 
 ## 本地验证
 
