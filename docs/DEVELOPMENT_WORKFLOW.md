@@ -36,7 +36,7 @@ npm run test:e2e:mobile
 
 ## GitHub Actions
 
-`.github/workflows/ci.yml` 在向 `main` 或 `master` 推送以及所有 PR 上运行：
+`.github/workflows/ci.yml` 在向 `main` 或 `master` 推送以及所有 PR 上运行后端和前端验证。桌面与移动浏览器 E2E 不随 push/PR 自动运行；需要时在 GitHub Actions 的 CI 工作流页面点击 **Run workflow** 手动触发。手动触发时会运行后端、前端和 E2E jobs：
 
 | Job | 运行环境 | 验证 |
 | --- | --- | --- |
