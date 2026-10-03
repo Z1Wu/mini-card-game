@@ -12,7 +12,7 @@ For full details, see [docs/DEVELOPMENT_WORKFLOW.md](docs/DEVELOPMENT_WORKFLOW.m
 
 ## Development rules
 
-- Use one focused branch and PR per coherent change.
+- Group closely related steps that complete the same user request into one focused branch and PR; do not split a coherent change into multiple PRs just to separate small implementation steps. Keep unrelated work in separate PRs.
 - Create branches from current `main` using `codex/<short-description>`.
 - Keep commits and the PR within the requested scope. Record relevant dependencies and follow-up work in the PR description.
 - Treat the server as authoritative: preserve existing authentication, room isolation, and recipient-specific game-state visibility unless the user explicitly requests a change.

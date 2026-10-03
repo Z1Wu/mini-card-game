@@ -2,7 +2,7 @@
 
 ## 分支和 Pull Request
 
-- 不要直接推送到 `main`；每项改动使用独立分支和 PR。
+- 不要直接推送到 `main`；同一目标下紧密相关、共同完成一项用户请求的小步骤合并到一个 PR，不要只为区分实现步骤而拆成多个 PR。彼此无关的工作再分开处理。
 - 从最新的 `main` 创建分支，命名为 `codex/<short-description>`，例如 `codex/align-docs`。
 - PR 合并前应通过 GitHub Actions；合并后才可从 `main` 打发布 tag。
 - 以用户请求明确工作范围，在 PR 描述中记录目标、范围、验证结果和后续事项。
