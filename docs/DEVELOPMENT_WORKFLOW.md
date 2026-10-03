@@ -6,6 +6,7 @@
 - 从最新的 `main` 创建分支，命名为 `codex/<short-description>`，例如 `codex/align-docs`。
 - PR 合并前应通过 GitHub Actions；合并后才可从 `main` 打发布 tag。
 - 以用户请求明确工作范围，在 PR 描述中记录目标、范围、验证结果和后续事项。
+- PR 标题和描述使用中文；技术标识、命令和测试名称可保留原文。
 
 ## 本地验证
 

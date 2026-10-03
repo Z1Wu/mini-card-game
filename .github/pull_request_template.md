@@ -1,17 +1,17 @@
-## Summary
+## 摘要
 
-Describe what changed and why.
+描述改动内容和原因。
 
-## Scope
+## 范围
 
-- Included:
-- Excluded:
+- 包含：
+- 不包含：
 
-## Validation
+## 验证
 
-- [ ] Relevant automated tests pass
-- [ ] Relevant manual verification completed
+- [ ] 相关自动化测试通过
+- [ ] 已完成相关手动验证
 
-## Collaboration notes
+## 协作说明
 
-List related PRs, dependencies, follow-up work, migration steps, or known risks. Write "None" when not applicable.
+列出相关 PR、依赖、后续工作、迁移步骤或已知风险；没有时填写“无”。

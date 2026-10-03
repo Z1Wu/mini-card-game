@@ -21,6 +21,7 @@ For full details, see [docs/DEVELOPMENT_WORKFLOW.md](docs/DEVELOPMENT_WORKFLOW.m
 ## Pull requests and handoffs
 
 - Open a regular, non-draft PR against `main`. Use a draft PR only when the user explicitly requests one.
+- Write PR titles and descriptions in Chinese. Keep technical identifiers, commands, and test names in their original form when needed.
 - Use the PR template to document summary, scope, validation, and collaboration notes.
 - **After creating a PR, immediately check CI status** with `gh pr checks <PR-number>`. If any check fails, read the logs with `gh run view <run-id> --log-failed`, fix the root cause, push, and re-check. Never report a PR as ready without confirming CI passes or explicitly listing failing checks.
 - When changing UI structure (class names, DOM hierarchy, element roles), update E2E locators in `frontend/e2e/` to match. Local unit tests (`vitest`) do not cover E2E flows — CI runs Playwright E2E separately.
