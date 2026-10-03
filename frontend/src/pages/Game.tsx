@@ -15,6 +15,7 @@ import { PushToTalkButton } from '../components/game/PushToTalkButton';
 import { usePlayerStore } from '../stores/playerStore';
 import { useGameStore } from '../stores/gameStore';
 import { useWebSocket } from '../hooks/useWebSocket';
+import { useGameAudio } from '../hooks/useGameAudio';
 import { useVoiceChat } from '../hooks/useVoiceChat';
 import { wsService } from '../services/websocket';
 import { GameStateMessage, GameOverMessage, PlayCardMessage, SkillChoiceRequiredMessage, ViewHandMessage, ViewHarmonyMessage, NewsClubChoiceRequiredMessage, RichGirlChooseGiveMessage, ClassRepChoiceRequiredMessage, HonorStudentChoiceRequiredMessage, HonorStudentResultMessage, HonorStudentPhaseMessage, ClassRepWaitingMessage, ClassRepPhaseMessage, ClassRepResultMessage, NewsClubInProgressMessage, NewsClubYouChoseMessage, SettlementSummary, InfectedChoiceRequiredMessage } from '../types/message';
@@ -36,6 +37,7 @@ export const Game: React.FC = () => {
   const navigate = useNavigate();
   const { playerId, reset: resetPlayer } = usePlayerStore();
   const { gameState, setGameState, resetGame } = useGameStore();
+  const { soundEnabled, toggleSound } = useGameAudio(gameState);
   const { send } = useWebSocket();
   const [activatingSkill, setActivatingSkill] = useState<CardType | null>(null);
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null);
@@ -547,6 +549,17 @@ export const Game: React.FC = () => {
         </div>
         <div className="game-hud-right">
           <CardCatalog />
+
+          <button
+            type="button"
+            className="game-menu-trigger"
+            aria-label="对局声音"
+            aria-pressed={soundEnabled}
+            title={soundEnabled ? '关闭音乐和音效' : '开启音乐和音效'}
+            onClick={toggleSound}
+          >
+            <span aria-hidden="true">{soundEnabled ? '声音开' : '声音关'}</span>
+          </button>
           <GameMenu
             open={menuOpen}
             isHost={isHost}

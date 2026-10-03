@@ -40,8 +40,39 @@ try {
   // Pause so the initial game table (harmony target, opponent stats, hand) is visible in video.
   await primary.waitForTimeout(800);
   assert.equal(await primary.evaluate(() => document.documentElement.scrollWidth > window.innerWidth), false, 'Desktop game table should not create horizontal overflow');
+  // Observe real media playback without replacing decoding or autoplay behavior.
+  await primary.evaluate(() => {
+    window.__gameAudioProbe = { music: null, card: null, cardPlays: 0 };
+    const originalPlay = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function (...args) {
+      if (this.src.includes('/audio/horror-suspense-loop.wav')) window.__gameAudioProbe.music = this;
+      if (this.src.includes('/audio/card-play-dark.wav')) {
+        window.__gameAudioProbe.card = this;
+        window.__gameAudioProbe.cardPlays += 1;
+      }
+      return originalPlay.apply(this, args);
+    };
+  });
+  const soundButton = primary.getByRole('button', { name: '对局声音', exact: true });
+  assert.equal(await soundButton.getAttribute('aria-pressed'), 'true');
+  await soundButton.click();
+  assert.equal(await primary.evaluate(() => localStorage.getItem('mini-card-game-sound')), 'off');
+  await soundButton.click();
+  await primary.waitForFunction(() => {
+    const music = window.__gameAudioProbe.music;
+    return music && !music.paused && music.readyState >= 2 && music.currentTime > 0;
+  });
+  assert.equal(await primary.evaluate(() => window.__gameAudioProbe.music.loop), true);
+  await soundButton.click();
+  assert.equal(await primary.evaluate(() => window.__gameAudioProbe.music.paused), true);
+  await soundButton.click();
   await primary.getByLabel(/调和目标 \d+，已投入 \d+ 张，当前总值未知/).waitFor({ state: 'visible' });
   await primary.screenshot({ path: path.join(outputRoot, 'game-table.png') });
+  await primary.setViewportSize({ width: 844, height: 390 });
+  const soundBounds = await soundButton.boundingBox();
+  assert.ok(soundBounds && soundBounds.x >= 0 && soundBounds.x + soundBounds.width <= 844 && soundBounds.y >= 0 && soundBounds.y + soundBounds.height <= 390, 'Sound control should remain visible on landscape phones');
+  await primary.screenshot({ path: path.join(outputRoot, 'game-audio-mobile.png') });
+  await primary.setViewportSize({ width: 1280, height: 720 });
   const pagesByPlayer = new Map();
   for (const player of players) pagesByPlayer.set((await readState(player.page)).connection.player_id, player.page);
   let showcaseDone = false;
@@ -62,6 +93,9 @@ try {
   }
   finalState = await readState(primary);
   assert.equal(finalState.game?.state, 'game_over');
+  assert.ok(await primary.evaluate(() => window.__gameAudioProbe.cardPlays > 0), 'Confirmed plays should trigger card audio');
+  assert.equal(await primary.evaluate(() => window.__gameAudioProbe.music.paused), true, 'Settlement should stop music');
+  assert.equal(await primary.evaluate(() => window.__gameAudioProbe.card?.paused), true, 'Settlement should stop card audio');
   assert.ok(turns.length >= 15, `Expected at least 15 turns, got ${turns.length}`);
   assert.ok(finalState.game?.players.every((player) => player.hand_count === 1), 'Every player should have exactly 1 card in hand');
   assert.ok(finalState.game?.winner_id, 'The winner should be exposed through render_game_to_text');
