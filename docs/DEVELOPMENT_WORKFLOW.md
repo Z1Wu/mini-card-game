@@ -2,10 +2,11 @@
 
 ## 分支和 Pull Request
 
-- 不要直接推送到 `main`；每项改动使用独立分支和 PR。
-- 从最新的 `main` 创建分支，命名为 `codex/issue-<number>-<short-description>`，例如 `codex/issue-93-align-docs`。
+- 不要直接推送到 `main`；同一目标下紧密相关、共同完成一项用户请求的小步骤合并到一个 PR，不要只为区分实现步骤而拆成多个 PR。彼此无关的工作再分开处理。
+- 从最新的 `main` 创建分支，命名为 `codex/<short-description>`，例如 `codex/align-docs`。
 - PR 合并前应通过 GitHub Actions；合并后才可从 `main` 打发布 tag。
-- Issue 是工作单元：先查找并认领现有 Issue；无匹配项时创建含目标、范围、验收标准、验证命令和非目标的 agent-ready Issue。
+- 以用户请求明确工作范围，在 PR 描述中记录目标、范围、验证结果和后续事项。
+- PR 标题和描述使用中文；技术标识、命令和测试名称可保留原文。
 
 ## 本地验证
 
@@ -36,7 +37,7 @@ npm run test:e2e:mobile
 
 ## GitHub Actions
 
-`.github/workflows/ci.yml` 在向 `main` 或 `master` 推送以及所有 PR 上运行：
+`.github/workflows/ci.yml` 在向 `main` 或 `master` 推送以及所有 PR 上运行后端和前端验证。桌面与移动浏览器 E2E 不随 push/PR 自动运行；需要时在 GitHub Actions 的 CI 工作流页面点击 **Run workflow** 手动触发。手动触发时会运行后端、前端和 E2E jobs：
 
 | Job | 运行环境 | 验证 |
 | --- | --- | --- |

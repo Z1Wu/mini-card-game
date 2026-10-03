@@ -409,7 +409,8 @@ class RoomHubWebSocketServer:
         for code, entry in list(self._rooms.items()):
             if code == DEFAULT_ROOM_CODE or entry.server.clients or entry.empty_since is None:
                 continue
-            if current_time - entry.empty_since >= self.room_ttl_seconds:
+            expires_at = entry.empty_since + self.room_ttl_seconds
+            if current_time >= expires_at:
                 expired.append(code)
                 del self._rooms[code]
                 logger.info("Expired empty room %s", code)
