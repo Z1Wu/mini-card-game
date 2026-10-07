@@ -33,3 +33,10 @@ For full details, see [docs/DEVELOPMENT_WORKFLOW.md](docs/DEVELOPMENT_WORKFLOW.m
 - Never use destructive Git commands (`reset --hard`, `checkout --`, or broad clean commands) on a mixed working tree.
 - Do not commit editor state, agent state, dependency directories, test recordings, build output, credentials, or environment files.
 - Keep production credentials outside this repository. Demo plaintext credentials are for local development and automated tests only.
+
+## Parallel local worktrees
+
+- Start a local environment from the repository root with `make setup` and `make worktree` (`make dev` is an alias). The Makefile automatically finds and locks a free port slot for the running worktree, allowing multiple worktrees to run at the same time.
+- To request a specific slot, use `make worktree DEV_SLOT=<0-999>`. The command checks that its frontend, backend WebSocket, and admin API ports are available before starting; otherwise it reports the conflict. Do not hardcode ports in worktree-local instructions.
+- E2E scripts select free backend and frontend ports by default. Keep generated reports under each worktree's own `frontend/test-results/` directory or set `E2E_OUTPUT_DIR` to a worktree-specific path.
+- For local human acceptance, run `make e2e` to execute the CI desktop and mobile browser suites and review the generated `multiview.html`, `report.json`, screenshots, and per-player recordings under `frontend/test-results/`. Install dependencies and Chromium with `make e2e-install-browser` if needed.

@@ -4,7 +4,7 @@ React + TypeScript + Vite 的游戏客户端。它通过 WebSocket 连接后端�
 
 ## 前置条件与启动
 
-需要 Node.js 20。先按根目录 [快速启动](../docs/QUICK_START.md) 启动后端，再运行：
+需要 Node.js 20。建议按根目录 [快速启动](../docs/QUICK_START.md) 使用 `make setup` 安装依赖，再启动前端：
 
 ```powershell
 cd frontend
@@ -12,7 +12,7 @@ npm ci
 npm run dev
 ```
 
-Vite 输出实际访问地址（默认通常为 `http://localhost:5173`）。开发服务器的 WebSocket 地址由 `VITE_WS_URL` 覆盖；未设置时使用客户端默认地址。生产部署应让该地址指向可访问的后端 WebSocket 端点。
+直接运行 `npm run dev` 时，Vite 默认监听 `http://localhost:3000`（见 `vite.config.ts`）。通过根目录 Makefile 启动时，端口会按 worktree 自动分配；可用 `make worktree` 的启动输出查看地址。开发服务器的 WebSocket 地址由 `VITE_WS_URL` 覆盖；未设置时使用客户端同源 `/ws`。生产部署应让该地址指向可访问的后端 WebSocket 端点。
 
 ## 可用脚本
 
@@ -28,6 +28,8 @@ Vite 输出实际访问地址（默认通常为 `http://localhost:5173`）。开
 | `npm run test:e2e:smoke` | 仅运行三人完整牌局轮转、终局和结算冒烟 |
 | `npm run test:e2e:scenarios` | 仅运行四人确定性关键玩法矩阵 |
 | `npm run test:e2e:mobile` | 在 844×390 运行精选复杂交互场景 |
+
+在仓库根目录运行 `make e2e` 可依次复现 CI 的桌面与移动浏览器验收；首次运行先执行 `make e2e-install-browser`。报告、截图、逐玩家录像与同步播放器写入 `frontend/test-results/`。
 
 首次运行浏览器 E2E：
 

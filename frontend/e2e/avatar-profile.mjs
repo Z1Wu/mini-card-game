@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from 'playwright';
-import { findFreePort, startServices, stopProcess, prepareOutput } from './lib/services.mjs';
+import { findFreePort, startServices, stopServices, prepareOutput } from './lib/services.mjs';
 
 const frontendRoot = path.resolve(import.meta.dirname, '..');
 const backendRoot = path.resolve(frontendRoot, '..', 'backend');
@@ -48,7 +48,5 @@ try {
   console.log('Avatar selection, account persistence, lobby display and mobile layout passed');
 } finally {
   await browser?.close();
-  await stopProcess(services?.frontend);
-  await stopProcess(services?.backend);
+  await stopServices(services);
 }
-
