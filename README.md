@@ -15,23 +15,16 @@
 
 ## 本地开发
 
-需要 Python 3.10+、[uv](https://docs.astral.sh/uv/) 与 Node.js 20。
-
-在两个终端中运行：
+需要 GNU Make、[uv](https://docs.astral.sh/uv/)、Python 3.10 和 Node.js 20。在项目根目录安装依赖并启动前后端：
 
 ```powershell
-cd backend
-uv sync --frozen
-uv run python main.py
+make setup
+make worktree
 ```
 
-```powershell
-cd frontend
-npm ci
-npm run dev
-```
+先运行 `make setup` 安装依赖，再运行 `make worktree`（或 `make dev`）启动。命令会自动选择并锁定空闲端口，打印前端和后端地址；多个 worktree 可以同时运行。也可用 `make worktree DEV_SLOT=12` 指定槽位，命令会先检查端口可用性。详见 [快速启动](docs/QUICK_START.md)。
 
-Vite 会显示本地地址（默认通常为 `http://localhost:5173`）；后端默认监听 `ws://localhost:8765`。详见 [快速启动](docs/QUICK_START.md)。
+本地浏览器验收可运行 `make e2e`，覆盖 CI 的桌面与移动 E2E，并在 `frontend/test-results/` 生成多玩家录像、`multiview.html`、截图和报告。首次运行执行 `make e2e-install-browser` 会安装依赖和 Chromium。
 
 ## 验证命令
 

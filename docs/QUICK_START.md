@@ -2,31 +2,20 @@
 
 本项目由 React 前端和 Python WebSocket 后端组成。支持 3–5 名玩家；请用三个或更多浏览器会话进行本地试玩。
 
-## 1. 启动后端
+## 1. 安装并启动本地环境
 
-需要 Python 3.10+ 和 uv：
-
-```powershell
-cd backend
-uv sync --frozen
-uv run python main.py
-```
-
-后端默认监听 `ws://localhost:8765`。
-
-## 2. 启动前端
-
-另开一个终端（需要 Node.js 20）：
+需要 GNU Make、Python 3.10、uv、Node.js 20 和 npm。在仓库根目录运行以下命令安装依赖并启动前后端：
 
 ```powershell
-cd frontend
-npm ci
-npm run dev
+make setup
+make worktree
 ```
 
-在 Vite 输出的地址中打开三个或更多浏览器会话。不要使用旧的 `frontend/demo.html`：当前客户端由 Vite 构建和提供。
+首次运行前用 `make setup` 安装依赖。Makefile 会让 uv 使用 Python 3.10、检查 Node.js 主版本为 20，并自动选择、锁定空闲的前端、后端和管理 API 端口；终端会打印实际访问地址。这样多个 worktree 可以同时运行。也可指定槽位，例如 `make worktree DEV_SLOT=12`（范围 0–999）；命令会先检查该槽位端口。
 
-## 3. 创建房间并开始
+打开 `make worktree` 输出的前端地址并使用三个或更多浏览器会话。不要使用旧的 `frontend/demo.html`：当前客户端由 Vite 构建和提供。
+
+## 2. 创建房间并开始
 
 1. 第一位玩家在登录页创建房间，记录六位房间码并登录；该玩家成为房主。
 2. 其他玩家输入同一房间码并使用各自账号登录。
@@ -36,7 +25,21 @@ npm run dev
 
 账号来自 `backend/auth/users.json`，仅用于本地演示和测试。公网配置及安全密码说明见 [部署指南](DEPLOY.md)。
 
-## 4. 验证
+## 3. 验证
+
+运行与 GitHub Actions 浏览器验收相同的桌面和移动 E2E 套件：
+
+```powershell
+make e2e
+```
+
+首次运行前安装 Playwright Chromium：
+
+```powershell
+make e2e-install-browser
+```
+
+验收产物保存在 `frontend/test-results/` 下的 `full-game/`、`scenarios/`、`voice-chat/`、`avatar-profile/` 和 `mobile-game/` 目录。打开 `full-game/`、`scenarios/`、`mobile-game/` 中的 `multiview.html` 可同步查看玩家录像；`report.json` 与截图用于核对结果，语音和头像场景的证据也在各自目录中。也可分别运行 `make e2e-desktop` 或 `make e2e-mobile`。
 
 ```powershell
 cd backend

@@ -10,11 +10,15 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000,
+    port: Number(process.env.FRONTEND_PORT) || 3000,
+    strictPort: true,
     proxy: {
       '/ws': {
-        target: 'ws://localhost:8765',
+        target: `ws://localhost:${Number(process.env.BACKEND_PORT) || 8765}`,
         ws: true,
+      },
+      '/api/admin': {
+        target: `http://localhost:${Number(process.env.ADMIN_PORT) || 8766}`,
       },
     },
   },
