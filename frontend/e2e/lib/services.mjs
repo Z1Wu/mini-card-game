@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import http from 'node:http';
 import net from 'node:net';
+import os from 'node:os';
 import path from 'node:path';
 
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -29,6 +30,13 @@ export async function stopProcess(processInfo) {
   child.kill('SIGTERM');
   await Promise.race([new Promise((resolve) => child.once('exit', resolve)), sleep(3_000)]);
   if (child.exitCode === null) child.kill('SIGKILL');
+}
+
+export async function stopServices(services) {
+  await Promise.all([stopProcess(services?.frontend), stopProcess(services?.backend)]);
+  if (services?.authUsersDirectory) {
+    await fsPromises.rm(services.authUsersDirectory, { recursive: true, force: true });
+  }
 }
 
 async function waitFor(check, processInfo, description, timeoutMs = 20_000) {
@@ -84,6 +92,17 @@ export async function startServices({ frontendRoot, backendRoot, backendPort, fr
   const build = spawnSync(process.execPath, [viteEntry, 'build'], { cwd: frontendRoot, env: sharedEnv, stdio: 'inherit' });
   if (build.status !== 0) throw new Error(`Frontend production build failed with exit code ${build.status}`);
 
+  // Avatar selection persists to AUTH_USERS_FILE. Keep ordinary E2E suites
+  // from rewriting the checked-in demo accounts while preserving an explicit
+  // test fixture supplied by a suite such as avatar-profile.mjs.
+  let authUsersDirectory;
+  let authUsersFile = process.env.AUTH_USERS_FILE;
+  if (!authUsersFile) {
+    authUsersDirectory = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'mini-card-game-e2e-users-'));
+    authUsersFile = path.join(authUsersDirectory, 'users.json');
+    await fsPromises.copyFile(path.join(backendRoot, 'auth', 'users.json'), authUsersFile);
+  }
+
   const backend = startProcess(resolveBackendPython(backendRoot), ['main.py'], {
     cwd: backendRoot,
     env: {
@@ -91,14 +110,21 @@ export async function startServices({ frontendRoot, backendRoot, backendPort, fr
       HOST: '127.0.0.1',
       PORT: String(backendPort),
       ADMIN_HTTP_PORT: String(adminHttpPort),
+      AUTH_USERS_FILE: authUsersFile,
       E2E_RANDOM_SEED: String(seed),
       ...(enableScenarios ? { APP_ENV: 'e2e', ENABLE_E2E_SCENARIOS: 'true' } : {}),
     },
   });
   const frontend = startProcess(process.execPath, [viteEntry, 'preview', '--host', '127.0.0.1', '--port', String(frontendPort), '--strictPort'], { cwd: frontendRoot, env: sharedEnv });
   const appUrl = `http://127.0.0.1:${frontendPort}`;
-  await Promise.all([waitFor(() => websocketReady(backendPort), backend, `backend on ${backendPort}`), waitFor(() => httpReady(appUrl), frontend, `frontend on ${frontendPort}`)]);
-  return { backend, frontend, appUrl, websocketUrl, adminHttpPort };
+  try {
+    await Promise.all([waitFor(() => websocketReady(backendPort), backend, `backend on ${backendPort}`), waitFor(() => httpReady(appUrl), frontend, `frontend on ${frontendPort}`)]);
+  } catch (error) {
+    await Promise.all([stopProcess(frontend), stopProcess(backend)]);
+    if (authUsersDirectory) await fsPromises.rm(authUsersDirectory, { recursive: true, force: true });
+    throw error;
+  }
+  return { backend, frontend, appUrl, websocketUrl, adminHttpPort, authUsersDirectory };
 }
 
 export async function prepareOutput(frontendRoot, requestedOutput) {

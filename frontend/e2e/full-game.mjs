@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { findFreePort, prepareOutput, startServices, stopProcess } from './lib/services.mjs';
+import { findFreePort, prepareOutput, startServices, stopServices } from './lib/services.mjs';
 import { closePlayers, createRoomAndLogin, findHost, openPlayers, playSmokeTurn, readState, waitForState } from './lib/players.mjs';
 import { savePlayerArtifacts, savePlayerVideos, writeMultiviewArtifact, writeReport } from './lib/reporting.mjs';
 
@@ -91,7 +91,7 @@ try {
       if (!testError) testError = error;
     }
   });
-  await Promise.all([stopProcess(services?.frontend), stopProcess(services?.backend)]);
+  await stopServices(services);
 }
 
 if (!testError) {

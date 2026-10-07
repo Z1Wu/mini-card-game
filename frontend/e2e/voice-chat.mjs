@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { findFreePort, prepareOutput, startServices, stopProcess } from './lib/services.mjs';
+import { findFreePort, prepareOutput, startServices, stopServices } from './lib/services.mjs';
 import { closePlayers, createRoomAndLogin, findHost, openPlayers } from './lib/players.mjs';
 import { savePlayerArtifacts, writeReport } from './lib/reporting.mjs';
 
@@ -96,7 +96,7 @@ try {
 } finally {
   if (players.length) screenshots = await savePlayerArtifacts(players, outputRoot).catch(() => ({}));
   await closePlayers(browser, players);
-  await Promise.all([stopProcess(services?.frontend), stopProcess(services?.backend)]);
+  await stopServices(services);
 }
 
 await writeReport(reportPath, {
